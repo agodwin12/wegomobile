@@ -1,12 +1,13 @@
 // lib/screens/services/incoming_requests_screen.dart
 // WEGO Services Marketplace - Incoming Requests (Provider View)
-// ✅ COMPLETE IMPLEMENTATION - START & COMPLETE SERVICE
+// ✅ COMPLETE - With real-time socket listeners
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/services/service_request_model.dart';
 import '../../providers/services.dart';
+import '../../service/api/service_socket_listener.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 
@@ -30,12 +31,107 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     _tabController = TabController(length: _tabs.length, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadIncomingRequests();
+      _registerSocketListeners();
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SOCKET LISTENERS
+  // ═══════════════════════════════════════════════════════════════════
+
+  void _registerSocketListeners() {
+    final listener = ServiceSocketListener.instance;
+
+    // New request from customer
+    listener.onNewRequest = (data) {
+      if (!mounted) return;
+      _loadIncomingRequests();
+      final customerName = data['customer']?['first_name'] ?? 'Customer';
+      final listingTitle = data['listing_title'] ?? 'your service';
+      listener.showBanner(
+        context: context,
+        message: '$customerName sent a request for $listingTitle!',
+        backgroundColor: Colors.blue.shade700,
+        icon: Icons.notification_important,
+        onTap: () {
+          _tabController.animateTo(1); // Jump to Pending tab
+          _loadIncomingRequests();
+        },
+      );
+    };
+
+    // Customer cancelled their request
+    listener.onRequestCancelled = (data) {
+      if (!mounted) return;
+      _loadIncomingRequests();
+      final customerName = data['cancelled_by']?['first_name'] ?? 'Customer';
+      listener.showBanner(
+        context: context,
+        message: '$customerName cancelled their request.',
+        backgroundColor: Colors.red.shade600,
+        icon: Icons.cancel,
+        onTap: () {
+          _tabController.animateTo(0);
+          _loadIncomingRequests();
+        },
+      );
+    };
+
+    // Payment proof uploaded by customer
+    listener.onPaymentProofUploaded = (data) {
+      if (!mounted) return;
+      _loadIncomingRequests();
+      final customerName = data['customer']?['first_name'] ?? 'Customer';
+      final amount = data['final_amount']?.toString() ?? '';
+      listener.showBanner(
+        context: context,
+        message: '$customerName uploaded payment proof for $amount FCFA. Please confirm!',
+        backgroundColor: Colors.orange.shade700,
+        icon: Icons.payment,
+        onTap: () {
+          _tabController.animateTo(3); // Jump to In Progress tab
+          _loadIncomingRequests();
+        },
+      );
+    };
+
+    // Dispute filed against provider
+    listener.onDisputeFiled = (data) {
+      if (!mounted) return;
+      _loadIncomingRequests();
+      listener.showBanner(
+        context: context,
+        message: 'A dispute has been filed. Please respond within 48 hours.',
+        backgroundColor: Colors.red.shade800,
+        icon: Icons.gavel,
+        onTap: () => _loadIncomingRequests(),
+      );
+    };
+
+    // Dispute resolved
+    listener.onDisputeResolved = (data) {
+      if (!mounted) return;
+      _loadIncomingRequests();
+      listener.showBanner(
+        context: context,
+        message: 'A dispute has been resolved.',
+        backgroundColor: Colors.purple.shade700,
+        icon: Icons.gavel,
+        onTap: () => _loadIncomingRequests(),
+      );
+    };
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    // Clear callbacks so they don't fire after screen is gone
+    final listener = ServiceSocketListener.instance;
+    listener.onNewRequest = null;
+    listener.onRequestCancelled = null;
+    listener.onPaymentProofUploaded = null;
+    listener.onDisputeFiled = null;
+    listener.onDisputeResolved = null;
     super.dispose();
   }
 
@@ -180,26 +276,14 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       ),
       child: Row(
         children: [
-          _buildStatItem(
-            'Pending',
-            pendingCount.toString(),
-            Icons.pending_rounded,
-            isTablet,
-          ),
+          _buildStatItem('Pending', pendingCount.toString(),
+              Icons.pending_rounded, isTablet),
           _buildStatDivider(),
-          _buildStatItem(
-            'Active',
-            activeCount.toString(),
-            Icons.play_circle_filled_rounded,
-            isTablet,
-          ),
+          _buildStatItem('Active', activeCount.toString(),
+              Icons.play_circle_filled_rounded, isTablet),
           _buildStatDivider(),
-          _buildStatItem(
-            'Done',
-            completedCount.toString(),
-            Icons.check_circle_rounded,
-            isTablet,
-          ),
+          _buildStatItem('Done', completedCount.toString(),
+              Icons.check_circle_rounded, isTablet),
         ],
       ),
     );
@@ -267,7 +351,8 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
         indicatorWeight: 3,
         labelColor: AppColors.primaryGold,
         unselectedLabelColor: AppColors.textSecondary,
-        labelStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
+        labelStyle:
+        AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
         unselectedLabelStyle:
         AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w500),
         tabs: _tabs.map((tab) {
@@ -361,7 +446,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
   }
 
   Widget _buildRequestHeader(ServiceRequest request, bool isTablet) {
-    // Extract customer info safely
     String customerName = 'Customer';
     String? avatarUrl;
 
@@ -373,7 +457,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       avatarUrl = customerMap['avatar_url']?.toString();
     }
 
-    // Extract service title safely
     String serviceTitle = 'Service';
     if (request.listing != null) {
       final listingMap = request.listing as Map<String, dynamic>;
@@ -384,7 +467,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       padding: EdgeInsets.all(isTablet ? 20 : 16),
       child: Row(
         children: [
-          // Avatar
           Container(
             width: isTablet ? 56 : 48,
             height: isTablet ? 56 : 48,
@@ -576,7 +658,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Request ID & Date
           Row(
             children: [
               Icon(Icons.confirmation_number_rounded,
@@ -601,7 +682,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
 
           const SizedBox(height: 16),
 
-          // Description
           Text(
             request.description,
             style: AppTypography.bodyMedium.copyWith(
@@ -614,30 +694,19 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
 
           const SizedBox(height: 16),
 
-          // Location
           _buildDetailRow(
-            Icons.location_on_outlined,
-            request.serviceLocation,
-            isTablet,
-          ),
+              Icons.location_on_outlined, request.serviceLocation, isTablet),
 
           const SizedBox(height: 12),
 
-          // Schedule
           _buildDetailRow(
-            Icons.access_time,
-            _getScheduleDisplay(request),
-            isTablet,
-          ),
+              Icons.access_time, _getScheduleDisplay(request), isTablet),
 
-          // Photos
           if (request.photos.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
               'Attached Photos (${request.photos.length})',
-              style: AppTypography.labelLarge.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -660,10 +729,8 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                             width: 80,
                             height: 80,
                             color: AppColors.backgroundLight,
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              color: AppColors.textLight,
-                            ),
+                            child: const Icon(Icons.image_not_supported,
+                                color: AppColors.textLight),
                           );
                         },
                       ),
@@ -714,7 +781,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
   Widget _buildActionButtonsForStatus(ServiceRequest request, bool isTablet) {
     switch (request.status) {
       case RequestStatus.pending:
-      // Show Accept/Reject buttons
         return Row(
           children: [
             Expanded(
@@ -746,7 +812,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
         );
 
       case RequestStatus.accepted:
-      // Show "Start Service" button
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -762,7 +827,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
         );
 
       case RequestStatus.inProgress:
-      // Show "Complete Service" button
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -778,7 +842,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
         );
 
       case RequestStatus.paymentPending:
-      // Waiting for customer to upload payment proof
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -803,7 +866,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
         );
 
       case RequestStatus.paymentConfirmationPending:
-      // Show "Confirm Payment" button
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -820,7 +882,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
 
       case RequestStatus.paymentConfirmed:
       case RequestStatus.completed:
-      // Service completed
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -850,12 +911,10 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // ACTION HANDLERS - START SERVICE
+  // ACTION HANDLERS
   // ═══════════════════════════════════════════════════════════════════
 
-  /// ✅ START SERVICE - Changes status from ACCEPTED → IN_PROGRESS
   Future<void> _startService(ServiceRequest request) async {
-    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -868,14 +927,13 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     final success = await provider.startService(request.id);
 
     if (mounted) {
-      Navigator.pop(context); // Close loading
+      Navigator.pop(context);
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Service started! Timer running...'),
+            content: Text('✅ Service started!'),
             backgroundColor: AppColors.success,
-            duration: Duration(seconds: 2),
           ),
         );
         await _loadIncomingRequests();
@@ -890,11 +948,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // ACTION HANDLERS - COMPLETE SERVICE
-  // ═══════════════════════════════════════════════════════════════════
-
-  /// ✅ SHOW COMPLETE SERVICE DIALOG
   void _showCompleteServiceDialog(ServiceRequest request) {
     final amountController = TextEditingController();
     final summaryController = TextEditingController();
@@ -911,16 +964,11 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                 color: AppColors.successLight,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 24,
-              ),
+              child: const Icon(Icons.check_circle,
+                  color: AppColors.success, size: 24),
             ),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text('Complete Service'),
-            ),
+            const Expanded(child: Text('Complete Service')),
           ],
         ),
         content: SingleChildScrollView(
@@ -943,8 +991,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                   hintText: 'e.g., 15000',
                   prefixIcon: const Icon(Icons.payments),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -954,12 +1001,10 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                 maxLength: 500,
                 decoration: InputDecoration(
                   labelText: 'Work Summary (optional)',
-                  hintText:
-                  'Describe the work completed, materials used, etc.',
+                  hintText: 'Describe the work completed...',
                   alignLabelWithHint: true,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 8),
@@ -976,7 +1021,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Customer will be notified to make payment after you complete the service.',
+                        'Customer will be notified to make payment.',
                         style: AppTypography.labelMedium.copyWith(
                           color: AppColors.info,
                         ),
@@ -996,7 +1041,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
           ElevatedButton(
             onPressed: () {
               final amountText = amountController.text.trim();
-
               if (amountText.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -1006,7 +1050,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                 );
                 return;
               }
-
               final amount = double.tryParse(amountText);
               if (amount == null || amount <= 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1017,17 +1060,10 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                 );
                 return;
               }
-
               Navigator.pop(context);
-              _completeService(
-                request,
-                amount,
-                summaryController.text.trim(),
-              );
+              _completeService(request, amount, summaryController.text.trim());
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             child: const Text('Complete Service'),
           ),
         ],
@@ -1035,13 +1071,8 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     );
   }
 
-  /// ✅ COMPLETE SERVICE - Changes status from IN_PROGRESS → PAYMENT_PENDING
   Future<void> _completeService(
-      ServiceRequest request,
-      double amount,
-      String summary,
-      ) async {
-    // Show loading dialog
+      ServiceRequest request, double amount, String summary) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1058,14 +1089,13 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     );
 
     if (mounted) {
-      Navigator.pop(context); // Close loading
+      Navigator.pop(context);
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '✅ Service completed! Amount: ${amount.toStringAsFixed(0)} FCFA\n'
-                  'Customer notified to make payment.',
+              '✅ Service completed! Amount: ${amount.toStringAsFixed(0)} FCFA\nCustomer notified to make payment.',
             ),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 3),
@@ -1075,18 +1105,14 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-            Text(provider.requestsError ?? 'Failed to complete service'),
+            content: Text(
+                provider.requestsError ?? 'Failed to complete service'),
             backgroundColor: AppColors.error,
           ),
         );
       }
     }
   }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // ACTION HANDLERS - CONFIRM PAYMENT
-  // ═══════════════════════════════════════════════════════════════════
 
   void _showConfirmPaymentDialog(ServiceRequest request) {
     showDialog(
@@ -1101,16 +1127,11 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                 color: AppColors.successLight,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.verified,
-                color: AppColors.success,
-                size: 24,
-              ),
+              child: const Icon(Icons.verified,
+                  color: AppColors.success, size: 24),
             ),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text('Confirm Payment'),
-            ),
+            const Expanded(child: Text('Confirm Payment')),
           ],
         ),
         content: Column(
@@ -1159,9 +1180,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
               Navigator.pop(context);
               _confirmPayment(request);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             child: const Text('Yes, Confirm'),
           ),
         ],
@@ -1170,7 +1189,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
   }
 
   Future<void> _confirmPayment(ServiceRequest request) async {
-    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1183,7 +1201,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     final success = await provider.confirmPayment(request.id);
 
     if (mounted) {
-      Navigator.pop(context); // Close loading
+      Navigator.pop(context);
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1196,18 +1214,14 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-            Text(provider.requestsError ?? 'Failed to confirm payment'),
+            content: Text(
+                provider.requestsError ?? 'Failed to confirm payment'),
             backgroundColor: AppColors.error,
           ),
         );
       }
     }
   }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // ACTION HANDLERS - ACCEPT/REJECT
-  // ═══════════════════════════════════════════════════════════════════
 
   void _showAcceptDialog(ServiceRequest request) {
     final responseController = TextEditingController();
@@ -1224,16 +1238,11 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                 color: AppColors.successLight,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 24,
-              ),
+              child: const Icon(Icons.check_circle,
+                  color: AppColors.success, size: 24),
             ),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text('Accept Request'),
-            ),
+            const Expanded(child: Text('Accept Request')),
           ],
         ),
         content: Column(
@@ -1254,8 +1263,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
               decoration: InputDecoration(
                 hintText: 'e.g., I can be there in 30 minutes',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -1268,11 +1276,10 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _acceptRequest(request, responseController.text.trim());
+              _acceptRequest(
+                  request, responseController.text.trim());
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             child: const Text('Accept Request'),
           ),
         ],
@@ -1295,16 +1302,11 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                 color: AppColors.errorLight,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.cancel,
-                color: AppColors.error,
-                size: 24,
-              ),
+              child: const Icon(Icons.cancel,
+                  color: AppColors.error, size: 24),
             ),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text('Reject Request'),
-            ),
+            const Expanded(child: Text('Reject Request')),
           ],
         ),
         content: Column(
@@ -1325,8 +1327,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
               decoration: InputDecoration(
                 hintText: 'e.g., Not available at that time',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -1347,13 +1348,10 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
                 );
                 return;
               }
-
               Navigator.pop(context);
               _rejectRequest(request, reasonController.text.trim());
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Reject Request'),
           ),
         ],
@@ -1361,11 +1359,13 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     );
   }
 
-  Future<void> _acceptRequest(ServiceRequest request, String? response) async {
+  Future<void> _acceptRequest(
+      ServiceRequest request, String? response) async {
     final provider = Provider.of<ServicesProvider>(context, listen: false);
     final success = await provider.acceptRequest(
       request.id,
-      providerResponse: response?.isNotEmpty == true ? response : null,
+      providerResponse:
+      response?.isNotEmpty == true ? response : null,
     );
 
     if (success && mounted) {
@@ -1380,15 +1380,15 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            provider.requestsError ?? 'Failed to accept request',
-          ),
+              provider.requestsError ?? 'Failed to accept request'),
           backgroundColor: AppColors.error,
         ),
       );
     }
   }
 
-  Future<void> _rejectRequest(ServiceRequest request, String reason) async {
+  Future<void> _rejectRequest(
+      ServiceRequest request, String reason) async {
     final provider = Provider.of<ServicesProvider>(context, listen: false);
     final success = await provider.rejectRequest(request.id, reason);
 
@@ -1404,8 +1404,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            provider.requestsError ?? 'Failed to reject request',
-          ),
+              provider.requestsError ?? 'Failed to reject request'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -1493,9 +1492,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
           const SizedBox(height: 30),
           Text(
             'Loading requests...',
-            style: AppTypography.titleLarge.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),

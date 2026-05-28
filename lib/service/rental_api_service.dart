@@ -56,6 +56,32 @@ class RentalApiService {
   // HTTP REQUEST METHODS
   // ═══════════════════════════════════════════════════════════════
 
+
+  /// Initiate MoMo payment for a rental
+  /// POST /api/payments/initiate
+  static Future<Map<String, dynamic>> initiatePayment({
+    required String accessToken,
+    required String rentalId,
+    required String phone,
+  }) async {
+    final body = {
+      'vertical':    'rental',
+      'vertical_id': rentalId,
+      'phone':       phone,
+    };
+    return await _post('/payments/initiate', accessToken, body);
+  }
+
+  /// Poll payment status
+  /// GET /api/payments/:campayRef/status
+  static Future<Map<String, dynamic>> checkPaymentStatus({
+    required String accessToken,
+    required String campayRef,
+  }) async {
+    return await _get('/payments/$campayRef/status', accessToken);
+  }
+
+
   /// Generic GET request
   static Future<Map<String, dynamic>> _get(
       String endpoint,

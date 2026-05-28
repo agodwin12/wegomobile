@@ -2,6 +2,8 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -11,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wego_v1/main.dart';
 import 'package:wego_v1/utils/app_colors.dart';
+import 'package:wego_v1/utils/car_marker_painter.dart';
 
 import '../Trip in progress/driver_trip_in_progress_screen.dart';
 
@@ -61,15 +64,18 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     with TickerProviderStateMixin {
 
   // ── Map ──────────────────────────────────────────────────────
-  GoogleMapController? _mapController;
-  final Set<Marker>    _markers = {};
+  GoogleMapController?  _mapController;
+  final Set<Marker>     _markers = {};
+  BitmapDescriptor?     _carIcon;
+
+  // ── Draggable sheet ──────────────────────────────────────────
+  final DraggableScrollableController _sheetController =
+  DraggableScrollableController();
 
   // ── Animations ───────────────────────────────────────────────
   late AnimationController _pulseController;
   late AnimationController _timerPulseController;
-  late AnimationController _slideController;
   late Animation<double>   _pulseAnimation;
-  late Animation<Offset>   _slideAnimation;
 
   // ── Timer ────────────────────────────────────────────────────
   Timer? _waitingTimer;
@@ -98,21 +104,18 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     debugPrint('📍 [DRIVER-ARRIVED] Screen initialized');
     debugPrint('📦 Trip ID: ${widget.tripId}');
     debugPrint('👤 Passenger: $_passengerName');
-    debugPrint('🖼️  Avatar URL: $_passengerAvatarUrl');
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     _parseLocations();
     _setupAnimations();
-    _setupMarkers();
+    _buildCarIconThenMarkers();
     _startWaitingTimer();
     _notifyPassenger();
   }
 
   void _parseLocations() {
-    final pickup  =
-        widget.trip['pickup']  ?? widget.trip['pickup_location']  ?? {};
-    final dropoff =
-        widget.trip['dropoff'] ?? widget.trip['dropoff_location'] ?? {};
+    final pickup  = widget.trip['pickup']  ?? widget.trip['pickup_location']  ?? {};
+    final dropoff = widget.trip['dropoff'] ?? widget.trip['dropoff_location'] ?? {};
 
     _pickupLocation = LatLng(
       double.tryParse(pickup['lat']?.toString()
@@ -135,47 +138,93 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
         ?? 'Destination';
   }
 
+  Future<void> _buildCarIconThenMarkers() async {
+    try {
+      final byteData = await rootBundle.load('assets/car.png');
+      final codec = await ui.instantiateImageCodec(
+        byteData.buffer.asUint8List(),
+        targetWidth:  80,
+        targetHeight: 80,
+      );
+      final frame    = await codec.getNextFrame();
+      final pngBytes = await frame.image
+          .toByteData(format: ui.ImageByteFormat.png);
+
+      if (pngBytes != null) {
+        _carIcon = BitmapDescriptor.fromBytes(pngBytes.buffer.asUint8List());
+        debugPrint('✅ [DRIVER-ARRIVED] Car icon loaded from assets/car.png');
+      }
+    } catch (e) {
+      debugPrint('⚠️ [DRIVER-ARRIVED] Car icon load failed, using fallback: $e');
+      _carIcon = BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueYellow);
+    }
+    _setupMarkers();
+  }
+
   void _setupAnimations() {
     _pulseController = AnimationController(
         duration: const Duration(milliseconds: 1500), vsync: this);
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
-        CurvedAnimation(
-            parent: _pulseController, curve: Curves.easeInOut));
+        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
     _pulseController.repeat(reverse: true);
 
     _timerPulseController = AnimationController(
         duration: const Duration(milliseconds: 1000), vsync: this);
     _timerPulseController.repeat(reverse: true);
-
-    _slideController = AnimationController(
-        duration: const Duration(milliseconds: 600), vsync: this);
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-        parent: _slideController, curve: Curves.easeOutCubic));
-    _slideController.forward();
   }
 
   void _setupMarkers() {
-    _markers
-      ..add(Marker(
-        markerId: const MarkerId('pickup'),
-        position: _pickupLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueGreen),
-        infoWindow: InfoWindow(
-            title: 'Pickup Location', snippet: _pickupAddress),
-      ))
-      ..add(Marker(
-        markerId: const MarkerId('dropoff'),
-        position: _dropoffLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueRed),
-        infoWindow: InfoWindow(
-            title: 'Destination', snippet: _dropoffAddress),
-      ));
+    _markers.clear();
+
+    // ── Uber-style car at pickup ──────────────────────────────
+    _markers.add(Marker(
+      markerId:  const MarkerId('driver_car'),
+      position:  _pickupLocation,
+      icon:      _carIcon ?? BitmapDescriptor.defaultMarker,
+      anchor:    const Offset(0.5, 0.5),
+      flat:      true,
+      rotation:  0,
+      zIndex:    2,
+      infoWindow: const InfoWindow(title: 'You are here'),
+    ));
+
+    // ── Green pickup pin ──────────────────────────────────────
+    _markers.add(Marker(
+      markerId:  const MarkerId('pickup'),
+      position:  _pickupLocation,
+      icon:      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      zIndex:    1,
+      infoWindow: InfoWindow(title: 'Pickup Location', snippet: _pickupAddress),
+    ));
+
+    // ── Red dropoff pin ───────────────────────────────────────
+    _markers.add(Marker(
+      markerId:  const MarkerId('dropoff'),
+      position:  _dropoffLocation,
+      icon:      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      zIndex:    1,
+      infoWindow: InfoWindow(title: 'Destination', snippet: _dropoffAddress),
+    ));
+
     if (mounted) setState(() {});
+  }
+
+  void _updateCarMarker(LatLng position, {double bearing = 0}) {
+    if (!mounted) return;
+    setState(() {
+      _markers.removeWhere((m) => m.markerId.value == 'driver_car');
+      _markers.add(Marker(
+        markerId:  const MarkerId('driver_car'),
+        position:  position,
+        icon:      _carIcon ?? BitmapDescriptor.defaultMarker,
+        anchor:    const Offset(0.5, 0.5),
+        flat:      true,
+        rotation:  bearing,
+        zIndex:    2,
+        infoWindow: const InfoWindow(title: 'You are here'),
+      ));
+    });
   }
 
   void _startWaitingTimer() {
@@ -185,8 +234,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       if (_waitingSeconds == 300 && !_canShowNoShow) {
         setState(() => _canShowNoShow = true);
         _showNoShowAvailableSnackBar();
-        _timerPulseController.duration =
-        const Duration(milliseconds: 500);
+        _timerPulseController.duration = const Duration(milliseconds: 500);
         _timerPulseController.repeat(reverse: true);
       }
     });
@@ -204,38 +252,29 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
   }
 
   // ════════════════════════════════════════════════════════════
-  // ✅ PASSENGER HELPERS — name, initial, avatar
+  // PASSENGER HELPERS
   // ════════════════════════════════════════════════════════════
 
-  /// Full display name, resolved from multiple possible keys.
   String get _passengerName {
     final direct = widget.passenger['name']?.toString() ?? '';
     if (direct.isNotEmpty) return direct;
     final first = widget.passenger['firstName']?.toString()
-        ?? widget.passenger['first_name']?.toString()  ?? '';
+        ?? widget.passenger['first_name']?.toString() ?? '';
     final last  = widget.passenger['lastName']?.toString()
-        ?? widget.passenger['last_name']?.toString()   ?? '';
+        ?? widget.passenger['last_name']?.toString()  ?? '';
     final full  = '$first $last'.trim();
     return full.isNotEmpty ? full : 'Passenger';
   }
 
-  /// First character of the passenger's first name, uppercased.
-  /// Prefers `firstName` / `first_name` keys so we always get
-  /// the first name initial rather than the last name.
-  /// Falls back to the full name initial, then 'P'.
   String get _passengerInitial {
     final firstName = widget.passenger['firstName']?.toString().trim()
-        ?? widget.passenger['first_name']?.toString().trim()
-        ?? '';
+        ?? widget.passenger['first_name']?.toString().trim() ?? '';
     if (firstName.isNotEmpty) return firstName[0].toUpperCase();
     final name = _passengerName.trimLeft();
     if (name.isNotEmpty) return name[0].toUpperCase();
     return 'P';
   }
 
-  /// Avatar URL — validated to be a real http/https address.
-  /// Returns null when no valid URL is found so we never fire
-  /// a network request for an empty/relative string.
   String? get _passengerAvatarUrl {
     final candidates = [
       widget.passenger['avatar_url'],
@@ -246,9 +285,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     ];
     for (final c in candidates) {
       final url = c?.toString().trim() ?? '';
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        return url;
-      }
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
     }
     return null;
   }
@@ -270,19 +307,15 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
         final token      = await _getAccessToken();
         if (token.isEmpty) throw Exception('No access token available');
 
-        final response = await http
-            .post(
-          Uri.parse(
-              '$apiBaseUrl/driver/trips/${widget.tripId}/start'),
+        final response = await http.post(
+          Uri.parse('$apiBaseUrl/driver/trips/${widget.tripId}/start'),
           headers: {
             'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
+            'Content-Type':  'application/json',
           },
-        )
-            .timeout(
+        ).timeout(
           const Duration(seconds: 30),
-          onTimeout: () =>
-          throw TimeoutException('Request timed out after 30s'),
+          onTimeout: () => throw TimeoutException('Request timed out after 30s'),
         );
 
         if (response.statusCode == 200) {
@@ -315,14 +348,12 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
           final data = json.decode(response.body);
           if (mounted) {
             setState(() { _isStarting = false; _hasNavigated = false; });
-            _showErrorSnackBar(
-                data['message'] ?? 'Trip already started');
+            _showErrorSnackBar(data['message'] ?? 'Trip already started');
           }
           return;
 
         } else {
-          throw Exception(
-              'HTTP ${response.statusCode}: ${response.body}');
+          throw Exception('HTTP ${response.statusCode}: ${response.body}');
         }
 
       } on TimeoutException catch (e) {
@@ -381,40 +412,34 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color:        _kWarningLight,
-                borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.person_off,
-                color: _kWarning, size: 24),
+                color: _kWarningLight, borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.person_off, color: _kWarning, size: 24),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text('Report No-Show?',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           ),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-                'Are you sure the passenger did not show up?',
+            const Text('Are you sure the passenger did not show up?',
                 style: TextStyle(fontSize: 14)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                  color:        _kWarningLight,
+                  color: _kWarningLight,
                   borderRadius: BorderRadius.circular(8)),
               child: Row(children: [
-                const Icon(Icons.info_outline,
-                    color: _kWarning, size: 20),
+                const Icon(Icons.info_outline, color: _kWarning, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -451,20 +476,17 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       final apiBaseUrl = dotenv.env['API_BASE_URL'] ?? '';
       final token      = await _getAccessToken();
 
-      final response = await http
-          .post(
-        Uri.parse(
-            '$apiBaseUrl/driver/trips/${widget.tripId}/no-show'),
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/driver/trips/${widget.tripId}/no-show'),
         headers: {
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
+          'Content-Type':  'application/json',
         },
         body: json.encode({
           'waitingTime': _waitingSeconds,
           'reason':      'Passenger did not show up',
         }),
-      )
-          .timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         try {
@@ -474,7 +496,6 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
             'timestamp':   DateTime.now().toIso8601String(),
           });
         } catch (_) {}
-
         _showSuccessSnackBar('No-show reported. Trip canceled.');
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
@@ -488,19 +509,15 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
 
   Future<void> _callPassenger() async {
     final phone = widget.passenger['phone']?.toString()
-        ?? widget.passenger['phone_e164']?.toString()
-        ?? '';
+        ?? widget.passenger['phone_e164']?.toString() ?? '';
     if (phone.isEmpty) {
       _showErrorSnackBar('Passenger phone number not available');
       return;
     }
     final uri = Uri.parse('tel:$phone');
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        _showErrorSnackBar('Cannot launch phone dialer');
-      }
+      if (await canLaunchUrl(uri)) await launchUrl(uri);
+      else _showErrorSnackBar('Cannot launch phone dialer');
     } catch (_) {
       _showErrorSnackBar('Failed to make call');
     }
@@ -508,28 +525,19 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
 
   Future<void> _sendSMS() async {
     final phone = widget.passenger['phone']?.toString()
-        ?? widget.passenger['phone_e164']?.toString()
-        ?? '';
+        ?? widget.passenger['phone_e164']?.toString() ?? '';
     if (phone.isEmpty) {
       _showErrorSnackBar('Passenger phone number not available');
       return;
     }
-    final uri = Uri.parse(
-        'sms:$phone?body=I have arrived at the pickup location.');
+    final uri = Uri.parse('sms:$phone?body=I have arrived at the pickup location.');
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        _showErrorSnackBar('Cannot open SMS app');
-      }
+      if (await canLaunchUrl(uri)) await launchUrl(uri);
+      else _showErrorSnackBar('Cannot open SMS app');
     } catch (_) {
       _showErrorSnackBar('Failed to send SMS');
     }
   }
-
-  // ════════════════════════════════════════════════════════════
-  // ✅ CANCEL TRIP — calls API then pops to dashboard (root)
-  // ════════════════════════════════════════════════════════════
 
   Future<void> _cancelTrip() async {
     final reason = await showDialog<String>(
@@ -542,20 +550,17 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       final apiBaseUrl = dotenv.env['API_BASE_URL'] ?? '';
       final token      = await _getAccessToken();
 
-      final response = await http
-          .post(
-        Uri.parse(
-            '$apiBaseUrl/driver/trips/${widget.tripId}/cancel'),
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/driver/trips/${widget.tripId}/cancel'),
         headers: {
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
+          'Content-Type':  'application/json',
         },
         body: json.encode({
           'reason':      reason,
           'waitingTime': _waitingSeconds,
         }),
-      )
-          .timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         try {
@@ -566,11 +571,8 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
             'timestamp':  DateTime.now().toIso8601String(),
           });
         } catch (_) {}
-
         _showSuccessSnackBar('Trip canceled');
         await Future.delayed(const Duration(milliseconds: 800));
-
-        // ✅ Always pop all the way back to the root (dashboard)
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
       } else {
         throw Exception('HTTP ${response.statusCode}');
@@ -619,8 +621,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       ]),
       backgroundColor: _kWarning,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       duration: const Duration(seconds: 5),
     ));
   }
@@ -631,8 +632,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       content: Text(message),
       backgroundColor: _kError,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
@@ -642,8 +642,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       content: Text(message),
       backgroundColor: _kSuccess,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
@@ -655,7 +654,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
   void dispose() {
     _pulseController.dispose();
     _timerPulseController.dispose();
-    _slideController.dispose();
+    _sheetController.dispose();
     _mapController?.dispose();
     _waitingTimer?.cancel();
     super.dispose();
@@ -667,6 +666,11 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
 
   @override
   Widget build(BuildContext context) {
+    final double minFraction  =
+    (120 / MediaQuery.of(context).size.height).clamp(0.14, 0.20);
+    final double initFraction = 0.52;
+    final double maxFraction  = _canShowNoShow ? 0.80 : 0.72;
+
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
@@ -676,9 +680,8 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)),
-            title: const Text('Leave Screen?'),
-            content: const Text(
-                'You are waiting for the passenger. Go back?'),
+            title:   const Text('Leave Screen?'),
+            content: const Text('You are waiting for the passenger. Go back?'),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
@@ -689,36 +692,38 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
             ],
           ),
         );
-        if (shouldPop == true && context.mounted) {
-          Navigator.of(context).pop();
-        }
+        if (shouldPop == true && context.mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
         body: Stack(
           children: [
-            // ── MAP ──────────────────────────────────────────
-            GoogleMap(
-              initialCameraPosition:
-              CameraPosition(target: _pickupLocation, zoom: 15),
-              markers:                _markers,
-              myLocationEnabled:      true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled:    false,
-              mapToolbarEnabled:      false,
-              compassEnabled:         false,
-              onMapCreated:           (c) => _mapController = c,
+
+            // ── FULL-SCREEN MAP ────────────────────────────────
+            Positioned.fill(
+              child: GoogleMap(
+                initialCameraPosition:
+                CameraPosition(target: _pickupLocation, zoom: 15.5),
+                markers:                 _markers,
+                myLocationEnabled:       false,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled:     false,
+                mapToolbarEnabled:       false,
+                compassEnabled:          false,
+                buildingsEnabled:        true,
+                onMapCreated:            (c) => _mapController = c,
+              ),
             ),
 
-            // ── TOP GRADIENT SCRIM ────────────────────────────
+            // ── TOP GRADIENT SCRIM ─────────────────────────────
             Positioned(
               top: 0, left: 0, right: 0, height: 180,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end:   Alignment.bottomCenter,
+                    begin:  Alignment.topCenter,
+                    end:    Alignment.bottomCenter,
                     colors: [
-                      Colors.white.withOpacity(0.85),
+                      Colors.white.withOpacity(0.88),
                       Colors.transparent,
                     ],
                   ),
@@ -726,15 +731,14 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
               ),
             ),
 
-            // ── TOP BAR ──────────────────────────────────────
+            // ── TOP BAR ───────────────────────────────────────
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
                 child: Row(children: [
-                  _TopBarBtn(
-                      icon: Icons.support_agent_rounded, onTap: () {}),
+                  _TopBarBtn(icon: Icons.support_agent_rounded, onTap: () {}),
                   const Spacer(),
-                  // Waiting timer pill
                   AnimatedBuilder(
                     animation: _pulseAnimation,
                     builder: (_, __) => Transform.scale(
@@ -747,9 +751,9 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                           borderRadius: BorderRadius.circular(50),
                           boxShadow: [
                             BoxShadow(
-                              color: _getTimerColor().withOpacity(0.4),
+                              color:      _getTimerColor().withOpacity(0.40),
                               blurRadius: 12,
-                              offset: const Offset(0, 4),
+                              offset:     const Offset(0, 4),
                             ),
                           ],
                         ),
@@ -777,12 +781,37 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
               ),
             ),
 
-            // ── BOTTOM SHEET ──────────────────────────────────
+            // ── RE-CENTER FAB ──────────────────────────────────
             Positioned(
-              left: 0, right: 0, bottom: 0,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: _BottomSheet(
+              right:  16,
+              bottom: MediaQuery.of(context).size.height * initFraction + 16,
+              child: FloatingActionButton.small(
+                heroTag:         'recenter_fab',
+                backgroundColor: Colors.white,
+                elevation:       4,
+                onPressed: () {
+                  _mapController?.animateCamera(
+                    CameraUpdate.newCameraPosition(
+                      CameraPosition(target: _pickupLocation, zoom: 15.5),
+                    ),
+                  );
+                },
+                child: const Icon(Icons.my_location_rounded,
+                    color: Colors.black87),
+              ),
+            ),
+
+            // ── DRAGGABLE BOTTOM SHEET ─────────────────────────
+            DraggableScrollableSheet(
+              controller:       _sheetController,
+              initialChildSize: initFraction,
+              minChildSize:     minFraction,
+              maxChildSize:     maxFraction,
+              snap:             true,
+              snapSizes:        [minFraction, initFraction, maxFraction],
+              builder: (context, scrollController) {
+                return _SheetContent(
+                  scrollController: scrollController,
                   passengerName:    _passengerName,
                   passengerInitial: _passengerInitial,
                   passengerAvatar:  _passengerAvatarUrl,
@@ -798,8 +827,8 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                   onNoShow:         _handleNoShow,
                   onCall:           _callPassenger,
                   onSMS:            _sendSMS,
-                ),
-              ),
+                );
+              },
             ),
           ],
         ),
@@ -815,7 +844,6 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
 class _TopBarBtn extends StatelessWidget {
   final IconData     icon;
   final VoidCallback onTap;
-
   const _TopBarBtn({required this.icon, required this.onTap});
 
   @override
@@ -828,10 +856,7 @@ class _TopBarBtn extends StatelessWidget {
           color: _kBgWhite,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(
-                color:      _kShadow,
-                blurRadius: 12,
-                offset:     const Offset(0, 4))
+            BoxShadow(color: _kShadow, blurRadius: 12, offset: const Offset(0, 4))
           ],
         ),
         child: Icon(icon, size: 22, color: Colors.black87),
@@ -841,27 +866,29 @@ class _TopBarBtn extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════════════════
-// BOTTOM SHEET WIDGET
+// SHEET CONTENT
 // ════════════════════════════════════════════════════════════════
 
-class _BottomSheet extends StatelessWidget {
-  final String  passengerName;
-  final String  passengerInitial; // ✅ first-name initial passed in
-  final String? passengerAvatar;
-  final int     waitingSeconds;
-  final String  pickupAddress;
-  final String  dropoffAddress;
-  final bool    canShowNoShow;
-  final bool    isStarting;
-  final bool    isCanceling;
+class _SheetContent extends StatelessWidget {
+  final ScrollController     scrollController;
+  final String               passengerName;
+  final String               passengerInitial;
+  final String?              passengerAvatar;
+  final int                  waitingSeconds;
+  final String               pickupAddress;
+  final String               dropoffAddress;
+  final bool                 canShowNoShow;
+  final bool                 isStarting;
+  final bool                 isCanceling;
   final String Function(int) formatWaiting;
-  final VoidCallback onStartTrip;
-  final VoidCallback onCancel;
-  final VoidCallback onNoShow;
-  final VoidCallback onCall;
-  final VoidCallback onSMS;
+  final VoidCallback         onStartTrip;
+  final VoidCallback         onCancel;
+  final VoidCallback         onNoShow;
+  final VoidCallback         onCall;
+  final VoidCallback         onSMS;
 
-  const _BottomSheet({
+  const _SheetContent({
+    required this.scrollController,
     required this.passengerName,
     required this.passengerInitial,
     required this.passengerAvatar,
@@ -883,34 +910,36 @@ class _BottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: _kBgWhite,
+        color:        _kBgWhite,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
-          BoxShadow(
-              color:      _kShadow,
-              blurRadius: 24,
-              offset:     Offset(0, -6))
+          BoxShadow(color: _kShadow, blurRadius: 24, offset: Offset(0, -6))
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: ListView(
+        controller: scrollController,
+        padding:    EdgeInsets.zero,
+        physics:    const ClampingScrollPhysics(),
         children: [
-          // Handle
-          Container(
-            margin:    const EdgeInsets.only(top: 12),
-            width: 40, height: 4,
-            decoration: BoxDecoration(
-                color:        _kBorder,
-                borderRadius: BorderRadius.circular(2)),
+          // drag handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                  color: _kBorder, borderRadius: BorderRadius.circular(2)),
+            ),
           ),
 
           Padding(
             padding: EdgeInsets.fromLTRB(
-                20, 16, 20,
-                MediaQuery.of(context).padding.bottom + 20),
+                20, 12, 20,
+                MediaQuery.of(context).padding.bottom + 24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── STATUS BANNER ─────────────────────────────
+
+                // ── STATUS BANNER ──────────────────────────────
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
@@ -931,10 +960,8 @@ class _BottomSheet extends StatelessWidget {
                         color:        Colors.black.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                          Icons.person_pin_circle_rounded,
-                          color: Colors.black,
-                          size: 26),
+                      child: const Icon(Icons.person_pin_circle_rounded,
+                          color: Colors.black, size: 26),
                     ),
                     const SizedBox(width: 14),
                     const Expanded(
@@ -943,14 +970,11 @@ class _BottomSheet extends StatelessWidget {
                         children: [
                           Text('Waiting for Passenger',
                               style: TextStyle(
-                                  fontSize:   17,
-                                  fontWeight: FontWeight.w800,
-                                  color:      Colors.black)),
+                                  fontSize: 17, fontWeight: FontWeight.w800,
+                                  color: Colors.black)),
                           SizedBox(height: 3),
                           Text('Stay at the pickup point',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color:    Colors.black54)),
+                              style: TextStyle(fontSize: 13, color: Colors.black54)),
                         ],
                       ),
                     ),
@@ -959,18 +983,14 @@ class _BottomSheet extends StatelessWidget {
 
                 const SizedBox(height: 18),
 
-                // ── PASSENGER ROW ─────────────────────────────
+                // ── PASSENGER ROW ──────────────────────────────
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                      color:        _kBgLight,
-                      borderRadius: BorderRadius.circular(16)),
+                      color: _kBgLight, borderRadius: BorderRadius.circular(16)),
                   child: Row(children: [
-                    // ✅ Avatar: photo → first-letter fallback
                     _PassengerAvatar(
-                      initial:   passengerInitial,
-                      avatarUrl: passengerAvatar,
-                    ),
+                        initial: passengerInitial, avatarUrl: passengerAvatar),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -978,80 +998,62 @@ class _BottomSheet extends StatelessWidget {
                         children: [
                           Text(passengerName,
                               style: const TextStyle(
-                                  fontSize:   17,
-                                  fontWeight: FontWeight.w700)),
+                                  fontSize: 17, fontWeight: FontWeight.w700)),
                           Text('Your passenger',
                               style: TextStyle(
-                                  fontSize: 13,
-                                  color:    _kTextSecondary)),
+                                  fontSize: 13, color: _kTextSecondary)),
                         ],
                       ),
                     ),
                     _SmallBtn(
-                      icon:      Icons.call_rounded,
-                      iconColor: _kSuccess,
-                      bgColor:   _kSuccessLight,
-                      onTap:     onCall,
-                    ),
+                        icon: Icons.call_rounded, iconColor: _kSuccess,
+                        bgColor: _kSuccessLight, onTap: onCall),
                     const SizedBox(width: 8),
                     _SmallBtn(
-                      icon:      Icons.sms_rounded,
-                      iconColor: _kInfo,
-                      bgColor:   const Color(0xFFEFF6FF),
-                      onTap:     onSMS,
-                    ),
+                        icon: Icons.sms_rounded, iconColor: _kInfo,
+                        bgColor: const Color(0xFFEFF6FF), onTap: onSMS),
                   ]),
                 ),
 
                 const SizedBox(height: 14),
 
-                // ── ROUTE SUMMARY ─────────────────────────────
-                _RouteSummary(
-                    pickup: pickupAddress, dropoff: dropoffAddress),
+                // ── ROUTE SUMMARY ──────────────────────────────
+                _RouteSummary(pickup: pickupAddress, dropoff: dropoffAddress),
 
                 const SizedBox(height: 20),
 
-                // ── NO-SHOW (after 5 min) ─────────────────────
+                // ── NO-SHOW BUTTON (after 5 min) ───────────────
                 if (canShowNoShow) ...[
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: OutlinedButton.icon(
                       onPressed: onNoShow,
-                      icon: const Icon(Icons.person_off_rounded,
-                          color: _kWarning),
-                      label: const Text(
-                          'Report Passenger No-Show',
+                      icon: const Icon(Icons.person_off_rounded, color: _kWarning),
+                      label: const Text('Report Passenger No-Show',
                           style: TextStyle(
-                              color:      _kWarning,
-                              fontWeight: FontWeight.w700,
-                              fontSize:   15)),
+                              color: _kWarning, fontWeight: FontWeight.w700,
+                              fontSize: 15)),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                            color: _kWarning, width: 2),
+                        side:  const BorderSide(color: _kWarning, width: 2),
                         shape: RoundedRectangleBorder(
-                            borderRadius:
-                            BorderRadius.circular(14)),
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
                   ),
                   const SizedBox(height: 14),
                 ],
 
-                // ── CANCEL / START ROW ────────────────────────
+                // ── CANCEL / START ─────────────────────────────
                 Row(children: [
-                  // Cancel → returns to dashboard
                   Expanded(
                     child: OutlinedButton(
                       onPressed: isCanceling ? null : onCancel,
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 16),
-                        side: const BorderSide(
-                            color: _kError, width: 2),
-                        shape: RoundedRectangleBorder(
-                            borderRadius:
-                            BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side:    const BorderSide(color: _kError, width: 2),
+                        shape:   RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                       child: isCanceling
                           ? const SizedBox(
@@ -1059,30 +1061,25 @@ class _BottomSheet extends StatelessWidget {
                           child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor:
-                              AlwaysStoppedAnimation(
-                                  _kError)))
+                              AlwaysStoppedAnimation(_kError)))
                           : const Text('Cancel',
                           style: TextStyle(
-                              color:      _kError,
-                              fontWeight: FontWeight.w700)),
+                              color: _kError, fontWeight: FontWeight.w700)),
                     ),
                   ),
                   const SizedBox(width: 14),
-
-                  // Start Trip
                   Expanded(
                     flex: 2,
                     child: Container(
                       height: 54,
                       decoration: BoxDecoration(
-                        gradient: _kGoldGradient,
+                        gradient:     _kGoldGradient,
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryGold
-                                .withOpacity(0.3),
+                            color:      AppColors.primaryGold.withOpacity(0.3),
                             blurRadius: 12,
-                            offset: const Offset(0, 4),
+                            offset:     const Offset(0, 4),
                           ),
                         ],
                       ),
@@ -1093,26 +1090,21 @@ class _BottomSheet extends StatelessWidget {
                             width: 18, height: 18,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                AlwaysStoppedAnimation(
+                                valueColor: AlwaysStoppedAnimation(
                                     Colors.black)))
-                            : const Icon(
-                            Icons.play_arrow_rounded,
-                            color: Colors.black,
-                            size: 24),
+                            : const Icon(Icons.play_arrow_rounded,
+                            color: Colors.black, size: 24),
                         label: Text(
                           isStarting ? 'Starting…' : 'Start Trip',
                           style: const TextStyle(
-                              fontSize:   16,
-                              fontWeight: FontWeight.w800,
-                              color:      Colors.black),
+                              fontSize: 16, fontWeight: FontWeight.w800,
+                              color: Colors.black),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor:     Colors.transparent,
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14)),
                         ),
                       ),
                     ),
@@ -1128,13 +1120,11 @@ class _BottomSheet extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════════════════
-// ✅ PASSENGER AVATAR WIDGET
-//    Shows the network photo when a valid URL is available.
-//    Falls back to a gold circle with the first-name initial.
+// PASSENGER AVATAR
 // ════════════════════════════════════════════════════════════════
 
 class _PassengerAvatar extends StatelessWidget {
-  final String  initial;   // pre-computed first-name initial
+  final String  initial;
   final String? avatarUrl;
   final double  size;
 
@@ -1144,7 +1134,6 @@ class _PassengerAvatar extends StatelessWidget {
     this.size = 52,
   });
 
-  /// Only treat the URL as valid when it is a proper http/https address.
   bool get _hasValidPhoto {
     if (avatarUrl == null) return false;
     final url = avatarUrl!.trim();
@@ -1154,10 +1143,9 @@ class _PassengerAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width:  size,
-      height: size,
+      width: size, height: size,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        shape:  BoxShape.circle,
         border: Border.all(
             color: AppColors.primaryGold.withOpacity(0.5), width: 2),
       ),
@@ -1168,45 +1156,33 @@ class _PassengerAvatar extends StatelessWidget {
           width:       size,
           height:      size,
           fit:         BoxFit.cover,
-          // Show the initial while the image loads
           placeholder: (_, __) =>
               _Fallback(initial: initial, size: size),
-          // Show the initial if the load fails
           errorWidget: (_, __, ___) =>
               _Fallback(initial: initial, size: size),
         )
-        // No valid URL — show initial immediately, no flicker
             : _Fallback(initial: initial, size: size),
       ),
     );
   }
 }
 
-// ════════════════════════════════════════════════════════════════
-// AVATAR FALLBACK — gold circle with the first-name initial
-// ════════════════════════════════════════════════════════════════
-
 class _Fallback extends StatelessWidget {
   final String initial;
   final double size;
-
   const _Fallback({required this.initial, required this.size});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width:     size,
-      height:    size,
+      width: size, height: size,
       color:     AppColors.primaryGold,
       alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize:   size * 0.42,
-          fontWeight: FontWeight.w800,
-          color:      Colors.black,
-        ),
-      ),
+      child: Text(initial,
+          style: TextStyle(
+              fontSize:   size * 0.42,
+              fontWeight: FontWeight.w800,
+              color:      Colors.black)),
     );
   }
 }
@@ -1218,7 +1194,6 @@ class _Fallback extends StatelessWidget {
 class _RouteSummary extends StatelessWidget {
   final String pickup;
   final String dropoff;
-
   const _RouteSummary({required this.pickup, required this.dropoff});
 
   @override
@@ -1226,10 +1201,8 @@ class _RouteSummary extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-          color:        _kBgLight,
-          borderRadius: BorderRadius.circular(14)),
+          color: _kBgLight, borderRadius: BorderRadius.circular(14)),
       child: Row(children: [
-        // Route dots + connector line
         Column(children: [
           Container(
               width: 9, height: 9,
@@ -1256,7 +1229,7 @@ class _RouteSummary extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AddrLine(label: 'Pickup',    address: pickup),
+              _AddrLine(label: 'Pickup',   address: pickup),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 6),
                 child: Divider(height: 1, color: _kBorder),
@@ -1273,7 +1246,6 @@ class _RouteSummary extends StatelessWidget {
 class _AddrLine extends StatelessWidget {
   final String label;
   final String address;
-
   const _AddrLine({required this.label, required this.address});
 
   @override
@@ -1282,16 +1254,11 @@ class _AddrLine extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
-                fontSize: 11, color: _kTextSecondary)),
+            style: const TextStyle(fontSize: 11, color: _kTextSecondary)),
         Text(
-          address.length > 40
-              ? '${address.substring(0, 40)}…'
-              : address,
+          address.length > 40 ? '${address.substring(0, 40)}…' : address,
           style: const TextStyle(
-              fontSize:   13,
-              fontWeight: FontWeight.w600,
-              color:      Colors.black87),
+              fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -1309,7 +1276,6 @@ class _SmallBtn extends StatelessWidget {
   final Color        iconColor;
   final Color        bgColor;
   final VoidCallback onTap;
-
   const _SmallBtn({
     required this.icon,
     required this.iconColor,
@@ -1324,8 +1290,7 @@ class _SmallBtn extends StatelessWidget {
       child: Container(
         width: 42, height: 42,
         decoration: BoxDecoration(
-            color:        bgColor,
-            borderRadius: BorderRadius.circular(11)),
+            color: bgColor, borderRadius: BorderRadius.circular(11)),
         child: Icon(icon, color: iconColor, size: 20),
       ),
     );
@@ -1354,21 +1319,17 @@ class _CancelDialogState extends State<_CancelDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-              color:        _kErrorLight,
-              borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.cancel_rounded,
-              color: _kError, size: 24),
+              color: _kErrorLight, borderRadius: BorderRadius.circular(8)),
+          child: const Icon(Icons.cancel_rounded, color: _kError, size: 24),
         ),
         const SizedBox(width: 12),
         const Text('Cancel Trip?',
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w700)),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       ]),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1378,13 +1339,12 @@ class _CancelDialogState extends State<_CancelDialog> {
               style: TextStyle(fontSize: 14)),
           const SizedBox(height: 12),
           ..._reasons.map((r) => RadioListTile<String>(
-            title: Text(r,
-                style: const TextStyle(fontSize: 14)),
-            value:       r,
-            groupValue:  _selected,
-            dense:       true,
+            title:      Text(r, style: const TextStyle(fontSize: 14)),
+            value:      r,
+            groupValue: _selected,
+            dense:      true,
             activeColor: AppColors.primaryGold,
-            onChanged: (v) => setState(() => _selected = v),
+            onChanged:  (v) => setState(() => _selected = v),
           )),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path/path.dart';
@@ -471,9 +472,51 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> validateCoupon({
+    required String token,
+    required String code,
+    required double fareEstimate,
+  }) async {
+    debugPrint('\n🎟️ [VALIDATE COUPON] Code: $code | Fare: $fareEstimate XAF');
+    debugPrint('URL: $baseUrl/promotions/validate');
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/promotions/validate'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type':  'application/json',
+        },
+        body: json.encode({
+          'code':          code,
+          'fare_estimate': fareEstimate,
+        }),
+      ).timeout(
+        Duration(milliseconds: int.parse(apiTimeout)),
+        onTimeout: () {
+          debugPrint('⏱️ [VALIDATE COUPON] Timed out');
+          throw Exception('Request timeout. Please try again.');
+        },
+      );
+
+      debugPrint('✅ [VALIDATE COUPON] Status: ${response.statusCode}');
+      debugPrint('Body: ${response.body}');
+
+      // _handleResponse throws on 4xx/5xx — caller catches and shows error
+      return _handleResponse(response);
+    } on SocketException {
+      debugPrint('❌ [VALIDATE COUPON] No internet');
+      throw Exception('No internet connection. Please check your network.');
+    } catch (e) {
+      debugPrint('❌ [VALIDATE COUPON ERROR] $e');
+      rethrow;
+    }
+  }
+
+
+
   // ==================== TRIPS ====================
 
-  /// Create a new trip
   static Future<Map<String, dynamic>> createTrip({
     required String accessToken,
     required double pickupLat,
@@ -483,78 +526,68 @@ class ApiService {
     required double dropoffLng,
     required String dropoffAddress,
     required String paymentMethod,
+    String? vehicleType,   // ← NEW
+    String? promoCode,     // ← NEW
   }) async {
-    print('🚕 [CREATE TRIP] Starting trip creation...');
+    debugPrint('🚕 [CREATE TRIP] Starting trip creation...');
+    debugPrint('Pickup: ($pickupLat, $pickupLng) - $pickupAddress');
+    debugPrint('Dropoff: ($dropoffLat, $dropoffLng) - $dropoffAddress');
+    debugPrint('Payment: $paymentMethod | Vehicle: $vehicleType | Promo: $promoCode');
 
-    final url = '$baseUrl/trips';
-    print('URL: $url');
-    print('Pickup: ($pickupLat, $pickupLng) - $pickupAddress');
-    print('Dropoff: ($dropoffLat, $dropoffLng) - $dropoffAddress');
-    print('Payment Method: $paymentMethod');
-
-    final payload = {
-      'pickupLat': pickupLat,
-      'pickupLng': pickupLng,
-      'pickupAddress': pickupAddress,
-      'dropoffLat': dropoffLat,
-      'dropoffLng': dropoffLng,
-      'dropoffAddress': dropoffAddress,
-      'payment_method': paymentMethod,
+    final payload = <String, dynamic>{
+      'pickupLat':       pickupLat,
+      'pickupLng':       pickupLng,
+      'pickupAddress':   pickupAddress,
+      'dropoffLat':      dropoffLat,
+      'dropoffLng':      dropoffLng,
+      'dropoffAddress':  dropoffAddress,
+      'payment_method':  paymentMethod,
+      if (vehicleType != null && vehicleType.isNotEmpty)
+        'vehicle_type': vehicleType,
+      if (promoCode != null && promoCode.isNotEmpty)
+        'promo_code': promoCode,
     };
-
-    print('Request Payload: ${jsonEncode(payload)}');
 
     try {
       final response = await http.post(
-        Uri.parse(url),
+        Uri.parse('$baseUrl/trips'),
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type':  'application/json',
           'Authorization': 'Bearer $accessToken',
         },
         body: jsonEncode(payload),
+      ).timeout(
+        Duration(milliseconds: int.parse(apiTimeout)),
+        onTimeout: () {
+          debugPrint('⏱️ [CREATE TRIP] Timed out');
+          throw Exception('Request timeout. Please check your connection.');
+        },
       );
 
-      print('✅ [CREATE TRIP] Request completed');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('📥 [API RESPONSE]');
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('✅ [CREATE TRIP] Status: ${response.statusCode}');
+      debugPrint('Body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
-      // Handle 200 responses with error flag
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Check if backend returned an error
         if (data['error'] == true) {
-          print('⚠️ [BACKEND ERROR] ${data['message']}');
-          // Throw exception with backend message
           throw Exception(data['message'] ?? 'Request failed');
         }
-
-        // Success
         return data;
       }
 
-      // Handle 4xx and 5xx errors
       if (response.statusCode >= 400 && response.statusCode < 500) {
-        print('❌ [CLIENT ERROR] ${response.statusCode}');
-        final errorMessage = data['message'] ?? data['error'] ?? 'Bad request';
-        throw Exception(errorMessage);
+        throw Exception(data['message'] ?? data['error'] ?? 'Bad request');
       }
 
       if (response.statusCode >= 500) {
-        print('❌ [SERVER ERROR] Internal server error');
-        final errorMessage = data['message'] ?? data['error'] ?? 'Server error. Please try again later.';
-        throw Exception(errorMessage);
+        throw Exception(data['message'] ?? 'Server error. Please try again later.');
       }
 
-      // Unexpected status code
       throw Exception('Unexpected error occurred');
-
     } catch (e) {
-      print('❌ [CREATE TRIP ERROR] $e');
-      rethrow; // Re-throw to let the caller handle it
+      debugPrint('❌ [CREATE TRIP ERROR] $e');
+      rethrow;
     }
   }
 
@@ -1464,4 +1497,126 @@ class ApiService {
       rethrow;
     }
   }
+  // ==================== CAMPAY PAYMENTS ====================
+
+  /// POST /api/payments/initiate
+  /// Initiates a CamPay mobile money collection for any WeGo vertical.
+  /// Phone should be 9 digits e.g. '670000000' (no country code).
+  static Future<Map<String, dynamic>> initiatePayment({
+    required String accessToken,
+    required String vertical,    // 'trip' | 'delivery' | 'service_request' | 'rental'
+    required String verticalId,  // trip ID / delivery ID / etc.
+    required String phone,       // 9-digit number e.g. '670000000'
+  }) async {
+    debugPrint('\n💳 [INITIATE PAYMENT] vertical=$vertical id=$verticalId phone=$phone');
+    debugPrint('URL: $baseUrl/api/payments/initiate');
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/payments/initiate'),
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: json.encode({
+          'vertical':    vertical,
+          'vertical_id': verticalId,
+          'phone':       phone,
+        }),
+      ).timeout(
+        Duration(milliseconds: int.parse(apiTimeout)),
+        onTimeout: () => throw Exception('Payment request timed out. Please try again.'),
+      );
+      debugPrint('✅ [INITIATE PAYMENT] Status: ${response.statusCode}');
+      debugPrint('Body: ${response.body}');
+      // Parse manually — CamPay error codes (ER101, ER301 etc.) come back
+      // as 400/503 with a meaningful message we need to surface to Flutter.
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return data;
+      }
+      throw Exception(data['message'] ?? 'Payment initiation failed');
+    } on SocketException {
+      throw Exception('No internet connection. Please check your network.');
+    } catch (e) {
+      debugPrint('❌ [INITIATE PAYMENT ERROR] $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/payments/:campayRef/status
+  /// Polls the current status of a pending payment.
+  /// Used as a fallback when the socket event is missed
+  /// (app backgrounded, brief disconnect, etc.).
+  static Future<Map<String, dynamic>> checkPaymentStatus({
+    required String accessToken,
+    required String campayRef,
+  }) async {
+    debugPrint('\n🔄 [CHECK PAYMENT STATUS] campayRef=$campayRef');
+    debugPrint('URL: $baseUrl/api/payments/$campayRef/status');
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/payments/$campayRef/status'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type':  'application/json',
+        },
+      ).timeout(
+        Duration(milliseconds: int.parse(apiTimeout)),
+        onTimeout: () => throw Exception('Status check timed out.'),
+      );
+      debugPrint('✅ [CHECK PAYMENT STATUS] Status: ${response.statusCode}');
+      debugPrint('Body: ${response.body}');
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return data;
+      }
+      throw Exception(data['message'] ?? 'Could not check payment status');
+    } on SocketException {
+      throw Exception('No internet connection.');
+    } catch (e) {
+      debugPrint('❌ [CHECK PAYMENT STATUS ERROR] $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/payments/history
+  /// Returns paginated WegoPayment records for the authenticated user.
+  static Future<Map<String, dynamic>> getPaymentHistory({
+    required String accessToken,
+    int     page     = 1,
+    int     limit    = 20,
+    String? vertical,
+    String? status,
+  }) async {
+    debugPrint('\n📋 [GET PAYMENT HISTORY] page=$page limit=$limit');
+    try {
+      final params = <String, String>{
+        'page':  page.toString(),
+        'limit': limit.toString(),
+        if (vertical != null) 'vertical': vertical,
+        if (status   != null) 'status':   status,
+      };
+      final uri = Uri.parse('$baseUrl/api/payments/history')
+          .replace(queryParameters: params);
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type':  'application/json',
+        },
+      ).timeout(Duration(milliseconds: int.parse(apiTimeout)));
+      return _handleResponse(response);
+    } catch (e) {
+      debugPrint('❌ [GET PAYMENT HISTORY ERROR] $e');
+      return {
+        'success': true,
+        'data':    [],
+        'meta': {
+          'total': 0, 'page': page,
+          'limit': limit, 'totalPages': 0,
+        },
+      };
+    }
+  }
+
 }

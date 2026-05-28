@@ -37,6 +37,20 @@ class ServicesProvider with ChangeNotifier {
   bool get categoriesLoading => _categoriesLoading;
   String? get categoriesError => _categoriesError;
 
+  void reset() {
+    debugPrint('🔄 [SERVICES_PROVIDER] Resetting all state...');
+    clearAllState();
+    clearAllErrors();
+
+    // Reset pagination
+    _currentPage     = 1;
+    _totalPages      = 1;
+    _hasMoreListings = true;
+
+    debugPrint('✅ [SERVICES_PROVIDER] Reset complete');
+  }
+
+
   /// Fetch all categories with subcategories
   Future<void> fetchCategories() async {
     _categoriesLoading = true;
@@ -1081,16 +1095,48 @@ class ServicesProvider with ChangeNotifier {
       final response = await _apiService.getRatingsForListing(listingId);
 
       if (response['success'] == true) {
-        final data = response['data']['ratings'] as List;
-        _ratings = data.map((json) => ServiceRating.fromJson(json)).toList();
+        // ✅ FIXED: Handle both direct array and wrapped response
+        // Backend returns: { success: true, data: [...], statistics: {...} }
+        // NOT: { success: true, data: { ratings: [...] } }
 
-        print('✅ [PROVIDER] Loaded ${_ratings.length} ratings');
+        final data = response['data'];
+
+        if (data is List) {
+          // Direct array response
+          _ratings = data.map((json) {
+            try {
+              return ServiceRating.fromJson(json as Map<String, dynamic>);
+            } catch (e) {
+              debugPrint('❌ [PROVIDER] Error parsing rating: $e');
+              debugPrint('❌ [PROVIDER] Rating JSON: $json');
+              return null;
+            }
+          }).whereType<ServiceRating>().toList();
+        } else if (data is Map<String, dynamic>) {
+          // Wrapped response with ratings key
+          final rawList = data['ratings'] as List? ?? [];
+          _ratings = rawList.map((json) {
+            try {
+              return ServiceRating.fromJson(json as Map<String, dynamic>);
+            } catch (e) {
+              debugPrint('❌ [PROVIDER] Error parsing rating: $e');
+              return null;
+            }
+          }).whereType<ServiceRating>().toList();
+        } else {
+          _ratings = [];
+          debugPrint('⚠️ [PROVIDER] Unexpected ratings response format');
+        }
+
+        debugPrint('✅ [PROVIDER] Loaded ${_ratings.length} ratings');
       } else {
         _ratingsError = response['message'] ?? 'Failed to load ratings';
+        _ratings = [];
       }
     } catch (e) {
       _ratingsError = e.toString();
-      print('❌ [PROVIDER] Ratings error: $e');
+      _ratings = [];
+      debugPrint('❌ [PROVIDER] Ratings error: $e');
     } finally {
       _ratingsLoading = false;
       notifyListeners();
@@ -1185,7 +1231,7 @@ class ServicesProvider with ChangeNotifier {
     required String disputeType,
     required String description,
     required String resolutionRequested,
-    List<File>? evidencePhotos,
+    List<File>? evidencePhotos, double? refundAmount,
   }) async {
     _disputesLoading = true;
     _disputesError = null;

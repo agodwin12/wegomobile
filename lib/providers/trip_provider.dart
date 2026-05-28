@@ -292,6 +292,31 @@ class TripProvider with ChangeNotifier {
     }
   }
 
+  void reset() {
+    debugPrint('🔄 [TRIP_PROVIDER] Resetting all state...');
+
+    // Cancel all stream subscriptions
+    _driverAssignedSub?.cancel();
+    _statusChangedSub?.cancel();
+    _canceledSub?.cancel();
+    _noDriversSub?.cancel();
+    _driverLocationSub?.cancel();
+    _errorSub?.cancel();
+
+    // Clear all state
+    _status         = TripStatus.idle;
+    _currentTrip    = null;
+    _driver         = null;
+    _driverLocation = null;
+    _errorMessage   = null;
+    _isLoading      = false;
+    onDriverAssigned = null;
+
+    notifyListeners();
+    debugPrint('✅ [TRIP_PROVIDER] Reset complete');
+  }
+
+
   // ═══════════════════════════════════════════════════════════════════════
   // SUBMIT RATING
   // ═══════════════════════════════════════════════════════════════════════

@@ -910,13 +910,13 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   }
 
   void _editListing(ServiceListing listing) {
-    // TODO: Navigate to edit screen with listing data
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit listing #${listing.id}'),
-        backgroundColor: AppColors.info,
-      ),
-    );
+    Navigator.pushNamed(
+      context,
+      '/services/edit-listing',
+      arguments: {'listing': listing},
+    ).then((result) {
+      if (result == true) _loadMyListings(); // Refresh if updated
+    });
   }
 
   void _deleteListing(ServiceListing listing) {

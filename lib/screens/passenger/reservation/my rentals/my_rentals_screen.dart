@@ -37,27 +37,42 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
     super.dispose();
   }
 
-  /// Parse images from backend
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+
   List<dynamic> _parseImages(dynamic rawImages) {
     if (rawImages == null) return [];
-
     if (rawImages is String) {
       try {
         final decoded = json.decode(rawImages);
         if (decoded is List) return decoded;
-      } catch (e) {
-        debugPrint('Error parsing images: $e');
-      }
+      } catch (_) {}
       return [];
     } else if (rawImages is List) {
       return rawImages;
     }
-
     return [];
   }
 
-  /// Fetch user's rentals
-  /// Fetch user's rentals
+  String _getString(dynamic rental, List<String> keys, [String fallback = '']) {
+    for (final k in keys) {
+      if (rental[k] != null) return rental[k].toString();
+    }
+    return fallback;
+  }
+
+  DateTime _parseDate(dynamic rental, List<String> keys) {
+    for (final k in keys) {
+      if (rental[k] != null) {
+        try {
+          return DateTime.parse(rental[k].toString());
+        } catch (_) {}
+      }
+    }
+    return DateTime.now();
+  }
+
+  // ─── Data ────────────────────────────────────────────────────────────────────
+
   Future<void> _fetchUserRentals() async {
     setState(() => loading = true);
 
@@ -68,136 +83,81 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
 
     setState(() => loading = false);
 
-    if (response['success']) {
-      debugPrint('🔍 FULL RESPONSE: ${json.encode(response)}');
-
-      // ✅ FIX: Handle double-nested data structure with proper type checking
+    if (response['success'] == true) {
       final data = response['data'];
       List<dynamic> rentals = [];
 
       try {
-        // Check for double-nested structure
         if (data is Map) {
-          // First check if data itself has a 'data' key (double-nested)
           if (data['data'] != null) {
-            final innerData = data['data'];
-            if (innerData is Map && innerData['rentals'] != null) {
-              // ✅ FIXED: Ensure we're assigning a List
-              final rentalsData = innerData['rentals'];
-              if (rentalsData is List) {
-                rentals = rentalsData;
-              }
-            } else if (innerData is List) {
-              rentals = innerData;
+            final inner = data['data'];
+            if (inner is Map && inner['rentals'] is List) {
+              rentals = inner['rentals'];
+            } else if (inner is List) {
+              rentals = inner;
             }
-          }
-          // Fallback to direct 'rentals' key
-          else if (data['rentals'] != null) {
-            final rentalsData = data['rentals'];
-            if (rentalsData is List) {
-              rentals = rentalsData;
-            }
+          } else if (data['rentals'] is List) {
+            rentals = data['rentals'];
           }
         } else if (data is List) {
           rentals = data;
         }
       } catch (e) {
         debugPrint('❌ Error parsing rentals: $e');
-        rentals = [];
       }
 
-      debugPrint('✅ PARSED RENTALS COUNT: ${rentals.length}');
-
-      if (rentals.isNotEmpty) {
-        debugPrint('✅ FIRST RENTAL STATUS: ${rentals[0]['status']}');
-        debugPrint('✅ FIRST RENTAL VEHICLE: ${rentals[0]['vehicle'] != null ? "Found" : "Missing"}');
-      }
-
-      setState(() {
-        allRentals = rentals;
-      });
-
-      debugPrint('✅ Final allRentals count: ${allRentals.length}');
-      debugPrint('✅ Active rentals: ${activeRentals.length}');
-      debugPrint('✅ Past rentals: ${pastRentals.length}');
+      setState(() => allRentals = rentals);
     } else {
-      if (response['statusCode'] == 0) {
-        _showErrorDialog(
-          title: 'Connection Error',
-          message: 'Unable to connect. Please check your internet connection.',
-        );
-      } else {
-        _showErrorDialog(
-          title: 'Error ${response['statusCode']}',
-          message: response['error'] ?? 'Failed to load rentals',
-        );
-      }
+      _showErrorDialog(
+        title: response['statusCode'] == 0
+            ? 'Connection Error'
+            : 'Error ${response['statusCode']}',
+        message: response['statusCode'] == 0
+            ? 'Unable to connect. Please check your internet connection.'
+            : response['error'] ?? 'Failed to load rentals',
+      );
     }
   }
-  /// Get active rentals (PENDING, CONFIRMED)
-  List<dynamic> get activeRentals {
-    return allRentals
-        .where((rental) =>
-    rental['status'] == 'PENDING' || rental['status'] == 'CONFIRMED')
-        .toList();
-  }
 
-  /// Get past rentals (COMPLETED, CANCELLED)
-  List<dynamic> get pastRentals {
-    return allRentals
-        .where((rental) =>
-    rental['status'] == 'COMPLETED' || rental['status'] == 'CANCELLED')
-        .toList();
-  }
+  List<dynamic> get activeRentals => allRentals
+      .where((r) => r['status'] == 'PENDING' || r['status'] == 'CONFIRMED')
+      .toList();
 
-  /// Check if cancellation is allowed (24 hours before start)
+  List<dynamic> get pastRentals => allRentals
+      .where((r) => r['status'] == 'COMPLETED' || r['status'] == 'CANCELLED')
+      .toList();
+
   bool _canCancelRental(dynamic rental) {
     try {
       final status = rental['status'];
       if (status != 'PENDING' && status != 'CONFIRMED') return false;
-
-      final startDate = DateTime.parse(rental['startDate'] ?? rental['start_date']);
-      final now = DateTime.now();
-      final hoursUntilStart = startDate.difference(now).inHours;
-
-      return hoursUntilStart >= 24;
-    } catch (e) {
-      debugPrint('❌ Error in _canCancelRental: $e');
+      final start = _parseDate(rental, ['startDate', 'start_date']);
+      return start.difference(DateTime.now()).inHours >= 24;
+    } catch (_) {
       return false;
     }
   }
 
-  /// Show cancel confirmation dialog
+  // ─── Actions ─────────────────────────────────────────────────────────────────
+
   Future<void> _showCancelDialog(dynamic rental) async {
-    final TextEditingController reasonController = TextEditingController();
+    final start = _parseDate(rental, ['startDate', 'start_date']);
+    final hours = start.difference(DateTime.now()).inHours;
 
-    DateTime startDate;
-    try {
-      startDate = DateTime.parse(rental['startDate'] ?? rental['start_date']);
-    } catch (e) {
-      debugPrint('❌ Error parsing start date: $e');
-      _showErrorDialog(
-        title: 'Error',
-        message: 'Unable to process rental dates',
-      );
-      return;
-    }
-
-    final now = DateTime.now();
-    final hoursUntilStart = startDate.difference(now).inHours;
-
-    if (hoursUntilStart < 24) {
+    if (hours < 24) {
       _showErrorDialog(
         title: 'Cannot Cancel',
         message:
-        'Cancellation is only allowed 24 hours before the rental start date. Your rental starts in $hoursUntilStart hours.',
+        'Cancellation requires at least 24 hours notice. Your rental starts in $hours hours.',
       );
       return;
     }
 
+    final reasonController = TextEditingController();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: AppColors.backgroundWhite,
         contentPadding: const EdgeInsets.all(24),
@@ -214,18 +174,15 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                     color: AppColors.errorLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.cancel_outlined,
-                    color: AppColors.error,
-                    size: 28,
-                  ),
+                  child: const Icon(Icons.cancel_outlined,
+                      color: AppColors.error, size: 26),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 const Expanded(
                   child: Text(
                     'Cancel Rental?',
                     style: TextStyle(
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
@@ -237,101 +194,87 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
             const Text(
               'Please provide a reason for cancellation:',
               style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             TextField(
               controller: reasonController,
               maxLines: 3,
               maxLength: 500,
               decoration: InputDecoration(
                 hintText: 'e.g., Travel plans changed...',
-                hintStyle: const TextStyle(
-                  color: AppColors.textLight,
-                  fontSize: 14,
-                ),
+                hintStyle:
+                const TextStyle(color: AppColors.textLight, fontSize: 14),
                 filled: true,
                 fillColor: AppColors.backgroundLight,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.borderLight),
-                ),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                    const BorderSide(color: AppColors.borderLight)),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.borderLight),
-                ),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                    const BorderSide(color: AppColors.borderLight)),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                  const BorderSide(color: AppColors.primaryGold, width: 2),
-                ),
-                contentPadding: const EdgeInsets.all(16),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                        color: AppColors.primaryGold, width: 2)),
+                contentPadding: const EdgeInsets.all(14),
               ),
               style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textPrimary,
-              ),
+                  fontSize: 14, color: AppColors.textPrimary),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: const Text(
-              'Keep Rental',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Keep Rental',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
-              final reason = reasonController.text.trim();
-              if (reason.isEmpty || reason.length < 10) {
+              final r = reasonController.text.trim();
+              if (r.length < 10) {
                 _showErrorSnackBar(
                     'Please provide a reason (at least 10 characters)');
                 return;
               }
-              Navigator.of(context).pop();
-              // ✅ Try both possible ID field names
-              _cancelRental(rental['id'] ?? rental['uuid'] ?? '', reason);
+              Navigator.of(ctx).pop();
+              _cancelRental(
+                _getString(rental, ['id', 'uuid']),
+                r,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
               elevation: 0,
+              padding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text(
-              'Cancel Rental',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textWhite,
-              ),
-            ),
+            child: const Text('Cancel Rental',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textWhite)),
           ),
         ],
       ),
     );
   }
 
-  /// Cancel rental API call
   Future<void> _cancelRental(String rentalId, String reason) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _buildLoadingDialog('Cancelling rental...'),
+      builder: (_) => _buildLoadingDialog('Cancelling rental...'),
     );
 
     final response = await RentalApiService.cancelRentalByUser(
@@ -342,13 +285,13 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
 
     if (mounted) Navigator.of(context).pop();
 
-    if (response['success']) {
+    if (response['success'] == true) {
       _showSuccessDialog(
         title: 'Rental Cancelled',
         message: 'Your rental has been cancelled successfully.',
         onClose: () {
           Navigator.of(context).pop();
-          _fetchUserRentals(); // Refresh list
+          _fetchUserRentals();
         },
       );
     } else {
@@ -359,6 +302,8 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
       );
     }
   }
+
+  // ─── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -378,8 +323,8 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                     : TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildRentalsList(activeRentals, isActive: true),
-                    _buildRentalsList(pastRentals, isActive: false),
+                    _buildList(activeRentals, isActive: true),
+                    _buildList(pastRentals, isActive: false),
                   ],
                 ),
               ),
@@ -397,10 +342,9 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         color: AppColors.backgroundWhite,
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: AppColors.shadowLight,
+              blurRadius: 8,
+              offset: const Offset(0, 2))
         ],
       ),
       child: Row(
@@ -415,11 +359,8 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.borderLight, width: 1.5),
               ),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: AppColors.textPrimary,
-                size: 20,
-              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.textPrimary, size: 20),
             ),
           ),
           const Expanded(
@@ -435,7 +376,21 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               ),
             ),
           ),
-          const SizedBox(width: 44),
+          // Refresh button
+          GestureDetector(
+            onTap: _fetchUserRentals,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.backgroundLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.borderLight, width: 1.5),
+              ),
+              child: const Icon(Icons.refresh_rounded,
+                  color: AppColors.textPrimary, size: 20),
+            ),
+          ),
         ],
       ),
     );
@@ -443,7 +398,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
 
   Widget _buildTabBar() {
     return Container(
-      margin: const EdgeInsets.all(20),
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       decoration: BoxDecoration(
         color: AppColors.backgroundWhite,
         borderRadius: BorderRadius.circular(16),
@@ -457,20 +412,39 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         ),
         labelColor: AppColors.primaryDark,
         unselectedLabelColor: AppColors.textSecondary,
-        labelStyle: const TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-        ),
+        labelStyle:
+        const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        unselectedLabelStyle:
+        const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         padding: const EdgeInsets.all(4),
-        tabs: const [
-          Tab(text: 'Active'),
-          Tab(text: 'Past'),
+        tabs: [
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Active'),
+                if (activeRentals.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGold.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${activeRentals.length}',
+                      style: const TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Tab(text: 'Past'),
         ],
       ),
     );
@@ -489,45 +463,37 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.shadowMedium,
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
+                    color: AppColors.shadowMedium,
+                    blurRadius: 20,
+                    offset: const Offset(0, 8))
               ],
             ),
             child: const Center(
               child: CircularProgressIndicator(
-                color: AppColors.primaryGold,
-                strokeWidth: 3,
-              ),
+                  color: AppColors.primaryGold, strokeWidth: 3),
             ),
           ),
           const SizedBox(height: 24),
           const Text(
             'Loading your rentals...',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRentalsList(List<dynamic> rentals, {required bool isActive}) {
-    if (rentals.isEmpty) {
-      return _buildEmptyState(isActive);
-    }
+  Widget _buildList(List<dynamic> rentals, {required bool isActive}) {
+    if (rentals.isEmpty) return _buildEmptyState(isActive);
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       itemCount: rentals.length,
-      itemBuilder: (context, index) {
-        return _buildRentalCard(rentals[index], isActive: isActive);
-      },
+      itemBuilder: (_, i) => _buildRentalCard(rentals[i], isActive: isActive),
     );
   }
 
@@ -537,239 +503,311 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 120,
-            height: 120,
+            width: 110,
+            height: 110,
             decoration: BoxDecoration(
-              color: AppColors.backgroundLight,
+              color: AppColors.backgroundWhite,
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.borderLight, width: 2),
+              boxShadow: [
+                BoxShadow(
+                    color: AppColors.shadowLight,
+                    blurRadius: 16,
+                    offset: const Offset(0, 4))
+              ],
             ),
-            child: const Icon(
-              Icons.event_busy_rounded,
-              size: 60,
-              color: AppColors.textLight,
-            ),
+            child: const Icon(Icons.event_busy_rounded,
+                size: 50, color: AppColors.textLight),
           ),
           const SizedBox(height: 24),
           Text(
             isActive ? 'No Active Rentals' : 'No Past Rentals',
             style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary),
           ),
           const SizedBox(height: 8),
           Text(
             isActive
-                ? 'You don\'t have any active rentals'
-                : 'Your rental history is empty',
+                ? 'Book a car to see your active rentals here'
+                : 'Your completed and cancelled rentals will appear here',
             style: const TextStyle(
-              fontSize: 15,
-              color: AppColors.textSecondary,
-            ),
+                fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
+  // ─── Rental Card ─────────────────────────────────────────────────────────────
+
   Widget _buildRentalCard(dynamic rental, {required bool isActive}) {
-    final vehicle = rental['vehicle'] ?? rental['Vehicle'] ?? {};
+    final vehicle =
+        rental['vehicle'] ?? rental['Vehicle'] ?? <String, dynamic>{};
     final images = _parseImages(vehicle['images']);
     final firstImage = images.isNotEmpty ? images[0] : null;
-    final status = rental['status'] ?? 'UNKNOWN';
+    final status = _getString(rental, ['status'], 'UNKNOWN');
+    final paymentStatus =
+    _getString(rental, ['paymentStatus', 'payment_status'], 'unpaid')
+        .toLowerCase();
+    final paymentMethod =
+    _getString(rental, ['paymentMethod', 'payment_method'], '').toLowerCase();
+    final rentalType =
+    _getString(rental, ['rentalType', 'rental_type'], 'DAY');
     final canCancel = isActive && _canCancelRental(rental);
 
-    DateTime startDate;
-    DateTime endDate;
-
-    try {
-      startDate = DateTime.parse(rental['startDate'] ?? rental['start_date']);
-      endDate = DateTime.parse(rental['endDate'] ?? rental['end_date']);
-    } catch (e) {
-      debugPrint('❌ Error parsing dates: $e');
-      startDate = DateTime.now();
-      endDate = DateTime.now().add(const Duration(days: 1));
-    }
+    final startDate = _parseDate(rental, ['startDate', 'start_date']);
+    final endDate = _parseDate(rental, ['endDate', 'end_date']);
+    final durationDays = endDate.difference(startDate).inDays;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.borderLight, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+              color: AppColors.shadowLight,
+              blurRadius: 16,
+              offset: const Offset(0, 6))
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image Section
-          Container(
-            height: 160,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              color: AppColors.backgroundLight,
-            ),
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: firstImage != null
+          // ── Image ─────────────────────────────────────────────────────────
+          ClipRRect(
+            borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(24)),
+            child: SizedBox(
+              height: 170,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  firstImage != null
                       ? Image.network(
                     firstImage,
                     fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: 160,
-                    errorBuilder: (context, error, stackTrace) =>
-                        _buildVehiclePlaceholder(vehicle['makeModel'] ??
-                            vehicle['make_model']),
+                    errorBuilder: (_, __, ___) =>
+                        _buildVehiclePlaceholder(
+                            vehicle['makeModel'] ??
+                                vehicle['make_model']),
                   )
                       : _buildVehiclePlaceholder(
                       vehicle['makeModel'] ?? vehicle['make_model']),
-                ),
-                // Status Badge
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: _buildStatusBadge(status),
-                ),
-              ],
-            ),
-          ),
 
-          // Content Section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Vehicle Name
-                Text(
-                  vehicle['makeModel'] ??
-                      vehicle['make_model'] ??
-                      'Unknown Vehicle',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.3,
+                  // Gradient overlay for legibility
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.35),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
 
-                // Dates
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
+                  // Status badge top-right
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: _buildStatusBadge(status),
+                  ),
+
+                  // Rental type badge top-left
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                       child: Text(
-                        '${DateFormat('MMM dd').format(startDate)} - ${DateFormat('MMM dd, yyyy').format(endDate)}',
+                        _rentalTypeLabel(rentalType),
                         style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Duration
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${endDate.difference(startDate).inDays} days',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Price
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.payments,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'XAF ${rental['totalPrice'] ?? rental['total_price'] ?? '0'}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: AppColors.primaryGold,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-
-                if (isActive && canCancel) ...[
-                  const SizedBox(height: 16),
-                  const Divider(color: AppColors.borderLight, height: 1),
-                  const SizedBox(height: 16),
-
-                  // Cancel Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () => _showCancelDialog(rental),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                            color: AppColors.error, width: 1.5),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.cancel_outlined,
-                              color: AppColors.error, size: 18),
-                          SizedBox(width: 8),
-                          Text(
-                            'Cancel Rental',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.error,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
 
-                if (rental['cancellationReason'] != null ||
-                    rental['cancellation_reason'] != null) ...[
+          // ── Content ───────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Vehicle name + price
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        vehicle['makeModel'] ??
+                            vehicle['make_model'] ??
+                            'Unknown Vehicle',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'XAF ${_formatPrice(rental['totalPrice'] ?? rental['total_price'])}',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryGold,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Text(
+                          'Total',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textLight,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // Date & Duration row
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundLight,
+                    borderRadius: BorderRadius.circular(14),
+                    border:
+                    Border.all(color: AppColors.borderLight, width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem(
+                          Icons.calendar_today_rounded,
+                          'Start',
+                          DateFormat('MMM dd, yyyy').format(startDate),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: AppColors.borderLight,
+                        margin:
+                        const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      Expanded(
+                        child: _buildInfoItem(
+                          Icons.event_rounded,
+                          'End',
+                          DateFormat('MMM dd, yyyy').format(endDate),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: AppColors.borderLight,
+                        margin:
+                        const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      _buildInfoItem(
+                        Icons.access_time_rounded,
+                        'Duration',
+                        '$durationDays ${durationDays == 1 ? 'day' : 'days'}',
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Payment status + method
+                Row(
+                  children: [
+                    Expanded(
+                        child: _buildPaymentStatusChip(paymentStatus)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: _buildPaymentMethodChip(paymentMethod)),
+                  ],
+                ),
+
+                // Unpaid warning for active unpaid MoMo rentals
+                if (isActive &&
+                    paymentStatus == 'unpaid' &&
+                    (paymentMethod == 'mtn_momo' ||
+                        paymentMethod == 'orange_money')) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGold.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: AppColors.primaryGold.withOpacity(0.3),
+                          width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded,
+                            size: 16, color: AppColors.primaryGold),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Payment pending confirmation. Pull to refresh to check the latest status.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.primaryDark
+                                  .withOpacity(0.75),
+                              fontWeight: FontWeight.w500,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Cancellation reason
+                if (_getString(rental,
+                    ['cancellationReason', 'cancellation_reason'])
+                    .isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
                     width: double.infinity,
@@ -778,7 +816,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                       color: AppColors.errorLight.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppColors.error.withOpacity(0.3)),
+                          color: AppColors.error.withOpacity(0.25)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -786,29 +824,61 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                         const Row(
                           children: [
                             Icon(Icons.info_outline,
-                                size: 16, color: AppColors.error),
+                                size: 14, color: AppColors.error),
                             SizedBox(width: 6),
                             Text(
-                              'Cancellation Reason:',
+                              'Cancellation Reason',
                               style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.error,
-                              ),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.error),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 5),
                         Text(
-                          rental['cancellationReason'] ??
-                              rental['cancellation_reason'] ??
-                              '',
+                          _getString(rental, [
+                            'cancellationReason',
+                            'cancellation_reason'
+                          ]),
                           style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              height: 1.4),
                         ),
                       ],
+                    ),
+                  ),
+                ],
+
+                // Cancel button
+                if (canCancel) ...[
+                  const SizedBox(height: 16),
+                  const Divider(
+                      color: AppColors.borderLight, height: 1),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showCancelDialog(rental),
+                      icon: const Icon(Icons.cancel_outlined,
+                          color: AppColors.error, size: 18),
+                      label: const Text(
+                        'Cancel Rental',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.error,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: AppColors.error, width: 1.5),
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
                 ],
@@ -820,66 +890,183 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
     );
   }
 
+  // ─── Sub-widgets ─────────────────────────────────────────────────────────────
+
+  Widget _buildInfoItem(IconData icon, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 12, color: AppColors.textLight),
+            const SizedBox(width: 4),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textLight,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2)),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary),
+        ),
+      ],
+    );
+  }
+
   Widget _buildStatusBadge(String status) {
-    Color backgroundColor;
-    Color textColor;
-    String displayText;
-
-    switch (status) {
-      case 'PENDING':
-        backgroundColor = AppColors.primaryGold.withOpacity(0.9);
-        textColor = AppColors.primaryDark;
-        displayText = 'Pending';
-        break;
-      case 'CONFIRMED':
-        backgroundColor = Colors.blue.shade600;
-        textColor = AppColors.textWhite;
-        displayText = 'Confirmed';
-        break;
-      case 'COMPLETED':
-        backgroundColor = AppColors.success;
-        textColor = AppColors.textWhite;
-        displayText = 'Completed';
-        break;
-      case 'CANCELLED':
-        backgroundColor = AppColors.error;
-        textColor = AppColors.textWhite;
-        displayText = 'Cancelled';
-        break;
-      default:
-        backgroundColor = AppColors.textLight;
-        textColor = AppColors.textWhite;
-        displayText = status;
-    }
-
+    final cfg = _statusConfig(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: cfg['bg'] as Color,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: backgroundColor.withOpacity(0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: (cfg['bg'] as Color).withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
         ],
       ),
-      child: Text(
-        displayText,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: textColor,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(cfg['icon'] as IconData,
+              size: 12, color: cfg['text'] as Color),
+          const SizedBox(width: 5),
+          Text(
+            cfg['label'] as String,
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: cfg['text'] as Color),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildVehiclePlaceholder(String? vehicleName) {
+  Widget _buildPaymentStatusChip(String paymentStatus) {
+    Color bgColor;
+    Color textColor;
+    IconData icon;
+    String label;
+
+    switch (paymentStatus) {
+      case 'paid':
+        bgColor = AppColors.successLight;
+        textColor = AppColors.success;
+        icon = Icons.check_circle_outline_rounded;
+        label = 'Paid';
+        break;
+      case 'refunded':
+        bgColor = Colors.blue.shade50;
+        textColor = Colors.blue.shade700;
+        icon = Icons.replay_rounded;
+        label = 'Refunded';
+        break;
+      default:
+        bgColor = AppColors.primaryGold.withOpacity(0.12);
+        textColor = const Color(0xFF8B6F00);
+        icon = Icons.schedule_rounded;
+        label = 'Unpaid';
+    }
+
     return Container(
-      width: double.infinity,
-      height: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: textColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: textColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodChip(String method) {
+    IconData icon;
+    String label;
+    Color bgColor;
+    Color textColor;
+    Color borderColor;
+
+    switch (method) {
+      case 'mtn_momo':
+        icon = Icons.phone_android_rounded;
+        label = 'MTN MoMo';
+        bgColor = const Color(0xFFFFCC00).withOpacity(0.12);
+        textColor = const Color(0xFF8B6F00);
+        borderColor = const Color(0xFFFFCC00).withOpacity(0.4);
+        break;
+      case 'orange_money':
+        icon = Icons.phone_android_rounded;
+        label = 'Orange Money';
+        bgColor = const Color(0xFFFF6600).withOpacity(0.10);
+        textColor = const Color(0xFFCC4400);
+        borderColor = const Color(0xFFFF6600).withOpacity(0.3);
+        break;
+      case 'cash':
+        icon = Icons.payments_rounded;
+        label = 'Cash on Pickup';
+        bgColor = AppColors.backgroundLight;
+        textColor = AppColors.textSecondary;
+        borderColor = AppColors.borderLight;
+        break;
+      default:
+        icon = Icons.help_outline_rounded;
+        label = 'Not set';
+        bgColor = AppColors.backgroundLight;
+        textColor = AppColors.textLight;
+        borderColor = AppColors.borderLight;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: textColor),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: textColor),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVehiclePlaceholder(String? name) {
+    return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -895,48 +1082,46 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 60,
-              height: 60,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
                 color: AppColors.backgroundWhite,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.shadowMedium,
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
+                      color: AppColors.shadowMedium,
+                      blurRadius: 12,
+                      offset: const Offset(0, 4))
                 ],
               ),
-              child: const Icon(
-                Icons.directions_car_rounded,
-                size: 30,
-                color: AppColors.primaryGold,
-              ),
+              child: const Icon(Icons.directions_car_rounded,
+                  size: 28, color: AppColors.primaryGold),
             ),
-            const SizedBox(height: 12),
-            if (vehicleName != null)
+            if (name != null) ...[
+              const SizedBox(height: 10),
               Container(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                 decoration: BoxDecoration(
                   color: AppColors.backgroundWhite.withOpacity(0.95),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  vehicleName.split(' ').first,
+                  name.split(' ').first,
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary),
                 ),
               ),
+            ],
           ],
         ),
       ),
     );
   }
+
+  // ─── Dialogs ─────────────────────────────────────────────────────────────────
 
   Widget _buildLoadingDialog(String message) {
     return Center(
@@ -948,10 +1133,9 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: AppColors.shadowDark,
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
+                color: AppColors.shadowDark,
+                blurRadius: 24,
+                offset: const Offset(0, 8))
           ],
         ),
         child: Column(
@@ -961,20 +1145,15 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               width: 48,
               height: 48,
               child: CircularProgressIndicator(
-                color: AppColors.primaryGold,
-                strokeWidth: 4,
-              ),
+                  color: AppColors.primaryGold, strokeWidth: 4),
             ),
-            const SizedBox(height: 24),
-            Text(
-              message,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            const SizedBox(height: 20),
+            Text(message,
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -989,8 +1168,9 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      builder: (_) => AlertDialog(
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: AppColors.backgroundWhite,
         contentPadding: const EdgeInsets.all(24),
         content: Column(
@@ -1000,35 +1180,24 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.successLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle_rounded,
-                color: AppColors.success,
-                size: 48,
-              ),
+                  color: AppColors.successLight, shape: BoxShape.circle),
+              child: const Icon(Icons.check_circle_rounded,
+                  color: AppColors.success, size: 48),
             ),
             const SizedBox(height: 20),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: const TextStyle(
-                fontSize: 15,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 10),
+            Text(message,
+                style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.5),
+                textAlign: TextAlign.center),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -1038,18 +1207,14 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                   backgroundColor: AppColors.success,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                      borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Done',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textWhite,
-                  ),
-                ),
+                child: const Text('Done',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textWhite)),
               ),
             ),
           ],
@@ -1065,8 +1230,9 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
   }) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      builder: (_) => AlertDialog(
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: AppColors.backgroundWhite,
         contentPadding: const EdgeInsets.all(24),
         content: Column(
@@ -1076,37 +1242,26 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.errorLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.error_outline_rounded,
-                color: AppColors.error,
-                size: 48,
-              ),
+                  color: AppColors.errorLight, shape: BoxShape.circle),
+              child: const Icon(Icons.error_outline_rounded,
+                  color: AppColors.error, size: 48),
             ),
             const SizedBox(height: 20),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: const TextStyle(
-                fontSize: 15,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 10),
+            Text(message,
+                style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.5),
+                textAlign: TextAlign.center),
             if (details != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -1114,15 +1269,11 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                   color: AppColors.errorLight.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  details,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.error,
-                    fontFamily: 'monospace',
-                  ),
-                  textAlign: TextAlign.left,
-                ),
+                child: Text(details,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.error,
+                        fontFamily: 'monospace')),
               ),
             ],
             const SizedBox(height: 24),
@@ -1134,18 +1285,14 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                   backgroundColor: AppColors.error,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                      borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textWhite,
-                  ),
-                ),
+                child: const Text('Close',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textWhite)),
               ),
             ),
           ],
@@ -1160,15 +1307,12 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         content: Row(
           children: [
             const Icon(Icons.error_outline,
-                color: AppColors.textWhite, size: 22),
-            const SizedBox(width: 12),
+                color: AppColors.textWhite, size: 20),
+            const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                message,
-                style:
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-            ),
+                child: Text(message,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500))),
           ],
         ),
         backgroundColor: AppColors.error,
@@ -1178,5 +1322,72 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         duration: const Duration(seconds: 4),
       ),
     );
+  }
+
+  // ─── Pure helpers ─────────────────────────────────────────────────────────────
+
+  String _formatPrice(dynamic price) {
+    if (price == null) return '0';
+    try {
+      final v = double.parse(price.toString());
+      return v.toStringAsFixed(0);
+    } catch (_) {
+      return price.toString();
+    }
+  }
+
+  String _rentalTypeLabel(String type) {
+    switch (type.toUpperCase()) {
+      case 'HOUR':
+        return 'Hourly';
+      case 'DAY':
+        return 'Daily';
+      case 'WEEK':
+        return 'Weekly';
+      case 'MONTH':
+        return 'Monthly';
+      default:
+        return type;
+    }
+  }
+
+  Map<String, dynamic> _statusConfig(String status) {
+    switch (status) {
+      case 'PENDING':
+        return {
+          'bg': AppColors.primaryGold.withOpacity(0.9),
+          'text': AppColors.primaryDark,
+          'icon': Icons.schedule_rounded,
+          'label': 'Pending',
+        };
+      case 'CONFIRMED':
+        return {
+          'bg': Colors.blue.shade600,
+          'text': Colors.white,
+          'icon': Icons.verified_rounded,
+          'label': 'Confirmed',
+        };
+      case 'COMPLETED':
+        return {
+          'bg': AppColors.success,
+          'text': Colors.white,
+          'icon': Icons.check_circle_rounded,
+          'label': 'Completed',
+        };
+      case 'CANCELLED':
+        return {
+          'bg': AppColors.error,
+          'text': Colors.white,
+          'icon': Icons.cancel_rounded,
+          'label': 'Cancelled',
+        };
+      default:
+        return {
+          'bg': AppColors.textLight,
+          'text': Colors.white,
+          'icon': Icons.help_outline_rounded,
+          'label': status,
+        };
+    }
   }
 }

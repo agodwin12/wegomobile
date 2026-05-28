@@ -1,6 +1,6 @@
 // lib/screens/services/my_bookings_screen.dart
 // WEGO Services Marketplace - My Bookings (Customer View)
-// ✅ FIXED - ALL METHOD CALLS CORRECTED
+// ✅ COMPLETE - With real-time socket listeners + dispute navigation
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../models/services/service_request_model.dart';
 import '../../providers/services.dart';
+import '../../service/api/service_socket_listener.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 
@@ -39,26 +40,144 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     _tabController = TabController(length: _tabs.length, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadMyBookings();
+      _registerSocketListeners();
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SOCKET LISTENERS
+  // ═══════════════════════════════════════════════════════════════════
+
+  void _registerSocketListeners() {
+    final listener = ServiceSocketListener.instance;
+
+    listener.onRequestAccepted = (data) {
+      if (!mounted) return;
+      _loadMyBookings();
+      final providerName = data['provider']?['first_name'] ?? 'Provider';
+      listener.showBanner(
+        context: context,
+        message: '$providerName accepted your request!',
+        backgroundColor: Colors.green.shade700,
+        icon: Icons.check_circle,
+        onTap: () {
+          _tabController.animateTo(2);
+          _loadMyBookings();
+        },
+      );
+    };
+
+    listener.onRequestRejected = (data) {
+      if (!mounted) return;
+      _loadMyBookings();
+      final providerName = data['provider']?['first_name'] ?? 'Provider';
+      listener.showBanner(
+        context: context,
+        message: '$providerName declined your request.',
+        backgroundColor: Colors.red.shade600,
+        icon: Icons.cancel_outlined,
+        onTap: () {
+          _tabController.animateTo(0);
+          _loadMyBookings();
+        },
+      );
+    };
+
+    listener.onServiceStarted = (data) {
+      if (!mounted) return;
+      _loadMyBookings();
+      final providerName = data['provider']?['first_name'] ?? 'Provider';
+      listener.showBanner(
+        context: context,
+        message: '$providerName is on the way!',
+        backgroundColor: Colors.blue.shade700,
+        icon: Icons.directions_run,
+        onTap: () {
+          _tabController.animateTo(3);
+          _loadMyBookings();
+        },
+      );
+    };
+
+    listener.onPaymentRequested = (data) {
+      if (!mounted) return;
+      _loadMyBookings();
+      final amount = data['final_amount']?.toString() ?? '';
+      listener.showBanner(
+        context: context,
+        message: 'Service complete! Payment of $amount FCFA requested.',
+        backgroundColor: Colors.orange.shade700,
+        icon: Icons.payment,
+        onTap: () {
+          _tabController.animateTo(4);
+          _loadMyBookings();
+        },
+      );
+    };
+
+    listener.onPaymentConfirmed = (data) {
+      if (!mounted) return;
+      _loadMyBookings();
+      listener.showBanner(
+        context: context,
+        message: 'Payment confirmed! Please rate your experience.',
+        backgroundColor: Colors.green.shade800,
+        icon: Icons.verified,
+        onTap: () {
+          _tabController.animateTo(5);
+          _loadMyBookings();
+        },
+      );
+    };
+
+    listener.onRequestCancelled = (data) {
+      if (!mounted) return;
+      _loadMyBookings();
+      listener.showBanner(
+        context: context,
+        message: 'Your service request was cancelled.',
+        backgroundColor: Colors.red.shade700,
+        icon: Icons.cancel,
+        onTap: () {
+          _tabController.animateTo(0);
+          _loadMyBookings();
+        },
+      );
+    };
+
+    listener.onDisputeResolved = (data) {
+      if (!mounted) return;
+      _loadMyBookings();
+      listener.showBanner(
+        context: context,
+        message: 'Your dispute has been resolved.',
+        backgroundColor: Colors.purple.shade700,
+        icon: Icons.gavel,
+        onTap: () => _loadMyBookings(),
+      );
+    };
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    final listener = ServiceSocketListener.instance;
+    listener.onRequestAccepted = null;
+    listener.onRequestRejected = null;
+    listener.onServiceStarted = null;
+    listener.onPaymentRequested = null;
+    listener.onPaymentConfirmed = null;
+    listener.onRequestCancelled = null;
+    listener.onDisputeResolved = null;
     super.dispose();
   }
 
   Future<void> _loadMyBookings() async {
     if (!mounted) return;
-
     setState(() => _isLoading = true);
-
     final provider = Provider.of<ServicesProvider>(context, listen: false);
     await provider.fetchMyRequests();
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
   List<ServiceRequest> _filterRequestsByTab(List<ServiceRequest> allRequests) {
@@ -124,14 +243,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     controller: _tabController,
                     children: _tabs.map((tab) {
                       final requests = _filterRequestsByTab(allRequests);
-
                       if (requests.isEmpty) {
                         return _buildEmptyState(
                           'No ${tab.toLowerCase()} bookings',
                           isTablet,
                         );
                       }
-
                       return _buildRequestsList(requests, isTablet);
                     }).toList(),
                   ),
@@ -165,13 +282,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   Widget _buildStatsSummary(List<ServiceRequest> requests, bool isTablet) {
     final pendingCount =
         requests.where((r) => r.status == RequestStatus.pending).length;
-
     final activeCount = requests
         .where((r) =>
     r.status == RequestStatus.accepted ||
         r.status == RequestStatus.inProgress)
         .length;
-
     final completedCount = requests
         .where((r) =>
     r.status == RequestStatus.completed ||
@@ -194,26 +309,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       ),
       child: Row(
         children: [
-          _buildStatItem(
-            'Pending',
-            pendingCount.toString(),
-            Icons.pending_rounded,
-            isTablet,
-          ),
+          _buildStatItem('Pending', pendingCount.toString(),
+              Icons.pending_rounded, isTablet),
           _buildStatDivider(),
-          _buildStatItem(
-            'Active',
-            activeCount.toString(),
-            Icons.play_circle_filled_rounded,
-            isTablet,
-          ),
+          _buildStatItem('Active', activeCount.toString(),
+              Icons.play_circle_filled_rounded, isTablet),
           _buildStatDivider(),
-          _buildStatItem(
-            'Done',
-            completedCount.toString(),
-            Icons.check_circle_rounded,
-            isTablet,
-          ),
+          _buildStatItem('Done', completedCount.toString(),
+              Icons.check_circle_rounded, isTablet),
         ],
       ),
     );
@@ -295,8 +398,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 if (count > 0) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: _tabController.index == _tabs.indexOf(tab)
                           ? AppColors.primaryGold
@@ -331,10 +434,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return ListView.builder(
       padding: EdgeInsets.all(isTablet ? 24 : 16),
       itemCount: requests.length,
-      itemBuilder: (context, index) {
-        final request = requests[index];
-        return _buildRequestCard(request, isTablet);
-      },
+      itemBuilder: (context, index) =>
+          _buildRequestCard(requests[index], isTablet),
     );
   }
 
@@ -365,7 +466,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   Widget _buildRequestHeader(ServiceRequest request, bool isTablet) {
-    // Extract provider info safely
     String providerName = 'Provider';
     String? avatarUrl;
 
@@ -380,7 +480,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       }
     }
 
-    // Extract service title safely
     String serviceTitle = 'Service';
     if (request.listing != null) {
       final listingMap = request.listing as Map<String, dynamic>;
@@ -391,7 +490,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       padding: EdgeInsets.all(isTablet ? 20 : 16),
       child: Row(
         children: [
-          // Provider Avatar (Circular)
           Container(
             width: isTablet ? 56 : 48,
             height: isTablet ? 56 : 48,
@@ -424,20 +522,18 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     ),
                   );
                 },
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Text(
-                      providerName[0].toUpperCase(),
-                      style: (isTablet
-                          ? AppTypography.headlineMedium
-                          : AppTypography.titleLarge)
-                          .copyWith(
-                        color: AppColors.primaryBlack,
-                        fontWeight: FontWeight.w800,
-                      ),
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Text(
+                    providerName[0].toUpperCase(),
+                    style: (isTablet
+                        ? AppTypography.headlineMedium
+                        : AppTypography.titleLarge)
+                        .copyWith(
+                      color: AppColors.primaryBlack,
+                      fontWeight: FontWeight.w800,
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             )
                 : Center(
@@ -588,11 +684,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Request ID & Date
           Row(
             children: [
               Icon(Icons.confirmation_number_rounded,
-                  size: isTablet ? 18 : 16, color: AppColors.textSecondary),
+                  size: isTablet ? 18 : 16,
+                  color: AppColors.textSecondary),
               const SizedBox(width: 8),
               Text(
                 'Booking #${request.id}',
@@ -613,7 +709,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
           const SizedBox(height: 16),
 
-          // Description
           Text(
             request.description,
             style: AppTypography.bodyMedium.copyWith(
@@ -626,23 +721,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
           const SizedBox(height: 16),
 
-          // Location
           _buildDetailRow(
-            Icons.location_on_outlined,
-            request.serviceLocation,
-            isTablet,
-          ),
-
+              Icons.location_on_outlined, request.serviceLocation, isTablet),
           const SizedBox(height: 12),
-
-          // Schedule
           _buildDetailRow(
-            Icons.access_time,
-            _getScheduleDisplay(request),
-            isTablet,
-          ),
+              Icons.access_time, _getScheduleDisplay(request), isTablet),
 
-          // Provider Response (if accepted)
           if (request.providerResponse != null &&
               request.providerResponse!.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -683,7 +767,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
           ],
 
-          // Final Amount (if completed)
           if (request.finalAmount != null && request.finalAmount! > 0) ...[
             const SizedBox(height: 16),
             Container(
@@ -722,7 +805,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
           ],
 
-          // Work Summary (if provided)
           if (request.workSummary != null &&
               request.workSummary!.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -742,7 +824,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
           ],
 
-          // Photos
           if (request.photos.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
@@ -757,31 +838,25 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: request.photos.length,
-                itemBuilder: (context, index) {
-                  return Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        request.photos[index],
+                itemBuilder: (context, index) => Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      request.photos[index],
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
                         width: 80,
                         height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 80,
-                            height: 80,
-                            color: AppColors.backgroundLight,
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              color: AppColors.textLight,
-                            ),
-                          );
-                        },
+                        color: AppColors.backgroundLight,
+                        child: const Icon(Icons.image_not_supported,
+                            color: AppColors.textLight),
                       ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ],
@@ -810,10 +885,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   Widget _buildRequestActions(ServiceRequest request, bool isTablet) {
-    // Don't show actions section if there are no actions
-    if (!_hasActions(request)) {
-      return const SizedBox.shrink();
-    }
+    if (!_hasActions(request)) return const SizedBox.shrink();
 
     return Container(
       padding: EdgeInsets.all(isTablet ? 20 : 16),
@@ -832,13 +904,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     switch (request.status) {
       case RequestStatus.pending:
       case RequestStatus.accepted:
-      case RequestStatus.paymentPending:
-        return true;
       case RequestStatus.inProgress:
+      case RequestStatus.paymentPending:
       case RequestStatus.paymentConfirmationPending:
       case RequestStatus.completed:
       case RequestStatus.paymentConfirmed:
-        return true; // Info message
+        return true;
       default:
         return false;
     }
@@ -847,7 +918,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   Widget _buildActionButtonsForStatus(ServiceRequest request, bool isTablet) {
     switch (request.status) {
       case RequestStatus.pending:
-      // Show Cancel button
         return SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -863,7 +933,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         );
 
       case RequestStatus.accepted:
-      // Show info + cancel option
         return Column(
           children: [
             Container(
@@ -906,7 +975,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         );
 
       case RequestStatus.inProgress:
-      // Show info message
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -932,23 +1000,42 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         );
 
       case RequestStatus.paymentPending:
-      // Show "Upload Payment Proof" button
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () => _showPaymentProofDialog(request),
-            icon: const Icon(Icons.upload_file),
-            label: const Text('Upload Payment Proof'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGold,
-              foregroundColor: AppColors.primaryBlack,
-              padding: EdgeInsets.symmetric(vertical: isTablet ? 14 : 12),
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showPaymentProofDialog(request),
+                icon: const Icon(Icons.upload_file),
+                label: const Text('Upload Payment Proof'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGold,
+                  foregroundColor: AppColors.primaryBlack,
+                  padding:
+                  EdgeInsets.symmetric(vertical: isTablet ? 14 : 12),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(height: 10),
+            // ✅ DISPUTE BUTTON — available when payment is pending
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _navigateToDispute(request),
+                icon: const Icon(Icons.gavel, size: 18),
+                label: const Text('File a Dispute'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
+                  padding:
+                  EdgeInsets.symmetric(vertical: isTablet ? 14 : 12),
+                ),
+              ),
+            ),
+          ],
         );
 
       case RequestStatus.paymentConfirmationPending:
-      // Waiting for provider confirmation
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -974,7 +1061,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
       case RequestStatus.paymentConfirmed:
       case RequestStatus.completed:
-      // Service completed successfully
         return Column(
           children: [
             Container(
@@ -1009,7 +1095,24 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryGold,
                   foregroundColor: AppColors.primaryBlack,
-                  padding: EdgeInsets.symmetric(vertical: isTablet ? 14 : 12),
+                  padding:
+                  EdgeInsets.symmetric(vertical: isTablet ? 14 : 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // ✅ DISPUTE still available after completion
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _navigateToDispute(request),
+                icon: const Icon(Icons.gavel, size: 18),
+                label: const Text('File a Dispute'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
+                  padding:
+                  EdgeInsets.symmetric(vertical: isTablet ? 14 : 12),
                 ),
               ),
             ),
@@ -1022,6 +1125,18 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════════
+  // DISPUTE NAVIGATION
+  // ═══════════════════════════════════════════════════════════════════
+
+  void _navigateToDispute(ServiceRequest request) {
+    Navigator.pushNamed(
+      context,
+      '/services/dispute',
+      arguments: {'request': request},
+    ).then((_) => _loadMyBookings()); // Refresh when returning
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
   // ACTION HANDLERS
   // ═══════════════════════════════════════════════════════════════════
 
@@ -1031,7 +1146,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             Container(
@@ -1040,16 +1156,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 color: AppColors.errorLight,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.cancel,
-                color: AppColors.error,
-                size: 24,
-              ),
+              child: const Icon(Icons.cancel,
+                  color: AppColors.error, size: 24),
             ),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text('Cancel Request'),
-            ),
+            const Expanded(child: Text('Cancel Request')),
           ],
         ),
         content: Column(
@@ -1087,9 +1198,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               Navigator.pop(context);
               _cancelRequest(request, reasonController.text.trim());
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
+            style:
+            ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Cancel Request'),
           ),
         ],
@@ -1097,11 +1207,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  // ✅ FIXED: Correct method signature - 2 positional arguments
-  Future<void> _cancelRequest(ServiceRequest request, String reason) async {
+  Future<void> _cancelRequest(
+      ServiceRequest request, String reason) async {
     final provider = Provider.of<ServicesProvider>(context, listen: false);
 
-    // ✅ Pass 2 positional arguments as expected by provider
     final success = await provider.cancelRequest(
       request.id,
       reason.isNotEmpty ? reason : 'Cancelled by customer',
@@ -1119,8 +1228,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            provider.requestsError ?? 'Failed to cancel request',
-          ),
+              provider.requestsError ?? 'Failed to cancel request'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -1137,8 +1245,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
           title: const Text('Upload Payment Proof'),
           content: SingleChildScrollView(
             child: Column(
@@ -1155,36 +1263,26 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 const SizedBox(height: 20),
                 Text(
                   'Payment Method *',
-                  style: AppTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.labelLarge
+                      .copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   items: const [
                     DropdownMenuItem(
-                      value: 'mtn_momo',
-                      child: Text('MTN Mobile Money'),
-                    ),
+                        value: 'mtn_momo',
+                        child: Text('MTN Mobile Money')),
                     DropdownMenuItem(
-                      value: 'orange_money',
-                      child: Text('Orange Money'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'cash',
-                      child: Text('Cash'),
-                    ),
+                        value: 'orange_money',
+                        child: Text('Orange Money')),
+                    DropdownMenuItem(value: 'cash', child: Text('Cash')),
                   ],
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedMethod = value;
-                    });
-                  },
+                  onChanged: (value) =>
+                      setDialogState(() => selectedMethod = value),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -1193,16 +1291,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     labelText: 'Transaction Reference (optional)',
                     hintText: 'e.g., TXN123456',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Payment Screenshot *',
-                  style: AppTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.labelLarge
+                      .copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 if (proofImage != null)
@@ -1221,11 +1317,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         top: 8,
                         right: 8,
                         child: IconButton(
-                          onPressed: () {
-                            setDialogState(() {
-                              proofImage = null;
-                            });
-                          },
+                          onPressed: () =>
+                              setDialogState(() => proofImage = null),
                           icon: const Icon(Icons.close),
                           style: IconButton.styleFrom(
                             backgroundColor: AppColors.error,
@@ -1238,12 +1331,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 else
                   OutlinedButton.icon(
                     onPressed: () async {
-                      final XFile? image =
-                      await picker.pickImage(source: ImageSource.gallery);
+                      final XFile? image = await picker.pickImage(
+                          source: ImageSource.gallery);
                       if (image != null) {
-                        setDialogState(() {
-                          proofImage = File(image.path);
-                        });
+                        setDialogState(
+                                () => proofImage = File(image.path));
                       }
                     },
                     icon: const Icon(Icons.upload_file),
@@ -1271,7 +1363,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   );
                   return;
                 }
-
                 if (proofImage == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -1281,7 +1372,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   );
                   return;
                 }
-
                 Navigator.pop(context);
                 _uploadPaymentProof(
                   request,
@@ -1291,8 +1381,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGold,
-              ),
+                  backgroundColor: AppColors.primaryGold),
               child: const Text('Upload Proof'),
             ),
           ],
@@ -1301,7 +1390,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-// ✅ FIXED: Correct parameter types and names
   Future<void> _uploadPaymentProof(
       ServiceRequest request,
       String paymentMethod,
@@ -1310,7 +1398,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       ) async {
     final provider = Provider.of<ServicesProvider>(context, listen: false);
 
-    // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1319,18 +1406,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       ),
     );
 
-    // ✅ Pass File object directly, not path string
-    // ✅ Include required paymentMethod parameter
-    // ✅ Handle nullable transactionReference
     final success = await provider.uploadPaymentProof(
       id: request.id,
       paymentMethod: paymentMethod,
-      paymentProof: proofImage, // ✅ Pass File object, not string path
-      // ✅ Convert null to empty string
+      paymentProof: proofImage,
     );
 
     if (mounted) {
-      Navigator.pop(context); // Close loading
+      Navigator.pop(context);
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1343,17 +1426,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              provider.requestsError ?? 'Failed to upload payment proof',
-            ),
+            content: Text(provider.requestsError ??
+                'Failed to upload payment proof'),
             backgroundColor: AppColors.error,
           ),
         );
       }
     }
   }
-
-
 
   void _showRatingDialog(ServiceRequest request) {
     int selectedRating = 5;
@@ -1363,8 +1443,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
           title: const Text('Rate Service'),
           content: SingleChildScrollView(
             child: Column(
@@ -1382,11 +1462,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(5, (index) {
                     return IconButton(
-                      onPressed: () {
-                        setDialogState(() {
-                          selectedRating = index + 1;
-                        });
-                      },
+                      onPressed: () => setDialogState(
+                              () => selectedRating = index + 1),
                       icon: Icon(
                         index < selectedRating
                             ? Icons.star
@@ -1406,8 +1483,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     labelText: 'Write a review (optional)',
                     hintText: 'Share your experience...',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],
@@ -1421,15 +1497,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                _submitRating(
-                  request,
-                  selectedRating,
-                  reviewController.text.trim(),
-                );
+                _submitRating(request, selectedRating,
+                    reviewController.text.trim());
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGold,
-              ),
+                  backgroundColor: AppColors.primaryGold),
               child: const Text('Submit Rating'),
             ),
           ],
@@ -1438,7 +1510,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  // ✅ FIXED: Using correct provider method
   Future<void> _submitRating(
       ServiceRequest request,
       int rating,
@@ -1446,7 +1517,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       ) async {
     final provider = Provider.of<ServicesProvider>(context, listen: false);
 
-    // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1455,15 +1525,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       ),
     );
 
-    // ✅ Use createRating method with correct parameters
     final success = await provider.createRating(
       requestId: request.id,
-      rating: rating, review: '',
-
+      rating: rating,
+      review: review,
+      reviewText: review.isNotEmpty ? review : null,
     );
 
     if (mounted) {
-      Navigator.pop(context); // Close loading
+      Navigator.pop(context);
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1477,8 +1547,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              provider.ratingsError ?? 'Failed to submit rating',
-            ),
+                provider.ratingsError ?? 'Failed to submit rating'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -1523,9 +1592,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             const SizedBox(height: 12),
             Text(
               'Browse services and book one',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textLight,
-              ),
+              style: AppTypography.bodyMedium
+                  .copyWith(color: AppColors.textLight),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1567,9 +1635,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           const SizedBox(height: 30),
           Text(
             'Loading bookings...',
-            style: AppTypography.titleLarge.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: AppTypography.titleLarge
+                .copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),

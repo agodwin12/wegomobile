@@ -16,56 +16,73 @@ class SignupPassengerScreen extends StatefulWidget {
   State<SignupPassengerScreen> createState() => _SignupPassengerScreenState();
 }
 
-class _SignupPassengerScreenState extends State<SignupPassengerScreen> with TickerProviderStateMixin {
+class _SignupPassengerScreenState extends State<SignupPassengerScreen>
+    with TickerProviderStateMixin {
   int current = 0;
 
   // Step 1 inputs
-  final emailCtrl = TextEditingController();
-  final phoneCtrl = TextEditingController();
-  final firstCtrl = TextEditingController();
-  final lastCtrl = TextEditingController();
-  final pwCtrl = TextEditingController();
-  final confirmPwCtrl = TextEditingController();
+  final emailCtrl       = TextEditingController();
+  final phoneCtrl       = TextEditingController();
+  final firstCtrl       = TextEditingController();
+  final lastCtrl        = TextEditingController();
+  final pwCtrl          = TextEditingController();
+  final confirmPwCtrl   = TextEditingController();
 
   // Step 3 (OTP)
   final otpCtrl = TextEditingController();
-  String channel = 'EMAIL';
-  String purpose = 'EMAIL_VERIFY';
+
+  // ─── OTP state ────────────────────────────────────────────────
+  // channel / purpose / identifier are set by the backend response.
+  // Backend priority: SMS first, EMAIL fallback.
+  // Flutter must mirror this — check phone first, email second.
+  String  channel    = 'SMS';
+  String  purpose    = 'PHONE_VERIFY';
   String? identifier;
-  String? msg;
-  String? signupId; // ✅ NEW: Track pending signup UUID
+  String? signupId;
 
   // Profile photo
-  File? _profileImage;
-  final ImagePicker _picker = ImagePicker();
+  File?              _profileImage;
+  final ImagePicker  _picker = ImagePicker();
+
+  // Phone country picker
   String selectedCountryCode = '+237';
   String selectedCountryFlag = '🇨🇲';
 
   // Password visibility
-  bool _obscurePassword = true;
+  bool _obscurePassword        = true;
   bool _obscureConfirmPassword = true;
 
-  // Animation controllers
-  late AnimationController _stepAnimationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  // Message / error display
+  String? msg;
 
-  // Country codes with flags
+  // Loading state for step 2 submit
+  bool _isLoading = false;
+
+  // Animation controllers
+  late AnimationController  _stepAnimationController;
+  late Animation<double>    _fadeAnimation;
+  late Animation<Offset>    _slideAnimation;
+
+  // Country list
   final List<Map<String, String>> countries = [
     {'code': '+237', 'flag': '🇨🇲', 'name': 'Cameroon'},
-    {'code': '+1', 'flag': '🇺🇸', 'name': 'United States'},
-    {'code': '+44', 'flag': '🇬🇧', 'name': 'United Kingdom'},
-    {'code': '+33', 'flag': '🇫🇷', 'name': 'France'},
-    {'code': '+49', 'flag': '🇩🇪', 'name': 'Germany'},
-    {'code': '+39', 'flag': '🇮🇹', 'name': 'Italy'},
-    {'code': '+34', 'flag': '🇪🇸', 'name': 'Spain'},
-    {'code': '+31', 'flag': '🇳🇱', 'name': 'Netherlands'},
-    {'code': '+91', 'flag': '🇮🇳', 'name': 'India'},
-    {'code': '+86', 'flag': '🇨🇳', 'name': 'China'},
-    {'code': '+81', 'flag': '🇯🇵', 'name': 'Japan'},
+    {'code': '+1',   'flag': '🇺🇸', 'name': 'United States'},
+    {'code': '+44',  'flag': '🇬🇧', 'name': 'United Kingdom'},
+    {'code': '+33',  'flag': '🇫🇷', 'name': 'France'},
+    {'code': '+49',  'flag': '🇩🇪', 'name': 'Germany'},
+    {'code': '+39',  'flag': '🇮🇹', 'name': 'Italy'},
+    {'code': '+34',  'flag': '🇪🇸', 'name': 'Spain'},
+    {'code': '+31',  'flag': '🇳🇱', 'name': 'Netherlands'},
+    {'code': '+91',  'flag': '🇮🇳', 'name': 'India'},
+    {'code': '+86',  'flag': '🇨🇳', 'name': 'China'},
+    {'code': '+81',  'flag': '🇯🇵', 'name': 'Japan'},
     {'code': '+234', 'flag': '🇳🇬', 'name': 'Nigeria'},
-    {'code': '+27', 'flag': '🇿🇦', 'name': 'South Africa'},
+    {'code': '+27',  'flag': '🇿🇦', 'name': 'South Africa'},
   ];
+
+  // ═══════════════════════════════════════════════════════════════
+  // LIFECYCLE
+  // ═══════════════════════════════════════════════════════════════
 
   @override
   void initState() {
@@ -74,11 +91,10 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
       duration: const Duration(milliseconds: 400),
       vsync: this,
     );
-
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _stepAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _stepAnimationController, curve: Curves.easeInOut),
     );
-
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.2, 0),
       end: Offset.zero,
@@ -86,7 +102,6 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
       parent: _stepAnimationController,
       curve: Curves.easeOutCubic,
     ));
-
     _stepAnimationController.forward();
   }
 
@@ -103,25 +118,29 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
     super.dispose();
   }
 
-  String? _pickIdentifier({
-    required String channel,
-    required String email,
-    required String phone,
-  }) {
-    final em = email.trim();
-    final ph = phone.trim();
-    if (channel == 'EMAIL') {
-      return em.isNotEmpty ? em : null;
-    } else {
-      return ph.isNotEmpty ? ph : null;
-    }
+  // ═══════════════════════════════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════════════════════════════
+
+  void _animateToNextStep() {
+    _stepAnimationController.reset();
+    setState(() => current += 1);
+    _stepAnimationController.forward();
   }
+
+  void _animateToPreviousStep() {
+    _stepAnimationController.reset();
+    setState(() => current -= 1);
+    _stepAnimationController.forward();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // IMAGE PICKER
+  // ═══════════════════════════════════════════════════════════════
 
   Future<void> _pickProfileImage() async {
     try {
-      setState(() {
-        msg = null;
-      });
+      setState(() => msg = null);
 
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -131,57 +150,42 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
         preferredCameraDevice: CameraDevice.front,
       );
 
-      if (image != null) {
-        final fileSize = await image.length();
-        debugPrint('📷 Image picked: ${image.path}');
-        debugPrint('📊 File size: ${(fileSize / 1024).toStringAsFixed(2)} KB');
+      if (image == null) return;
 
-        if (fileSize > 5 * 1024 * 1024) {
-          setState(() {
-            msg = 'Image is too large. Please select a smaller image.';
-          });
-          return;
-        }
-
-        setState(() {
-          _profileImage = File(image.path);
-          msg = 'Profile photo selected successfully';
-        });
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() {
-              if (msg == 'Profile photo selected successfully') {
-                msg = null;
-              }
-            });
-          }
-        });
-      } else {
-        debugPrint('📷 No image selected');
+      final fileSize = await image.length();
+      if (fileSize > 5 * 1024 * 1024) {
+        setState(() => msg = 'Image is too large. Please select a smaller image.');
+        return;
       }
-    } on PlatformException catch (e) {
-      debugPrint('❌ Platform Exception: ${e.code} - ${e.message}');
 
       setState(() {
-        if (e.code == 'photo_access_denied' || e.code == 'camera_access_denied') {
-          msg = 'Permission denied. Please enable photo access in settings.';
-        } else {
-          msg = 'Error accessing photos: ${e.message ?? "Unknown error"}';
+        _profileImage = File(image.path);
+        msg = 'Profile photo selected successfully';
+      });
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted && msg == 'Profile photo selected successfully') {
+          setState(() => msg = null);
         }
+      });
+    } on PlatformException catch (e) {
+      setState(() {
+        msg = (e.code == 'photo_access_denied' || e.code == 'camera_access_denied')
+            ? 'Permission denied. Please enable photo access in settings.'
+            : 'Error accessing photos: ${e.message ?? "Unknown error"}';
       });
     } catch (e) {
-      debugPrint('❌ Error picking image: $e');
-      setState(() {
-        msg = 'Error selecting image. Please try again.';
-      });
+      setState(() => msg = 'Error selecting image. Please try again.');
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 1 — Personal info (no API call, just validation)
+  // ═══════════════════════════════════════════════════════════════
 
   Future<void> _submitStep1() async {
     setState(() => msg = null);
 
-    // Validation
     if (firstCtrl.text.trim().isEmpty) {
       setState(() => msg = 'First name is required');
       return;
@@ -190,12 +194,15 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
       setState(() => msg = 'Last name is required');
       return;
     }
-    if (emailCtrl.text.trim().isEmpty && phoneCtrl.text.trim().isEmpty) {
-      setState(() => msg = 'Email or phone number is required');
+    if (emailCtrl.text.trim().isEmpty) {
+      setState(() => msg = 'Email is required');
       return;
     }
 
-    // Email validation
+    if (phoneCtrl.text.trim().isEmpty) {
+      setState(() => msg = 'Phone number is required');
+      return;
+    }
     if (emailCtrl.text.trim().isNotEmpty) {
       final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
       if (!emailRegex.hasMatch(emailCtrl.text.trim())) {
@@ -207,10 +214,13 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
     _animateToNextStep();
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 2 — Password + API call to create pending signup
+  // ═══════════════════════════════════════════════════════════════
+
   Future<void> _submitStep2() async {
     setState(() => msg = null);
 
-    // Validation
     if (pwCtrl.text.trim().isEmpty) {
       setState(() => msg = 'Password is required');
       return;
@@ -228,117 +238,94 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
       return;
     }
 
-    // Show loading state
-    setState(() => msg = 'Creating your pending signup...');
+    setState(() {
+      _isLoading = true;
+      msg = 'Creating your account...';
+    });
 
     try {
       final email = emailCtrl.text.trim();
       final phone = phoneCtrl.text.trim();
+      final fullPhone = phone.isNotEmpty ? '$selectedCountryCode$phone' : '';
 
       debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       debugPrint('🚖 [PASSENGER SIGNUP] Starting registration...');
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('📧 Email: ${email.isNotEmpty ? email : "N/A"}');
+      debugPrint('📱 Phone: ${fullPhone.isNotEmpty ? fullPhone : "N/A"}');
 
-      // Prepare payload
+      // Build payload
       final payload = <String, dynamic>{
         'first_name': firstCtrl.text.trim(),
-        'last_name': lastCtrl.text.trim(),
-        'password': pwCtrl.text,
+        'last_name':  lastCtrl.text.trim(),
+        'password':   pwCtrl.text,
       };
-
-      // Add email or phone
-      if (email.isNotEmpty) {
-        payload['email'] = email;
-        debugPrint('📧 Email: $email');
-      }
-
-      if (phone.isNotEmpty) {
-        final fullPhone = '$selectedCountryCode$phone';
-        payload['phone_e164'] = fullPhone;
-        debugPrint('📱 Phone: $fullPhone');
-      }
-
-      debugPrint('👤 Name: ${payload['first_name']} ${payload['last_name']}');
-      debugPrint('📸 Avatar: ${_profileImage != null ? "YES" : "NO"}');
+      if (email.isNotEmpty)     payload['email']      = email;
+      if (fullPhone.isNotEmpty) payload['phone_e164'] = fullPhone;
 
       final resp = await ApiService.signupPassenger(
         payload,
         avatar: _profileImage,
       );
 
-      // ✅ UPDATED: Check for 200 status (not 201) - pending signup created
-      debugPrint('📥 [PASSENGER SIGNUP] Response received');
-      debugPrint('   Success: ${resp['success']}');
-      debugPrint('   Message: ${resp['message']}');
+      debugPrint('📥 Response: success=${resp['success']} msg=${resp['message']}');
 
       if (resp['success'] == true) {
-        debugPrint('\n✅ [SIGNUP] Pending signup created successfully!');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        final data       = resp['data'];
+        final otpDelivery = data['otp_delivery'] as Map<String, dynamic>?;
 
-        final data = resp['data'];
-
-        // ✅ NEW: Store signup_id for tracking
         signupId = data['signup_id'];
 
-        debugPrint('📋 Pending Signup Info:');
-        debugPrint('   Signup ID: $signupId');
-        debugPrint('   User Type: ${data['user_type']}');
-        debugPrint('   Name: ${data['first_name']} ${data['last_name']}');
-        debugPrint('   Email: ${data['email'] ?? "N/A"}');
-        debugPrint('   Phone: ${data['phone_e164'] ?? "N/A"}');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        debugPrint('✅ Pending signup created — ID: $signupId');
+        debugPrint('📨 OTP delivery: $otpDelivery');
 
-        // Determine OTP channel
-        final otpDelivery = data['otp_delivery'];
-        if (otpDelivery != null) {
-          if (otpDelivery['email'] != null) {
-            channel = 'EMAIL';
-            purpose = 'EMAIL_VERIFY';
-            identifier = email;
-            debugPrint('📧 [OTP] Will verify via EMAIL: $identifier');
-          } else if (otpDelivery['phone'] != null) {
-            channel = 'SMS';
-            purpose = 'PHONE_VERIFY';
-            identifier = '$selectedCountryCode$phone';
-            debugPrint('📱 [OTP] Will verify via SMS: $identifier');
-          }
+        // ─────────────────────────────────────────────────────────
+        // MIRROR BACKEND PRIORITY:
+        //   Backend sends SMS first (if phone provided).
+        //   Flutter must check phone first, email as fallback.
+        //   This ensures identifier + channel match the OTP that
+        //   was actually sent.
+        // ─────────────────────────────────────────────────────────
+        if (otpDelivery != null && otpDelivery['phone'] != null) {
+          // Backend sent SMS OTP
+          channel    = 'SMS';
+          purpose    = 'PHONE_VERIFY';
+          identifier = fullPhone;
+          debugPrint('📱 [OTP] Will verify via SMS: $identifier');
+        } else if (otpDelivery != null && otpDelivery['email'] != null) {
+          // Backend sent EMAIL OTP (no phone was provided)
+          channel    = 'EMAIL';
+          purpose    = 'EMAIL_VERIFY';
+          identifier = email;
+          debugPrint('📧 [OTP] Will verify via EMAIL: $identifier');
         }
 
-        setState(() {
-          msg = resp['message'] ?? 'Verification code sent. Please verify to complete registration.';
-        });
+        setState(() => msg = 'Verification code sent! Please check your '
+            '${channel == 'SMS' ? 'phone' : 'email'}.');
 
-        // Wait a moment to show success message
         await Future.delayed(const Duration(milliseconds: 500));
-
         _animateToNextStep();
       } else {
-        debugPrint('\n❌ [SIGNUP] Registration failed');
-        debugPrint('   Error: ${resp['message']}\n');
-
-        // ✅ IMPROVED: Better error handling
         String errorMessage = resp['message'] ?? 'Registration failed';
-
-        // Handle specific error codes
-        final errorCode = resp['code'];
+        final errorCode     = resp['code'];
         if (errorCode == 'EMAIL_ALREADY_EXISTS') {
           errorMessage = 'This email is already registered';
         } else if (errorCode == 'PHONE_ALREADY_EXISTS') {
           errorMessage = 'This phone number is already registered';
         }
-
-        setState(() {
-          msg = errorMessage;
-        });
+        setState(() => msg = errorMessage);
       }
     } catch (e) {
-      debugPrint('❌ [PASSENGER SIGNUP] Error: $e\n');
-
-      setState(() {
-        msg = e.toString().replaceAll('Exception: ', '');
-      });
+      debugPrint('❌ [PASSENGER SIGNUP] Error: $e');
+      setState(() => msg = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 3 — OTP verification
+  // ═══════════════════════════════════════════════════════════════
 
   Future<void> _verifyOtp() async {
     setState(() => msg = null);
@@ -348,50 +335,34 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
       return;
     }
 
+    if (identifier == null || identifier!.isEmpty) {
+      setState(() => msg = 'Something went wrong. Please go back and try again.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
     try {
       debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('🔐 [OTP] Verifying OTP and creating account...');
+      debugPrint('🔐 [OTP] Verifying...');
+      debugPrint('   Signup ID  : $signupId');
+      debugPrint('   Identifier : $identifier');
+      debugPrint('   Channel    : $channel');
+      debugPrint('   Purpose    : $purpose');
+      debugPrint('   Code       : ${otpCtrl.text}');
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('Signup ID: $signupId');
-      debugPrint('Identifier: $identifier');
-      debugPrint('Purpose: $purpose');
-      debugPrint('OTP: ${otpCtrl.text}');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-      identifier ??= _pickIdentifier(
-        channel: channel,
-        email: emailCtrl.text,
-        phone: '$selectedCountryCode${phoneCtrl.text}',
-      );
-
-      if (identifier == null || identifier!.isEmpty) {
-        setState(() {
-          msg = 'Select the correct channel and provide email/phone.';
-        });
-        return;
-      }
-
-      // ✅ UPDATED: Use new OTP verification endpoint
       final resp = await ApiService.verifyOtp(
         identifier: identifier!,
-        purpose: purpose,
-        code: otpCtrl.text.trim(),
+        purpose:    purpose,
+        code:       otpCtrl.text.trim(),
       );
 
-      debugPrint('📥 [OTP] Response received');
-      debugPrint('   Success: ${resp['success']}');
-      debugPrint('   Message: ${resp['message']}');
+      debugPrint('📥 OTP response: success=${resp['success']}');
 
       if (resp['success'] == true) {
-        debugPrint('\n✅ [OTP] Verification successful!');
-        debugPrint('✅ [ACCOUNT] Account created successfully!\n');
+        setState(() => msg = 'Account created successfully! You can now login.');
 
-        // ✅ UPDATED: Show new success message
-        setState(() {
-          msg = 'Account created successfully! You can now login.';
-        });
-
-        // Navigate to login after 2 seconds
         await Future.delayed(const Duration(seconds: 2));
 
         if (mounted) {
@@ -401,13 +372,8 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
           );
         }
       } else {
-        debugPrint('❌ [OTP] Verification failed');
-        debugPrint('   Error: ${resp['message']}\n');
-
-        // ✅ IMPROVED: Handle specific error codes
         String errorMessage = resp['message'] ?? 'Invalid OTP code';
-
-        final errorCode = resp['code'];
+        final errorCode     = resp['code'];
         if (errorCode == 'OTP_EXPIRED') {
           errorMessage = 'OTP code has expired. Please request a new one.';
         } else if (errorCode == 'TOO_MANY_ATTEMPTS') {
@@ -417,72 +383,48 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
         } else if (errorCode == 'INVALID_OTP') {
           errorMessage = 'Invalid OTP code. Please try again.';
         }
-
-        setState(() {
-          msg = errorMessage;
-        });
+        setState(() => msg = errorMessage);
       }
     } catch (e) {
-      debugPrint('❌ [OTP] Exception: $e\n');
-      setState(() {
-        msg = e.toString().replaceAll('Exception: ', '');
-      });
+      debugPrint('❌ [OTP] Exception: $e');
+      setState(() => msg = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // RESEND OTP
+  // ═══════════════════════════════════════════════════════════════
 
   Future<void> _resendOtp() async {
     setState(() => msg = null);
 
+    if (identifier == null || identifier!.isEmpty) {
+      setState(() => msg = 'Cannot resend — no identifier found.');
+      return;
+    }
+
     try {
-      identifier = _pickIdentifier(
-        channel: channel,
-        email: emailCtrl.text,
-        phone: '$selectedCountryCode${phoneCtrl.text}',
-      );
-
-      if (identifier == null || identifier!.isEmpty) {
-        setState(() {
-          msg = 'Enter your email/phone for the selected channel.';
-        });
-        return;
-      }
-
-      debugPrint('🔄 [OTP] Resending OTP...');
+      debugPrint('🔄 [OTP] Resending to $identifier via $channel...');
 
       await ApiService.sendOtp(
         identifier: identifier!,
-        channel: channel,
-        purpose: purpose,
+        channel:    channel,
+        purpose:    purpose,
       );
 
-      debugPrint('✅ [OTP] OTP resent successfully\n');
-
-      setState(() {
-        msg = 'Verification code sent successfully';
-      });
+      setState(() => msg = 'Verification code resent successfully');
+      debugPrint('✅ [OTP] Resent successfully');
     } catch (e) {
-      debugPrint('❌ [OTP] Resend failed: $e\n');
-      setState(() {
-        msg = e.toString().replaceAll('Exception: ', '');
-      });
+      debugPrint('❌ [OTP] Resend failed: $e');
+      setState(() => msg = e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-  void _animateToNextStep() {
-    _stepAnimationController.reset();
-    setState(() {
-      current += 1;
-    });
-    _stepAnimationController.forward();
-  }
-
-  void _animateToPreviousStep() {
-    _stepAnimationController.reset();
-    setState(() {
-      current -= 1;
-    });
-    _stepAnimationController.forward();
-  }
+  // ═══════════════════════════════════════════════════════════════
+  // COUNTRY PICKER
+  // ═══════════════════════════════════════════════════════════════
 
   void _showCountryPicker() {
     showModalBottomSheet(
@@ -506,13 +448,9 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
               ),
             ),
             const SizedBox(height: 20),
-
             Row(
               children: [
-                Text(
-                  'Select Country',
-                  style: AppTypography.headlineSmall,
-                ),
+                Text('Select Country', style: AppTypography.headlineSmall),
                 const Spacer(),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -522,51 +460,53 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                       color: AppColors.backgroundLight,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
-                      Icons.close,
-                      color: AppColors.textSecondary,
-                      size: 20,
-                    ),
+                    child: const Icon(Icons.close,
+                        color: AppColors.textSecondary, size: 20),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-
             Expanded(
               child: ListView.builder(
                 itemCount: countries.length,
                 itemBuilder: (context, index) {
-                  final country = countries[index];
+                  final country    = countries[index];
                   final isSelected = selectedCountryCode == country['code'];
-
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primaryGold.withOpacity(0.1) : Colors.transparent,
+                      color: isSelected
+                          ? AppColors.primaryGold.withOpacity(0.1)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isSelected ? AppColors.primaryGold : Colors.transparent,
+                        color: isSelected
+                            ? AppColors.primaryGold
+                            : Colors.transparent,
                         width: 1.5,
                       ),
                     ),
                     child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: Text(
-                        country['flag']!,
-                        style: const TextStyle(fontSize: 28),
-                      ),
+                      contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Text(country['flag']!,
+                          style: const TextStyle(fontSize: 28)),
                       title: Text(
                         country['name']!,
                         style: AppTypography.bodyLarge.copyWith(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                       ),
                       trailing: Text(
                         country['code']!,
                         style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.textSecondary,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                       ),
                       onTap: () {
@@ -586,6 +526,10 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
       ),
     );
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BUILD
+  // ═══════════════════════════════════════════════════════════════
 
   @override
   Widget build(BuildContext context) {
@@ -638,11 +582,8 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.arrow_back_ios_new,
-                color: AppColors.textPrimary,
-                size: 18,
-              ),
+              child: const Icon(Icons.arrow_back_ios_new,
+                  color: AppColors.textPrimary, size: 18),
             ),
           ),
           Expanded(
@@ -674,9 +615,8 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
   }
 
   Widget _buildStepCircle(int step, String label) {
-    final isActive = current == step;
+    final isActive    = current == step;
     final isCompleted = current > step;
-
     return Container(
       width: 36,
       height: 36,
@@ -700,7 +640,9 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
             : Text(
           label,
           style: AppTypography.titleMedium.copyWith(
-            color: isActive ? AppColors.textPrimary : AppColors.textLight,
+            color: isActive
+                ? AppColors.textPrimary
+                : AppColors.textLight,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -710,7 +652,6 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
 
   Widget _buildProgressLine(int step) {
     final isCompleted = current > step;
-
     return Expanded(
       child: Container(
         height: 3,
@@ -737,6 +678,10 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 1: PERSONAL INFO
+  // ═══════════════════════════════════════════════════════════════
+
   Widget _buildPersonalInfoStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -760,13 +705,12 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
             const SizedBox(height: 8),
             Text(
               'Please provide your details to get started',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: AppTypography.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 32),
 
-            // Profile Photo Section
+            // Profile photo
             Center(
               child: Stack(
                 children: [
@@ -777,8 +721,12 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                       height: 110,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: _profileImage == null ? AppColors.primaryGradient : null,
-                        color: _profileImage != null ? AppColors.backgroundLight : null,
+                        gradient: _profileImage == null
+                            ? AppColors.primaryGradient
+                            : null,
+                        color: _profileImage != null
+                            ? AppColors.backgroundLight
+                            : null,
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primaryGold.withOpacity(0.3),
@@ -794,38 +742,29 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                           fit: BoxFit.cover,
                           width: 110,
                           height: 110,
-                          errorBuilder: (context, error, stackTrace) {
-                            debugPrint('❌ Error displaying image: $error');
-                            return Container(
-                              decoration: BoxDecoration(
-                                gradient: AppColors.primaryGradient,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.error_outline,
-                                color: AppColors.textPrimary,
-                                size: 40,
-                              ),
-                            );
-                          },
-                          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                            if (wasSynchronouslyLoaded) {
-                              return child;
-                            }
+                          errorBuilder: (_, __, ___) => Container(
+                            decoration: BoxDecoration(
+                              gradient: AppColors.primaryGradient,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.error_outline,
+                                color: AppColors.textPrimary, size: 40),
+                          ),
+                          frameBuilder: (_, child, frame,
+                              wasSynchronouslyLoaded) {
+                            if (wasSynchronouslyLoaded) return child;
                             return AnimatedOpacity(
                               opacity: frame == null ? 0 : 1,
-                              duration: const Duration(milliseconds: 300),
+                              duration:
+                              const Duration(milliseconds: 300),
                               curve: Curves.easeOut,
                               child: child,
                             );
                           },
                         ),
                       )
-                          : const Icon(
-                        Icons.person_outline,
-                        color: AppColors.textPrimary,
-                        size: 50,
-                      ),
+                          : const Icon(Icons.person_outline,
+                          color: AppColors.textPrimary, size: 50),
                     ),
                   ),
                   Positioned(
@@ -840,9 +779,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                           gradient: AppColors.primaryGradient,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppColors.backgroundWhite,
-                            width: 3,
-                          ),
+                              color: AppColors.backgroundWhite, width: 3),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.primaryGold.withOpacity(0.3),
@@ -851,11 +788,8 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: AppColors.textPrimary,
-                          size: 18,
-                        ),
+                        child: const Icon(Icons.camera_alt,
+                            color: AppColors.textPrimary, size: 18),
                       ),
                     ),
                   ),
@@ -864,14 +798,11 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
             ),
             const SizedBox(height: 12),
             Center(
-              child: Text(
-                'Add profile photo (optional)',
-                style: AppTypography.caption,
-              ),
+              child: Text('Add profile photo (optional)',
+                  style: AppTypography.caption),
             ),
             const SizedBox(height: 32),
 
-            // Form Fields
             _buildTextField(
               controller: firstCtrl,
               label: 'First Name',
@@ -879,7 +810,6 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: lastCtrl,
               label: 'Last Name',
@@ -887,7 +817,6 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: emailCtrl,
               label: 'Email Address',
@@ -896,7 +825,6 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
               prefixIcon: Icons.email_outlined,
             ),
             const SizedBox(height: 20),
-
             _buildPhoneField(),
             const SizedBox(height: 32),
 
@@ -905,10 +833,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
               const SizedBox(height: 20),
             ],
 
-            _buildPrimaryButton(
-              text: 'Next',
-              onPressed: _submitStep1,
-            ),
+            _buildPrimaryButton(text: 'Next', onPressed: _submitStep1),
             const SizedBox(height: 20),
             _buildLoginLink(),
           ],
@@ -916,6 +841,10 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
       ),
     );
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 2: SECURITY
+  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildSecurityStep() {
     return SingleChildScrollView(
@@ -940,9 +869,8 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
             const SizedBox(height: 8),
             Text(
               'Create a strong password to secure your account',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: AppTypography.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 40),
 
@@ -954,21 +882,18 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
               prefixIcon: Icons.lock_outline,
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   color: AppColors.textSecondary,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              'Must be at least 8 characters',
-              style: AppTypography.caption,
-            ),
+            Text('Must be at least 8 characters',
+                style: AppTypography.caption),
             const SizedBox(height: 24),
 
             _buildTextField(
@@ -979,14 +904,13 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
               prefixIcon: Icons.lock_outline,
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   color: AppColors.textSecondary,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _obscureConfirmPassword = !_obscureConfirmPassword;
-                  });
-                },
+                onPressed: () => setState(
+                        () => _obscureConfirmPassword = !_obscureConfirmPassword),
               ),
             ),
             const SizedBox(height: 40),
@@ -997,8 +921,10 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
             ],
 
             _buildPrimaryButton(
-              text: 'Continue to Verification',
-              onPressed: _submitStep2,
+              text: _isLoading
+                  ? 'Creating account...'
+                  : 'Continue to Verification',
+              onPressed: _isLoading ? () {} : _submitStep2,
             ),
             const SizedBox(height: 20),
             _buildLoginLink(),
@@ -1008,7 +934,16 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 3: OTP
+  // ═══════════════════════════════════════════════════════════════
+
   Widget _buildOtpStep() {
+    // Show where the code was sent
+    final sentTo = channel == 'SMS'
+        ? (identifier ?? '$selectedCountryCode${phoneCtrl.text}')
+        : (identifier ?? emailCtrl.text);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Container(
@@ -1027,7 +962,6 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Icon
             Container(
               width: 80,
               height: 80,
@@ -1042,25 +976,24 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.mark_email_read_outlined,
+              child: Icon(
+                channel == 'SMS'
+                    ? Icons.sms_outlined
+                    : Icons.mark_email_read_outlined,
                 color: AppColors.textPrimary,
                 size: 40,
               ),
             ),
             const SizedBox(height: 24),
 
-            Text(
-              'Verification Code',
-              style: AppTypography.displaySmall,
-              textAlign: TextAlign.center,
-            ),
+            Text('Verification Code',
+                style: AppTypography.displaySmall,
+                textAlign: TextAlign.center),
             const SizedBox(height: 12),
             Text(
-              'We sent a verification code to\n${channel == 'EMAIL' ? emailCtrl.text : '$selectedCountryCode${phoneCtrl.text}'}',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              'We sent a ${channel == 'SMS' ? 'SMS' : 'email'} code to\n$sentTo',
+              style: AppTypography.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -1074,15 +1007,12 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
             ),
             const SizedBox(height: 40),
 
-            // OTP Input Field
+            // OTP input
             Container(
               decoration: BoxDecoration(
                 color: AppColors.inputBackground,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.inputBorder,
-                  width: 1.5,
-                ),
+                border: Border.all(color: AppColors.inputBorder, width: 1.5),
               ),
               child: TextField(
                 controller: otpCtrl,
@@ -1103,7 +1033,8 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                     letterSpacing: 16,
                   ),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 20),
+                  contentPadding:
+                  const EdgeInsets.symmetric(vertical: 20),
                 ),
               ),
             ),
@@ -1115,30 +1046,30 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
             ],
 
             _buildPrimaryButton(
-              text: 'Verify & Create Account',
-              onPressed: _verifyOtp,
+              text: _isLoading
+                  ? 'Verifying...'
+                  : 'Verify & Create Account',
+              onPressed: _isLoading ? () {} : _verifyOtp,
             ),
             const SizedBox(height: 32),
 
-            // Resend OTP
+            // Resend
             Column(
               children: [
                 Text(
                   "Didn't receive the code?",
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTypography.bodyMedium
+                      .copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: _resendOtp,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: AppColors.primaryGold,
-                        width: 1.5,
-                      ),
+                          color: AppColors.primaryGold, width: 1.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -1158,11 +1089,15 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // SHARED WIDGETS
+  // ═══════════════════════════════════════════════════════════════
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
-    bool obscureText = false,
+    bool obscureText       = false,
     IconData? prefixIcon,
     Widget? suffixIcon,
     TextInputType? keyboardType,
@@ -1176,10 +1111,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
           decoration: BoxDecoration(
             color: AppColors.inputBackground,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: AppColors.inputBorder,
-              width: 1.5,
-            ),
+            border: Border.all(color: AppColors.inputBorder, width: 1.5),
           ),
           child: TextField(
             controller: controller,
@@ -1190,11 +1122,13 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
               hintText: hint,
               hintStyle: AppTypography.inputHint,
               prefixIcon: prefixIcon != null
-                  ? Icon(prefixIcon, color: AppColors.textSecondary, size: 22)
+                  ? Icon(prefixIcon,
+                  color: AppColors.textSecondary, size: 22)
                   : null,
               suffixIcon: suffixIcon,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             ),
           ),
         ),
@@ -1212,38 +1146,29 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
           decoration: BoxDecoration(
             color: AppColors.inputBackground,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: AppColors.inputBorder,
-              width: 1.5,
-            ),
+            border: Border.all(color: AppColors.inputBorder, width: 1.5),
           ),
           child: Row(
             children: [
               GestureDetector(
                 onTap: _showCountryPicker,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 18),
                   decoration: BoxDecoration(
                     border: Border(
                       right: BorderSide(
-                        color: AppColors.inputBorder,
-                        width: 1.5,
-                      ),
+                          color: AppColors.inputBorder, width: 1.5),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        selectedCountryFlag,
-                        style: const TextStyle(fontSize: 24),
-                      ),
+                      Text(selectedCountryFlag,
+                          style: const TextStyle(fontSize: 24)),
                       const SizedBox(width: 8),
-                      const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: AppColors.textSecondary,
-                        size: 20,
-                      ),
+                      const Icon(Icons.keyboard_arrow_down,
+                          color: AppColors.textSecondary, size: 20),
                     ],
                   ),
                 ),
@@ -1258,7 +1183,8 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
                     hintText: '6 77 77 77 77',
                     hintStyle: AppTypography.inputHint,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 18),
                   ),
                 ),
               ),
@@ -1293,14 +1219,22 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+              borderRadius: BorderRadius.circular(14)),
         ),
-        child: Text(
-          text,
-          style: AppTypography.buttonLarge.copyWith(
-            fontWeight: FontWeight.w700,
+        child: _isLoading
+            ? const SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            valueColor: AlwaysStoppedAnimation<Color>(
+                AppColors.textPrimary),
           ),
+        )
+            : Text(
+          text,
+          style: AppTypography.buttonLarge
+              .copyWith(fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -1355,9 +1289,8 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen> with Tick
         child: RichText(
           text: TextSpan(
             text: 'Already have an account? ',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTypography.bodyMedium
+                .copyWith(color: AppColors.textSecondary),
             children: [
               TextSpan(
                 text: 'Login',

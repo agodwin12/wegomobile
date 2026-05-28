@@ -1,5 +1,64 @@
-// lib/models/services/service_rating_model.dart
-// Service Rating & Review Model - Production Ready
+
+
+import 'package:flutter/foundation.dart';
+
+/// ═══════════════════════════════════════════════════════════════════════
+/// HELPER FUNCTIONS
+/// ═══════════════════════════════════════════════════════════════════════
+
+int _parseInt(dynamic value, {int defaultValue = 0}) {
+  if (value == null) return defaultValue;
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? defaultValue;
+  return defaultValue;
+}
+
+String _parseString(dynamic value, {String defaultValue = ''}) {
+  if (value == null) return defaultValue;
+  return value.toString();
+}
+
+double? _parseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+DateTime? _parseDateTime(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String) {
+    try {
+      return DateTime.parse(value);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+List<String> _parseStringList(dynamic value) {
+  if (value == null) return [];
+  if (value is List) {
+    return value
+        .map((e) => e?.toString())
+        .where((e) => e != null && e.isNotEmpty)
+        .cast<String>()
+        .toList();
+  }
+  return [];
+}
+
+bool _parseBool(dynamic value) {
+  if (value == null) return false;
+  if (value is bool) return value;
+  if (value is int) return value == 1;
+  if (value is String) return value.toLowerCase() == 'true' || value == '1';
+  return false;
+}
 
 /// ═══════════════════════════════════════════════════════════════════════
 /// SERVICE RATING MODEL
@@ -9,25 +68,24 @@ class ServiceRating {
   final int id;
   final int requestId;
   final int listingId;
-  final int customerId;
-  final String customerType;
-  final int providerId;
-  final String providerType;
-  final int rating; // Overall rating 1-5
+
+  // ✅ FIXED: These are UUIDs (strings) not integers
+  final String customerId;
+  final String providerId;
+
+  final int rating;
   final int? qualityRating;
   final int? professionalismRating;
   final int? communicationRating;
   final int? valueRating;
   final String? reviewText;
   final List<String> reviewPhotos;
-  final String? providerResponseText;
+  final String? providerResponse;
   final DateTime? providerRespondedAt;
   final bool isFlagged;
-  final String? flagReason;
-  final int? flaggedBy;
-  final DateTime? flaggedAt;
+  final String? flaggedReason;
   final int helpfulCount;
-  final bool isVerifiedService;
+  final bool isVerified;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -35,15 +93,14 @@ class ServiceRating {
   final Map<String, dynamic>? customer;
   final Map<String, dynamic>? provider;
   final Map<String, dynamic>? listing;
+  final Map<String, dynamic>? request;
 
   ServiceRating({
     required this.id,
     required this.requestId,
     required this.listingId,
     required this.customerId,
-    required this.customerType,
     required this.providerId,
-    required this.providerType,
     required this.rating,
     this.qualityRating,
     this.professionalismRating,
@@ -51,61 +108,90 @@ class ServiceRating {
     this.valueRating,
     this.reviewText,
     required this.reviewPhotos,
-    this.providerResponseText,
+    this.providerResponse,
     this.providerRespondedAt,
     required this.isFlagged,
-    this.flagReason,
-    this.flaggedBy,
-    this.flaggedAt,
+    this.flaggedReason,
     required this.helpfulCount,
-    required this.isVerifiedService,
+    required this.isVerified,
     required this.createdAt,
     required this.updatedAt,
     this.customer,
     this.provider,
     this.listing,
+    this.request,
   });
 
   /// ═══════════════════════════════════════════════════════════════════════
-  /// JSON SERIALIZATION
+  /// JSON SERIALIZATION - FULLY NULL-SAFE
   /// ═══════════════════════════════════════════════════════════════════════
 
   factory ServiceRating.fromJson(Map<String, dynamic> json) {
-    return ServiceRating(
-      id: json['id'] as int,
-      requestId: json['request_id'] as int,
-      listingId: json['listing_id'] as int,
-      customerId: json['customer_id'] as int,
-      customerType: json['customer_type'] as String,
-      providerId: json['provider_id'] as int,
-      providerType: json['provider_type'] as String,
-      rating: json['rating'] as int,
-      qualityRating: json['quality_rating'] as int?,
-      professionalismRating: json['professionalism_rating'] as int?,
-      communicationRating: json['communication_rating'] as int?,
-      valueRating: json['value_rating'] as int?,
-      reviewText: json['review_text'] as String?,
-      reviewPhotos: json['review_photos'] != null
-          ? List<String>.from(json['review_photos'] as List)
-          : [],
-      providerResponseText: json['provider_response_text'] as String?,
-      providerRespondedAt: json['provider_responded_at'] != null
-          ? DateTime.parse(json['provider_responded_at'] as String)
-          : null,
-      isFlagged: json['is_flagged'] as bool? ?? false,
-      flagReason: json['flag_reason'] as String?,
-      flaggedBy: json['flagged_by'] as int?,
-      flaggedAt: json['flagged_at'] != null
-          ? DateTime.parse(json['flagged_at'] as String)
-          : null,
-      helpfulCount: json['helpful_count'] as int? ?? 0,
-      isVerifiedService: json['is_verified_service'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      customer: json['customer'] as Map<String, dynamic>?,
-      provider: json['provider'] as Map<String, dynamic>?,
-      listing: json['listing'] as Map<String, dynamic>?,
-    );
+    try {
+      return ServiceRating(
+        id: _parseInt(json['id']),
+        requestId: _parseInt(json['request_id']),
+        listingId: _parseInt(json['listing_id']),
+
+        // ✅ FIXED: UUID fields — always parse as String
+        customerId: _parseString(json['customer_id']),
+        providerId: _parseString(json['provider_id']),
+
+        rating: _parseInt(json['rating'], defaultValue: 1),
+        qualityRating: json['quality_rating'] != null
+            ? _parseInt(json['quality_rating'])
+            : null,
+        professionalismRating: json['professionalism_rating'] != null
+            ? _parseInt(json['professionalism_rating'])
+            : null,
+        communicationRating: json['communication_rating'] != null
+            ? _parseInt(json['communication_rating'])
+            : null,
+        valueRating: json['value_rating'] != null
+            ? _parseInt(json['value_rating'])
+            : null,
+        reviewText: json['review_text']?.toString(),
+
+        // ✅ Handle both field names from backend
+        reviewPhotos: _parseStringList(
+          json['review_photos'],
+        ),
+
+        // ✅ Handle both field names from backend
+        providerResponse: json['provider_response']?.toString() ??
+            json['provider_response_text']?.toString(),
+
+        providerRespondedAt: _parseDateTime(
+          json['provider_responded_at'],
+        ),
+
+        isFlagged: _parseBool(json['is_flagged']),
+
+        // ✅ Handle both field names from backend
+        flaggedReason: json['flagged_reason']?.toString() ??
+            json['flag_reason']?.toString(),
+
+        helpfulCount: _parseInt(json['helpful_count']),
+
+        // ✅ Handle both field names from backend
+        isVerified: _parseBool(json['is_verified'] ?? json['is_verified_service']),
+
+        createdAt: _parseDateTime(json['created_at'] ?? json['createdAt']) ??
+            DateTime.now(),
+        updatedAt: _parseDateTime(json['updated_at'] ?? json['updatedAt']) ??
+            DateTime.now(),
+
+        customer: json['customer'] as Map<String, dynamic>?,
+        provider: json['provider'] as Map<String, dynamic>?,
+        listing: json['listing'] as Map<String, dynamic>?,
+        request: json['request'] as Map<String, dynamic>?,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ [SERVICE_RATING_MODEL] Error parsing: $e');
+      debugPrint('Stack trace: $stackTrace');
+      debugPrint('JSON: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -114,9 +200,7 @@ class ServiceRating {
       'request_id': requestId,
       'listing_id': listingId,
       'customer_id': customerId,
-      'customer_type': customerType,
       'provider_id': providerId,
-      'provider_type': providerType,
       'rating': rating,
       'quality_rating': qualityRating,
       'professionalism_rating': professionalismRating,
@@ -124,19 +208,18 @@ class ServiceRating {
       'value_rating': valueRating,
       'review_text': reviewText,
       'review_photos': reviewPhotos,
-      'provider_response_text': providerResponseText,
+      'provider_response': providerResponse,
       'provider_responded_at': providerRespondedAt?.toIso8601String(),
       'is_flagged': isFlagged,
-      'flag_reason': flagReason,
-      'flagged_by': flaggedBy,
-      'flagged_at': flaggedAt?.toIso8601String(),
+      'flagged_reason': flaggedReason,
       'helpful_count': helpfulCount,
-      'is_verified_service': isVerifiedService,
+      'is_verified': isVerified,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'customer': customer,
       'provider': provider,
       'listing': listing,
+      'request': request,
     };
   }
 
@@ -144,103 +227,67 @@ class ServiceRating {
   /// HELPER METHODS
   /// ═══════════════════════════════════════════════════════════════════════
 
-  /// Get customer name
   String get customerName {
     if (customer == null) return 'Anonymous';
-    return '${customer!['first_name']} ${customer!['last_name']}';
+    final firstName = customer!['first_name']?.toString() ?? '';
+    final lastName = customer!['last_name']?.toString() ?? '';
+    return '$firstName $lastName'.trim().isEmpty
+        ? 'Anonymous'
+        : '$firstName $lastName'.trim();
   }
 
-  /// Get customer first name only
   String get customerFirstName {
     if (customer == null) return 'Anonymous';
-    return customer!['first_name'] as String;
+    return customer!['first_name']?.toString() ?? 'Anonymous';
   }
 
-  /// Get customer photo
-  String? get customerPhoto {
+  String? get customerAvatarUrl {
     if (customer == null) return null;
-    return customer!['profile_photo'] as String?;
+    return customer!['avatar_url']?.toString();
   }
 
-  /// Get provider name
   String get providerName {
     if (provider == null) return 'Provider';
-    return '${provider!['first_name']} ${provider!['last_name']}';
+    final firstName = provider!['first_name']?.toString() ?? '';
+    final lastName = provider!['last_name']?.toString() ?? '';
+    return '$firstName $lastName'.trim().isEmpty
+        ? 'Provider'
+        : '$firstName $lastName'.trim();
   }
 
-  /// Get listing title
   String get listingTitle {
     if (listing == null) return 'Service';
-    return listing!['title'] as String;
+    return listing!['title']?.toString() ?? 'Service';
   }
 
-  /// Get star display (★★★★★)
-  String get starDisplay {
-    return '★' * rating + '☆' * (5 - rating);
-  }
+  String get starDisplay => '★' * rating + '☆' * (5 - rating);
 
-  /// Get star emoji display (⭐⭐⭐⭐⭐)
-  String get starEmojiDisplay {
-    return '⭐' * rating;
-  }
+  String get starEmojiDisplay => '⭐' * rating;
 
-  /// Get rating text
   String get ratingText {
     switch (rating) {
-      case 5:
-        return 'Excellent';
-      case 4:
-        return 'Very Good';
-      case 3:
-        return 'Good';
-      case 2:
-        return 'Fair';
-      case 1:
-        return 'Poor';
-      default:
-        return 'No Rating';
+      case 5: return 'Excellent';
+      case 4: return 'Very Good';
+      case 3: return 'Good';
+      case 2: return 'Fair';
+      case 1: return 'Poor';
+      default: return 'No Rating';
     }
   }
 
-  /// Get rating color for UI
-  String get ratingColorHex {
-    if (rating >= 4) return '#4CAF50'; // Green
-    if (rating == 3) return '#FF9800'; // Orange
-    return '#F44336'; // Red
-  }
-
-  /// Check if has review text
   bool get hasReviewText => reviewText != null && reviewText!.isNotEmpty;
 
-  /// Check if has photos
   bool get hasPhotos => reviewPhotos.isNotEmpty;
 
-  /// Check if has provider response
   bool get hasProviderResponse =>
-      providerResponseText != null && providerResponseText!.isNotEmpty;
+      providerResponse != null && providerResponse!.isNotEmpty;
 
-  /// Get short review text (first 100 chars)
   String? get shortReviewText {
     if (reviewText == null || reviewText!.isEmpty) return null;
     if (reviewText!.length <= 100) return reviewText;
     return '${reviewText!.substring(0, 100)}...';
   }
 
-  /// Get review length category
-  String get reviewLength {
-    if (reviewText == null || reviewText!.isEmpty) return 'No review';
-    if (reviewText!.length < 50) return 'Short';
-    if (reviewText!.length < 200) return 'Medium';
-    return 'Detailed';
-  }
-
-  /// Check if verified purchase
-  bool get isVerified => isVerifiedService;
-
-  /// Get verified badge text
-  String get verifiedBadge => isVerifiedService ? '✓ Verified Service' : '';
-
-  /// Get average of aspect ratings
   double? get aspectRatingsAverage {
     final aspects = [
       qualityRating,
@@ -250,12 +297,9 @@ class ServiceRating {
     ].whereType<int>().toList();
 
     if (aspects.isEmpty) return null;
-
-    final sum = aspects.reduce((a, b) => a + b);
-    return sum / aspects.length;
+    return aspects.reduce((a, b) => a + b) / aspects.length;
   }
 
-  /// Get relative time (e.g., "2 days ago")
   String get relativeTime {
     final now = DateTime.now();
     final difference = now.difference(createdAt);
@@ -274,7 +318,6 @@ class ServiceRating {
     }
   }
 
-  /// Get formatted date (e.g., "Jan 15, 2025")
   String get formattedDate {
     final months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -283,40 +326,14 @@ class ServiceRating {
     return '${months[createdAt.month - 1]} ${createdAt.day}, ${createdAt.year}';
   }
 
-  /// Get helpful count display
   String get helpfulCountDisplay {
     if (helpfulCount == 0) return '';
     if (helpfulCount == 1) return '1 person found this helpful';
     return '$helpfulCount people found this helpful';
   }
 
-  /// Build aspect ratings summary
-  String get aspectRatingsSummary {
-    final buffer = StringBuffer();
-
-    if (qualityRating != null) {
-      buffer.write('Quality: ${'★' * qualityRating!}');
-    }
-    if (professionalismRating != null) {
-      if (buffer.isNotEmpty) buffer.write(' | ');
-      buffer.write('Professionalism: ${'★' * professionalismRating!}');
-    }
-    if (communicationRating != null) {
-      if (buffer.isNotEmpty) buffer.write(' | ');
-      buffer.write('Communication: ${'★' * communicationRating!}');
-    }
-    if (valueRating != null) {
-      if (buffer.isNotEmpty) buffer.write(' | ');
-      buffer.write('Value: ${'★' * valueRating!}');
-    }
-
-    return buffer.toString();
-  }
-
-  /// Check if all aspect ratings are 5 stars
   bool get isPerfectRating {
     if (rating != 5) return false;
-
     return (qualityRating == null || qualityRating == 5) &&
         (professionalismRating == null || professionalismRating == 5) &&
         (communicationRating == null || communicationRating == 5) &&
@@ -331,10 +348,8 @@ class ServiceRating {
     int? id,
     int? requestId,
     int? listingId,
-    int? customerId,
-    String? customerType,
-    int? providerId,
-    String? providerType,
+    String? customerId,
+    String? providerId,
     int? rating,
     int? qualityRating,
     int? professionalismRating,
@@ -342,48 +357,45 @@ class ServiceRating {
     int? valueRating,
     String? reviewText,
     List<String>? reviewPhotos,
-    String? providerResponseText,
+    String? providerResponse,
     DateTime? providerRespondedAt,
     bool? isFlagged,
-    String? flagReason,
-    int? flaggedBy,
-    DateTime? flaggedAt,
+    String? flaggedReason,
     int? helpfulCount,
-    bool? isVerifiedService,
+    bool? isVerified,
     DateTime? createdAt,
     DateTime? updatedAt,
     Map<String, dynamic>? customer,
     Map<String, dynamic>? provider,
     Map<String, dynamic>? listing,
+    Map<String, dynamic>? request,
   }) {
     return ServiceRating(
       id: id ?? this.id,
       requestId: requestId ?? this.requestId,
       listingId: listingId ?? this.listingId,
       customerId: customerId ?? this.customerId,
-      customerType: customerType ?? this.customerType,
       providerId: providerId ?? this.providerId,
-      providerType: providerType ?? this.providerType,
       rating: rating ?? this.rating,
       qualityRating: qualityRating ?? this.qualityRating,
-      professionalismRating: professionalismRating ?? this.professionalismRating,
+      professionalismRating:
+      professionalismRating ?? this.professionalismRating,
       communicationRating: communicationRating ?? this.communicationRating,
       valueRating: valueRating ?? this.valueRating,
       reviewText: reviewText ?? this.reviewText,
       reviewPhotos: reviewPhotos ?? this.reviewPhotos,
-      providerResponseText: providerResponseText ?? this.providerResponseText,
+      providerResponse: providerResponse ?? this.providerResponse,
       providerRespondedAt: providerRespondedAt ?? this.providerRespondedAt,
       isFlagged: isFlagged ?? this.isFlagged,
-      flagReason: flagReason ?? this.flagReason,
-      flaggedBy: flaggedBy ?? this.flaggedBy,
-      flaggedAt: flaggedAt ?? this.flaggedAt,
+      flaggedReason: flaggedReason ?? this.flaggedReason,
       helpfulCount: helpfulCount ?? this.helpfulCount,
-      isVerifiedService: isVerifiedService ?? this.isVerifiedService,
+      isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       customer: customer ?? this.customer,
       provider: provider ?? this.provider,
       listing: listing ?? this.listing,
+      request: request ?? this.request,
     );
   }
 
@@ -419,42 +431,79 @@ class RatingListResponse {
   });
 
   factory RatingListResponse.fromJson(Map<String, dynamic> json) {
-    return RatingListResponse(
-      success: json['success'] as bool,
-      message: json['message'] as String,
-      ratings: (json['data']['ratings'] as List)
-          .map((item) => ServiceRating.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      statistics: json['data']['statistics'] as Map<String, dynamic>?,
-      total: json['data']['pagination']['total'] as int,
-      page: json['data']['pagination']['page'] as int,
-      limit: json['data']['pagination']['limit'] as int,
-      totalPages: json['data']['pagination']['total_pages'] as int,
-    );
+    try {
+      // ✅ Handle both direct array and wrapped response
+      List<ServiceRating> ratingsList = [];
+      Map<String, dynamic>? stats;
+      int total = 0;
+      int page = 1;
+      int limit = 10;
+      int totalPages = 1;
+
+      final data = json['data'];
+
+      if (data is List) {
+        // Backend returns data as direct array
+        ratingsList = data
+            .map((item) => ServiceRating.fromJson(item as Map<String, dynamic>))
+            .toList();
+        total = ratingsList.length;
+      } else if (data is Map<String, dynamic>) {
+        // Backend returns wrapped object
+        final rawList = data['ratings'] as List? ?? [];
+        ratingsList = rawList
+            .map((item) => ServiceRating.fromJson(item as Map<String, dynamic>))
+            .toList();
+        stats = data['statistics'] as Map<String, dynamic>?;
+
+        final pagination = data['pagination'] as Map<String, dynamic>?
+            ?? json['pagination'] as Map<String, dynamic>?
+            ?? {};
+        total = _parseInt(pagination['total'], defaultValue: ratingsList.length);
+        page = _parseInt(pagination['page'], defaultValue: 1);
+        limit = _parseInt(pagination['limit'], defaultValue: 10);
+        totalPages = _parseInt(
+          pagination['totalPages'] ?? pagination['total_pages'],
+          defaultValue: 1,
+        );
+      }
+
+      return RatingListResponse(
+        success: json['success'] as bool? ?? true,
+        message: json['message']?.toString() ?? '',
+        ratings: ratingsList,
+        statistics: stats,
+        total: total,
+        page: page,
+        limit: limit,
+        totalPages: totalPages,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ [RATING_LIST_RESPONSE] Error parsing: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   bool get hasMore => page < totalPages;
 
-  /// Get average rating from statistics
   double? get averageRating {
     if (statistics == null) return null;
-    final avg = statistics!['average_rating'];
-    return avg != null ? (avg as num).toDouble() : null;
+    return _parseDouble(statistics!['average_rating']);
   }
 
-  /// Get rating breakdown (5 star: X, 4 star: Y, etc.)
   Map<int, int>? get ratingBreakdown {
     if (statistics == null) return null;
-
-    final breakdown = statistics!['rating_breakdown'] as Map<String, dynamic>?;
+    final breakdown = statistics!['rating_distribution'] as Map<String, dynamic>?
+        ?? statistics!['rating_breakdown'] as Map<String, dynamic>?;
     if (breakdown == null) return null;
 
     return {
-      5: breakdown['5_star'] as int? ?? 0,
-      4: breakdown['4_star'] as int? ?? 0,
-      3: breakdown['3_star'] as int? ?? 0,
-      2: breakdown['2_star'] as int? ?? 0,
-      1: breakdown['1_star'] as int? ?? 0,
+      5: _parseInt(breakdown['5'] ?? breakdown['5_star']),
+      4: _parseInt(breakdown['4'] ?? breakdown['4_star']),
+      3: _parseInt(breakdown['3'] ?? breakdown['3_star']),
+      2: _parseInt(breakdown['2'] ?? breakdown['2_star']),
+      1: _parseInt(breakdown['1'] ?? breakdown['1_star']),
     };
   }
 }
@@ -475,23 +524,33 @@ class SingleRatingResponse {
   });
 
   factory SingleRatingResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'];
+    ServiceRating ratingData;
+
+    if (data is Map<String, dynamic> && data.containsKey('rating')) {
+      ratingData = ServiceRating.fromJson(
+          data['rating'] as Map<String, dynamic>);
+    } else if (data is Map<String, dynamic>) {
+      ratingData = ServiceRating.fromJson(data);
+    } else {
+      throw Exception('Invalid response format for SingleRatingResponse');
+    }
+
     return SingleRatingResponse(
-      success: json['success'] as bool,
-      message: json['message'] as String,
-      rating: ServiceRating.fromJson(json['data']['rating'] as Map<String, dynamic>),
+      success: json['success'] as bool? ?? true,
+      message: json['message']?.toString() ?? '',
+      rating: ratingData,
     );
   }
 }
 
 /// ═══════════════════════════════════════════════════════════════════════
 /// RATING STATISTICS MODEL
-/// For provider/listing rating summary
 /// ═══════════════════════════════════════════════════════════════════════
 
 class RatingStatistics {
   final double averageRating;
   final int totalReviews;
-  final Map<int, int> ratingBreakdown; // star -> count
   final int fiveStarCount;
   final int fourStarCount;
   final int threeStarCount;
@@ -505,7 +564,6 @@ class RatingStatistics {
   RatingStatistics({
     required this.averageRating,
     required this.totalReviews,
-    required this.ratingBreakdown,
     required this.fiveStarCount,
     required this.fourStarCount,
     required this.threeStarCount,
@@ -518,80 +576,45 @@ class RatingStatistics {
   });
 
   factory RatingStatistics.fromJson(Map<String, dynamic> json) {
-    final breakdown = json['rating_breakdown'] as Map<String, dynamic>? ?? {};
+    // ✅ Handle both rating_distribution and rating_breakdown key names
+    final breakdown = json['rating_distribution'] as Map<String, dynamic>?
+        ?? json['rating_breakdown'] as Map<String, dynamic>?
+        ?? {};
 
     return RatingStatistics(
-      averageRating: (json['average_rating'] as num).toDouble(),
-      totalReviews: json['total_reviews'] as int,
-      ratingBreakdown: {
-        5: breakdown['5_star'] as int? ?? 0,
-        4: breakdown['4_star'] as int? ?? 0,
-        3: breakdown['3_star'] as int? ?? 0,
-        2: breakdown['2_star'] as int? ?? 0,
-        1: breakdown['1_star'] as int? ?? 0,
-      },
-      fiveStarCount: breakdown['5_star'] as int? ?? 0,
-      fourStarCount: breakdown['4_star'] as int? ?? 0,
-      threeStarCount: breakdown['3_star'] as int? ?? 0,
-      twoStarCount: breakdown['2_star'] as int? ?? 0,
-      oneStarCount: breakdown['1_star'] as int? ?? 0,
-      averageQuality: json['average_quality'] != null
-          ? (json['average_quality'] as num).toDouble()
-          : null,
-      averageProfessionalism: json['average_professionalism'] != null
-          ? (json['average_professionalism'] as num).toDouble()
-          : null,
-      averageCommunication: json['average_communication'] != null
-          ? (json['average_communication'] as num).toDouble()
-          : null,
-      averageValue: json['average_value'] != null
-          ? (json['average_value'] as num).toDouble()
-          : null,
+      averageRating: _parseDouble(json['average_rating']) ?? 0.0,
+      totalReviews: _parseInt(json['total_reviews']),
+      fiveStarCount: _parseInt(breakdown['5'] ?? breakdown['5_star']),
+      fourStarCount: _parseInt(breakdown['4'] ?? breakdown['4_star']),
+      threeStarCount: _parseInt(breakdown['3'] ?? breakdown['3_star']),
+      twoStarCount: _parseInt(breakdown['2'] ?? breakdown['2_star']),
+      oneStarCount: _parseInt(breakdown['1'] ?? breakdown['1_star']),
+      averageQuality: _parseDouble(json['average_quality']),
+      averageProfessionalism: _parseDouble(json['average_professionalism']),
+      averageCommunication: _parseDouble(json['average_communication']),
+      averageValue: _parseDouble(json['average_value']),
     );
   }
 
-  /// Get star display (e.g., "4.8 ★")
-  String get starDisplay {
-    return '${averageRating.toStringAsFixed(1)} ★';
-  }
+  String get starDisplay =>
+      '${averageRating.toStringAsFixed(1)} ★';
 
-  /// Get display with review count (e.g., "4.8 ★ (156)")
-  String get displayWithCount {
-    return '${averageRating.toStringAsFixed(1)} ★ ($totalReviews)';
-  }
+  String get displayWithCount =>
+      '${averageRating.toStringAsFixed(1)} ★ ($totalReviews)';
 
-  /// Get percentage for each star rating
   Map<int, double> get ratingPercentages {
     if (totalReviews == 0) return {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
-
     return {
-      5: (fiveStarCount / totalReviews * 100),
-      4: (fourStarCount / totalReviews * 100),
-      3: (threeStarCount / totalReviews * 100),
-      2: (twoStarCount / totalReviews * 100),
-      1: (oneStarCount / totalReviews * 100),
+      5: fiveStarCount / totalReviews * 100,
+      4: fourStarCount / totalReviews * 100,
+      3: threeStarCount / totalReviews * 100,
+      2: twoStarCount / totalReviews * 100,
+      1: oneStarCount / totalReviews * 100,
     };
   }
 
-  /// Get most common rating
-  int get mostCommonRating {
-    var maxCount = 0;
-    var maxRating = 5;
-
-    ratingBreakdown.forEach((rating, count) {
-      if (count > maxCount) {
-        maxCount = count;
-        maxRating = rating;
-      }
-    });
-
-    return maxRating;
-  }
-
-  /// Check if mostly positive (4+ stars >= 75%)
   bool get isMostlyPositive {
     if (totalReviews == 0) return false;
-    final positiveCount = fiveStarCount + fourStarCount;
-    return (positiveCount / totalReviews) >= 0.75;
+    return ((fiveStarCount + fourStarCount) / totalReviews) >= 0.75;
   }
 }

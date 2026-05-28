@@ -1,20 +1,132 @@
 // lib/screens/login/login_screen.dart
 
-import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-// ✅ Import utilities and config
 import '../../authentication service/api_services.dart';
+import '../../authentication service/google_auth_service.dart';
 import '../../core/config.dart';
+import '../../main.dart';
+import '../../service/api/service_socket_listener.dart';
+import '../../service/mode_service.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// WAVE PAINTER
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// ✅ Import main for socket helper
-import '../../main.dart';
+class _WavePainter extends CustomPainter {
+  final Color waveColor;
+
+  const _WavePainter({required this.waveColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = waveColor
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(0, size.height * 0.35);
+    path.cubicTo(
+      size.width * 0.25, size.height * -0.1,
+      size.width * 0.55, size.height * 0.9,
+      size.width, size.height * 0.2,
+    );
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter old) => old.waveColor != waveColor;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DECORATIVE RING PAINTER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _RingsPainter extends CustomPainter {
+  const _RingsPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.primaryGold.withOpacity(0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final center = Offset(size.width * 0.82, size.height * 0.28);
+    canvas.drawCircle(center, 90, paint);
+    canvas.drawCircle(center, 58, paint..color = AppColors.primaryGold.withOpacity(0.08));
+
+    final paintFill = Paint()
+      ..color = AppColors.primaryGold.withOpacity(0.05)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width * 0.1, size.height * 0.72), 50, paintFill);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GOOGLE ICON PAINTER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _GoogleIcon extends StatelessWidget {
+  const _GoogleIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(20, 20),
+      painter: _GoogleLogoPainter(),
+    );
+  }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    void arc(Paint p, double start, double sweep) =>
+        canvas.drawArc(rect, start, sweep, false, p);
+
+    Paint p(Color c) => Paint()
+      ..color = c
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.2
+      ..strokeCap = StrokeCap.round;
+
+    arc(p(const Color(0xFF4285F4)), -0.5, 1.5);
+    arc(p(const Color(0xFF34A853)), 1.0, 1.05);
+    arc(p(const Color(0xFFFBBC05)), 2.05, 1.05);
+    arc(p(const Color(0xFFEA4335)), 3.1, 1.0);
+
+    canvas.drawLine(
+      center,
+      Offset(center.dx + radius, center.dy),
+      p(const Color(0xFF4285F4)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOGIN SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,108 +136,193 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
-  // ═══════════════════════════════════════════════════════════════
-  // CONTROLLERS & STATE
-  // ═══════════════════════════════════════════════════════════════
-  final _authService = AuthService();
-  final emailCtrl = TextEditingController();
-  final phoneCtrl = TextEditingController();
-  final pwCtrl = TextEditingController();
 
-  bool loading = false;
-  bool rememberMe = false;
-  bool isPhoneMode = false;
+  // ─── Controllers & State ────────────────────────────────────────────────────
+
+  final _authService = AuthService();
+
+  final emailCtrl    = TextEditingController();
+  final phoneCtrl    = TextEditingController();
+  final pwCtrl       = TextEditingController();
+  final fullNameCtrl = TextEditingController();
+
+  bool loading          = false;
+  bool rememberMe       = false;
+  bool isPhoneMode      = false;
   bool _obscurePassword = true;
+  bool _signupExpanded  = false;
+
   String selectedCountryCode = '+237';
   String selectedCountryFlag = '🇨🇲';
 
-  // Animation controllers
-  late AnimationController _fadeController;
+  final FocusNode _emailFocus    = FocusNode();
+  final FocusNode _phoneFocus    = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
+
+  // ─── Animation Controllers ──────────────────────────────────────────────────
+
+  late AnimationController _entryController;
   late AnimationController _toastController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  late Animation<Offset> _toastSlideAnimation;
-  late Animation<double> _toastOpacityAnimation;
+  late AnimationController _buttonController;
+  late AnimationController _signupExpandController;
 
-  // Toast state
-  bool _showToast = false;
-  bool _isToastSuccess = false;
-  String _toastMessage = '';
+  late Animation<double>  _heroFade;
+  late Animation<Offset>  _heroSlide;
+  late Animation<double>  _formFade;
+  late Animation<Offset>  _formSlide;
+  late Animation<double>  _toastOpacity;
+  late Animation<Offset>  _toastSlide;
+  late Animation<double>  _buttonScale;
+  late Animation<double>  _signupHeight;
 
-  // Country codes
+  bool   _showToast      = false;
+  bool   _isToastSuccess = false;
+  String _toastMessage   = '';
+
   final List<Map<String, String>> countries = [
     {'code': '+237', 'flag': '🇨🇲', 'name': 'Cameroon'},
-    {'code': '+1', 'flag': '🇺🇸', 'name': 'United States'},
-    {'code': '+44', 'flag': '🇬🇧', 'name': 'United Kingdom'},
-    {'code': '+33', 'flag': '🇫🇷', 'name': 'France'},
-    {'code': '+49', 'flag': '🇩🇪', 'name': 'Germany'},
+    {'code': '+1',   'flag': '🇺🇸', 'name': 'United States'},
+    {'code': '+44',  'flag': '🇬🇧', 'name': 'United Kingdom'},
+    {'code': '+33',  'flag': '🇫🇷', 'name': 'France'},
+    {'code': '+49',  'flag': '🇩🇪', 'name': 'Germany'},
     {'code': '+234', 'flag': '🇳🇬', 'name': 'Nigeria'},
-    {'code': '+27', 'flag': '🇿🇦', 'name': 'South Africa'},
+    {'code': '+27',  'flag': '🇿🇦', 'name': 'South Africa'},
     {'code': '+254', 'flag': '🇰🇪', 'name': 'Kenya'},
   ];
+
+  // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
+    _initAnimations();
+    _playEntryAnimation();
+
+    _emailFocus.addListener(_onFocusChange);
+    _phoneFocus.addListener(_onFocusChange);
+    _passwordFocus.addListener(_onFocusChange);
   }
 
-  void _initializeAnimations() {
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+  void _onFocusChange() {
+    if (mounted) setState(() {});
+  }
+
+  void _initAnimations() {
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 1100),
       vsync: this,
     );
 
     _toastController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 350),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
+    _buttonController = AnimationController(
+      duration: const Duration(milliseconds: 140),
+      vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
+    _signupExpandController = AnimationController(
+      duration: const Duration(milliseconds: 380),
+      vsync: this,
+    );
 
-    _toastSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
+    // Hero panel: slides up + fades in
+    _heroSlide = Tween<Offset>(
+      begin: const Offset(0, -0.15),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _toastController, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(
+      parent: _entryController,
+      curve: const Interval(0.0, 0.55, curve: Curves.easeOutCubic),
+    ));
 
-    _toastOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _heroFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+      ),
+    );
+
+    // Form: slides up from below + fades in
+    _formSlide = Tween<Offset>(
+      begin: const Offset(0, 0.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entryController,
+      curve: const Interval(0.3, 0.85, curve: Curves.easeOutCubic),
+    ));
+
+    _formFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: const Interval(0.35, 0.75, curve: Curves.easeOut),
+      ),
+    );
+
+    // Toast
+    _toastSlide = Tween<Offset>(
+      begin: const Offset(0, -1.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _toastController, curve: Curves.easeOutBack));
+
+    _toastOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _toastController, curve: Curves.easeOut),
     );
 
-    _fadeController.forward();
+    // Primary button press scale
+    _buttonScale = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _buttonController, curve: Curves.easeInOut),
+    );
+
+    // Signup expand — drives SizeTransition
+    _signupHeight = CurvedAnimation(
+      parent: _signupExpandController,
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  void _playEntryAnimation() {
+    Future.delayed(const Duration(milliseconds: 80), () {
+      if (mounted) _entryController.forward();
+    });
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
+    _entryController.dispose();
     _toastController.dispose();
+    _buttonController.dispose();
+    _signupExpandController.dispose();
+
+    _emailFocus
+      ..removeListener(_onFocusChange)
+      ..dispose();
+    _phoneFocus
+      ..removeListener(_onFocusChange)
+      ..dispose();
+    _passwordFocus
+      ..removeListener(_onFocusChange)
+      ..dispose();
+
     emailCtrl.dispose();
     phoneCtrl.dispose();
     pwCtrl.dispose();
+    fullNameCtrl.dispose();
+
     super.dispose();
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // TOAST METHODS
-  // ═══════════════════════════════════════════════════════════════
+  // ─── Toast ───────────────────────────────────────────────────────────────────
+
   void _showToastMessage(String message, bool isSuccess) {
     if (!mounted) return;
-
     setState(() {
-      _toastMessage = message;
+      _toastMessage   = message;
       _isToastSuccess = isSuccess;
-      _showToast = true;
+      _showToast      = true;
     });
-
     _toastController.forward();
-
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) _hideToast();
     });
@@ -138,17 +335,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     });
   }
 
-  void _toggleMode() {
-    setState(() => isPhoneMode = !isPhoneMode);
-  }
+  // ─── Login ───────────────────────────────────────────────────────────────────
 
-  // ═══════════════════════════════════════════════════════════════
-  // LOGIN METHOD
-  // ═══════════════════════════════════════════════════════════════
   Future<void> _login() async {
     if (loading) return;
+    HapticFeedback.lightImpact();
+    await _buttonController.forward();
+    await _buttonController.reverse();
 
-    // ✅ Build identifier - automatically concatenate country code for phone
     final identifier = isPhoneMode
         ? '$selectedCountryCode${phoneCtrl.text.trim()}'
         : emailCtrl.text.trim();
@@ -161,444 +355,227 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     setState(() => loading = true);
 
     try {
-      debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('🔐 [LOGIN SCREEN] Starting login...');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('📧 Identifier: $identifier');
-      debugPrint('🔑 Login Mode: ${isPhoneMode ? "PHONE" : "EMAIL"}');
-      debugPrint('🌐 API URL: ${AppConfig.apiBaseUrl}');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-      // ═══════════════════════════════════════════════════════════
-      // CALL AUTH SERVICE
-      // ═══════════════════════════════════════════════════════════
       final resp = await _authService.login(identifier, pwCtrl.text);
-
-      debugPrint('✅ [LOGIN SCREEN] Response received from backend');
-
-      // ═══════════════════════════════════════════════════════════
-      // EXTRACT DATA FROM RESPONSE
-      // ═══════════════════════════════════════════════════════════
-      final data = (resp['data'] ?? {}) as Map;
-      final String? accessToken = data['access_token'] as String?;
-      final String? refreshToken = data['refresh_token'] as String?;
-      final Map<String, dynamic> user =
-      (data['user'] is Map) ? Map<String, dynamic>.from(data['user']) : {};
-
-      if (accessToken == null || accessToken.isEmpty) {
-        throw Exception('No access token received from server');
-      }
-
-      debugPrint('🎫 [LOGIN SCREEN] Tokens received successfully');
-      debugPrint('   Access Token: ${accessToken.substring(0, 20)}...');
-      if (refreshToken != null) {
-        debugPrint('   Refresh Token: ${refreshToken.substring(0, 20)}...');
-      }
-
-      // ═══════════════════════════════════════════════════════════
-      // SAVE TO SHARED PREFERENCES
-      // ═══════════════════════════════════════════════════════════
-      debugPrint('\n💾 [LOGIN SCREEN] Saving data to SharedPreferences...');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-      final prefs = await SharedPreferences.getInstance();
-
-      // ─────────────────────────────────────────────────────────────
-      // SAVE TOKENS
-      // ─────────────────────────────────────────────────────────────
-      await prefs.setString('access_token', accessToken);
-      debugPrint('✅ [SAVE] Access token saved');
-
-      if (refreshToken != null && refreshToken.isNotEmpty) {
-        await prefs.setString('refresh_token', refreshToken);
-        debugPrint('✅ [SAVE] Refresh token saved');
-      }
-
-      // ─────────────────────────────────────────────────────────────
-      // SAVE COMPLETE USER DATA AS JSON
-      // ─────────────────────────────────────────────────────────────
-      final userJson = jsonEncode(user);
-      await prefs.setString('user_data', userJson);
-      debugPrint('✅ [SAVE] Complete user data saved as JSON');
-      debugPrint('   User Data Size: ${userJson.length} characters');
-
-      // ─────────────────────────────────────────────────────────────
-      // SAVE INDIVIDUAL FIELDS FOR QUICK ACCESS
-      // ─────────────────────────────────────────────────────────────
-      await prefs.setString('user_uuid', user['uuid'] ?? '');
-      await prefs.setString('user_type', user['user_type'] ?? '');
-      await prefs.setString('user_email', user['email'] ?? '');
-      await prefs.setString('user_phone', user['phone_e164'] ?? '');
-      await prefs.setString('first_name', user['first_name'] ?? '');
-      await prefs.setString('last_name', user['last_name'] ?? '');
-      await prefs.setString('civility', user['civility'] ?? '');
-      await prefs.setString('birth_date', user['birth_date'] ?? '');
-
-      // Save avatar URL
-      if (user['avatar_url'] != null && user['avatar_url'].toString().isNotEmpty) {
-        await prefs.setString('avatar_url', user['avatar_url']);
-        debugPrint('✅ [SAVE] Avatar URL: ${user['avatar_url']}');
-      }
-
-      // Save verification status
-      await prefs.setBool('email_verified', user['email_verified'] ?? false);
-      await prefs.setBool('phone_verified', user['phone_verified'] ?? false);
-      await prefs.setString('status', user['status'] ?? '');
-
-      debugPrint('✅ [SAVE] Individual fields saved');
-
-      // ─────────────────────────────────────────────────────────────
-      // SAVE PROFILE DATA (PASSENGER OR DRIVER)
-      // ─────────────────────────────────────────────────────────────
-      if (user['profile'] != null && user['profile'] is Map) {
-        final profile = user['profile'] as Map<String, dynamic>;
-        final profileJson = jsonEncode(profile);
-        await prefs.setString('profile_data', profileJson);
-        debugPrint('✅ [SAVE] Profile data saved');
-        debugPrint('   Profile Data Size: ${profileJson.length} characters');
-
-        // ─────────────────────────────────────────────────────────
-        // SAVE DRIVER-SPECIFIC DATA
-        // ─────────────────────────────────────────────────────────
-        if (user['user_type'] == 'DRIVER') {
-          debugPrint('\n🚗 [SAVE] Saving driver-specific data...');
-
-          // Identity documents
-          await prefs.setString('cni_number', profile['cni_number'] ?? '');
-          await prefs.setString('license_number', profile['license_number'] ?? '');
-          await prefs.setString('license_expiry', profile['license_expiry'] ?? '');
-          await prefs.setString('insurance_number', profile['insurance_number'] ?? '');
-          await prefs.setString('insurance_expiry', profile['insurance_expiry'] ?? '');
-
-          // Document URLs
-          if (profile['license_document_url'] != null) {
-            await prefs.setString('license_document_url', profile['license_document_url']);
-            debugPrint('   ✅ License Document: ${profile['license_document_url']}');
-          }
-          if (profile['insurance_document_url'] != null) {
-            await prefs.setString('insurance_document_url', profile['insurance_document_url']);
-            debugPrint('   ✅ Insurance Document: ${profile['insurance_document_url']}');
-          }
-
-          // Vehicle information
-          await prefs.setString('vehicle_type', profile['vehicle_type'] ?? '');
-          await prefs.setString('vehicle_make_model', profile['vehicle_make_model'] ?? '');
-          await prefs.setString('vehicle_color', profile['vehicle_color'] ?? '');
-          await prefs.setString('vehicle_year', profile['vehicle_year']?.toString() ?? '');
-          await prefs.setString('vehicle_plate', profile['vehicle_plate'] ?? '');
-
-          // Vehicle photo
-          if (profile['vehicle_photo_url'] != null) {
-            await prefs.setString('vehicle_photo_url', profile['vehicle_photo_url']);
-            debugPrint('   ✅ Vehicle Photo: ${profile['vehicle_photo_url']}');
-          }
-
-          // Driver status
-          await prefs.setString('verification_state', profile['verification_state'] ?? '');
-          await prefs.setBool('is_online', profile['is_online'] ?? false);
-          await prefs.setBool('is_available', profile['is_available'] ?? false);
-
-          debugPrint('✅ [SAVE] Driver profile saved');
-        }
-
-        // ─────────────────────────────────────────────────────────
-        // SAVE PASSENGER-SPECIFIC DATA
-        // ─────────────────────────────────────────────────────────
-        if (user['user_type'] == 'PASSENGER') {
-          debugPrint('\n👤 [SAVE] Saving passenger-specific data...');
-
-          await prefs.setString('address_text', profile['address_text'] ?? '');
-          await prefs.setString('notes', profile['notes'] ?? '');
-
-          debugPrint('✅ [SAVE] Passenger profile saved');
-        }
-      }
-
-      // ═══════════════════════════════════════════════════════════
-      // PRINT SUMMARY
-      // ═══════════════════════════════════════════════════════════
-      debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('📦 [SAVE] Data Summary:');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('✅ Access Token: Saved');
-      debugPrint('✅ Refresh Token: ${refreshToken != null ? "Saved" : "N/A"}');
-      debugPrint('✅ Complete User Data: Saved');
-      debugPrint('');
-      debugPrint('👤 User Information:');
-      debugPrint('   • UUID: ${user['uuid']}');
-      debugPrint('   • Type: ${user['user_type']}');
-      debugPrint('   • Name: ${user['first_name']} ${user['last_name']}');
-      debugPrint('   • Email: ${user['email'] ?? "N/A"}');
-      debugPrint('   • Phone: ${user['phone_e164'] ?? "N/A"}');
-      debugPrint('   • Status: ${user['status']}');
-      debugPrint('   • Email Verified: ${user['email_verified']}');
-      debugPrint('   • Phone Verified: ${user['phone_verified']}');
-
-      if (user['avatar_url'] != null) {
-        debugPrint('   • Avatar: ✓ ${user['avatar_url']}');
-      }
-
-      if (user['profile'] != null) {
-        final profile = user['profile'] as Map<String, dynamic>;
-        debugPrint('');
-        debugPrint('📋 Profile Information:');
-
-        if (user['user_type'] == 'DRIVER') {
-          debugPrint('   🚗 Driver Profile:');
-          debugPrint('      • License: ${profile['license_number']}');
-          debugPrint('      • Vehicle: ${profile['vehicle_make_model'] ?? "N/A"}');
-          debugPrint('      • Plate: ${profile['vehicle_plate'] ?? "N/A"}');
-          debugPrint('      • License Doc: ${profile['license_document_url'] != null ? "✓" : "✗"}');
-          debugPrint('      • Vehicle Photo: ${profile['vehicle_photo_url'] != null ? "✓" : "✗"}');
-          debugPrint('      • Verification: ${profile['verification_state']}');
-        } else if (user['user_type'] == 'PASSENGER') {
-          debugPrint('   👤 Passenger Profile:');
-          debugPrint('      • Address: ${profile['address_text'] ?? "N/A"}');
-        }
-      }
-
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-      // ═══════════════════════════════════════════════════════════
-      // CONNECT TO SOCKET
-      // ═══════════════════════════════════════════════════════════
-      final String userId = user['uuid'] ?? '';
-      final String userType = user['user_type'] ?? '';
-
-      if (userId.isNotEmpty && userType.isNotEmpty) {
-        debugPrint('🔌 [LOGIN SCREEN] Connecting to Socket.IO...');
-        try {
-          await SocketHelper.connect(
-            accessToken: accessToken,
-            userId: userId,
-            userType: userType,
-            onTokenExpired: () async {
-              debugPrint('🔄 [SOCKET] Token expired, refreshing...');
-              final refreshed = await _authService.refreshAccessToken();
-              if (refreshed) {
-                final prefs = await SharedPreferences.getInstance();
-                return prefs.getString('access_token');
-              }
-              return null;
-            },
-          );
-          debugPrint('✅ [LOGIN SCREEN] Socket connected successfully');
-        } catch (e) {
-          debugPrint('⚠️  [LOGIN SCREEN] Socket connection failed: $e');
-          debugPrint('   Note: Login will proceed without real-time features');
-        }
-      }
-
-      debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('✅ [LOGIN COMPLETE] All data saved successfully!');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-      // ═══════════════════════════════════════════════════════════
-      // SHOW SUCCESS MESSAGE
-      // ═══════════════════════════════════════════════════════════
-      final firstName = user['first_name'] ?? 'User';
-      _showToastMessage('Welcome back, $firstName!', true);
-
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      if (!mounted) return;
-
-      // ═══════════════════════════════════════════════════════════
-      // NAVIGATE BASED ON USER TYPE
-      // ═══════════════════════════════════════════════════════════
-      final String userTypeUpper = userType.toUpperCase();
-
-      debugPrint('🚀 [LOGIN SCREEN] Navigating to $userTypeUpper dashboard...\n');
-
-      if (userTypeUpper == 'PASSENGER') {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/dashboard/passenger',
-              (route) => false,
-        );
-      } else if (userTypeUpper == 'DRIVER') {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/dashboard/driver',
-              (route) => false,
-        );
-      } else {
-        _showToastMessage('Unknown user type: $userTypeUpper', false);
-        debugPrint('❌ [LOGIN SCREEN] Unknown user type: $userTypeUpper');
-      }
+      final data = (resp['data'] is Map)
+          ? Map<String, dynamic>.from(resp['data'] as Map)
+          : <String, dynamic>{};
+      await _handleAuthSuccess(data);
     } on AuthException catch (e) {
-      // ✅ Handle custom API exceptions from AuthService
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('❌ [LOGIN SCREEN] AuthException caught');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('Message: ${e.message}');
-      debugPrint('Status Code: ${e.statusCode}');
-      debugPrint('Error Code: ${e.errorCode}');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
       _showToastMessage(e.message, false);
     } on SocketException {
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('❌ [LOGIN SCREEN] Network error - No internet');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       _showToastMessage('No internet connection', false);
     } catch (e) {
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('❌ [LOGIN SCREEN] Unexpected error');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('Error: $e');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-      String errorMessage = 'Login failed. Please try again.';
-
-      if (e.toString().contains('timeout')) {
-        errorMessage = 'Request timeout. Check your connection.';
-      } else if (e.toString().contains('No access token')) {
-        errorMessage = 'Server error. Please try again.';
-      } else if (e.toString().contains('FormatException')) {
-        errorMessage = 'Invalid response from server.';
-      }
-
-      _showToastMessage(errorMessage, false);
+      String msg = 'Login failed. Please try again.';
+      final err  = e.toString();
+      if (err.contains('timeout'))         msg = 'Request timeout. Check your connection.';
+      else if (err.contains('NO_ACCESS_TOKEN') || err.contains('No access token'))
+        msg = 'Server error. Please try again.';
+      else if (err.contains('FormatException')) msg = 'Invalid response from server.';
+      _showToastMessage(msg, false);
     } finally {
       if (mounted) setState(() => loading = false);
     }
   }
 
+  // ─── Google Auth ─────────────────────────────────────────────────────────────
+
   Future<void> _loginWithGoogle() async {
-    _showToastMessage('Google Sign-In coming soon!', false);
-    // TODO: Implement Google OAuth
+    if (loading) return;
+    HapticFeedback.lightImpact();
+    setState(() => loading = true);
+
+    try {
+      final resp = await GoogleAuthService.instance.loginWithGoogle();
+      if (!resp.success || resp.data == null) {
+        _showToastMessage(resp.message ?? 'Google login failed.', false);
+        return;
+      }
+      await _handleAuthSuccess(resp.data!);
+    } on SocketException {
+      _showToastMessage('No internet connection', false);
+    } catch (e) {
+      debugPrint('❌ [GOOGLE LOGIN] $e');
+      _showToastMessage('Google login failed. Please try again.', false);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _registerPassengerWithGoogle() async {
+    if (loading) return;
+    setState(() => loading = true);
+
+    try {
+      final resp = await GoogleAuthService.instance.registerPassengerWithGoogle();
+      if (!resp.success || resp.data == null) {
+        _showToastMessage(resp.message ?? 'Google passenger registration failed.', false);
+        return;
+      }
+      await _handleAuthSuccess(resp.data!);
+    } on SocketException {
+      _showToastMessage('No internet connection', false);
+    } catch (e) {
+      debugPrint('❌ [GOOGLE PASSENGER REGISTER] $e');
+      _showToastMessage('Google registration failed. Please try again.', false);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _startDriverSignupWithGoogle() async {
+    if (loading) return;
+    setState(() => loading = true);
+
+    try {
+      final picked = await GoogleAuthService.instance.pickGoogleAccountOnly();
+      if (!picked.success || picked.idToken == null || picked.idToken!.isEmpty) {
+        _showToastMessage(picked.message ?? 'Google Sign-In failed.', false);
+        return;
+      }
+      if (!mounted) return;
+      Navigator.pushNamed(context, '/signup/driver', arguments: {
+        'signup_provider': 'google',
+        'google_id_token': picked.idToken,
+        'email':           picked.email,
+        'first_name':      picked.firstName,
+        'last_name':       picked.lastName,
+        'avatar_url':      picked.photoUrl,
+      });
+    } on SocketException {
+      _showToastMessage('No internet connection', false);
+    } catch (e) {
+      debugPrint('❌ [GOOGLE DRIVER START] $e');
+      _showToastMessage('Google Sign-In failed. Please try again.', false);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  // ─── Auth Success ─────────────────────────────────────────────────────────────
+
+  Future<void> _handleAuthSuccess(Map<String, dynamic> data) async {
+    final user = (data['user'] is Map)
+        ? Map<String, dynamic>.from(data['user'] as Map)
+        : <String, dynamic>{};
+
+    final accessToken = data['access_token']?.toString() ?? '';
+    final userId      = user['uuid']?.toString() ?? '';
+    final userType    = user['user_type']?.toString().trim() ?? '';
+
+    if (accessToken.isEmpty) {
+      throw AuthException(
+        message:    'No access token received from server',
+        statusCode: 500,
+        errorCode:  'NO_ACCESS_TOKEN',
+      );
+    }
+    if (userId.isEmpty || userType.isEmpty) {
+      throw AuthException(
+        message:    'Invalid user data received from server',
+        statusCode: 500,
+        errorCode:  'INVALID_USER_DATA',
+      );
+    }
+
+    await _authService.saveSessionFromAuthData(data);
+
+    final activeMode   = user['active_mode']?.toString();
+    final resolvedMode = (activeMode != null && activeMode.isNotEmpty)
+        ? activeMode
+        : ModeService.modeFromUserType(userType);
+
+    await ModeService.saveActiveMode(resolvedMode, userType);
+
+    try {
+      await SocketHelper.connect(
+        accessToken:  accessToken,
+        userId:       userId,
+        userType:     userType,
+        onTokenExpired: () async {
+          final refreshed = await _authService.refreshAccessToken();
+          if (refreshed) return await _authService.getAccessToken();
+          return null;
+        },
+      );
+      ServiceSocketListener.instance.startListening();
+    } catch (e) {
+      debugPrint('⚠️ Socket failed after auth, continuing anyway: $e');
+    }
+
+    final route      = ModeService.routeForMode(resolvedMode);
+    final firstName  = user['first_name']?.toString();
+    final welcomeName = (firstName != null && firstName.isNotEmpty) ? firstName : 'User';
+
+    _showToastMessage('Welcome back, $welcomeName! 👋', true);
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(route, (r) => false);
+  }
+
+  // ─── UI Actions ───────────────────────────────────────────────────────────────
+
+  void _togglePhoneMode() => setState(() => isPhoneMode = !isPhoneMode);
+
+  void _toggleSignupExpanded() {
+    setState(() => _signupExpanded = !_signupExpanded);
+    if (_signupExpanded) {
+      _signupExpandController.forward();
+    } else {
+      _signupExpandController.reverse();
+    }
+    HapticFeedback.selectionClick();
   }
 
   void _showCountryPicker() {
     showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.backgroundWhite,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.secondaryLightGrey,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Text(
-                  'Select Country',
-                  style: AppTypography.headlineMedium,
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: countries.length,
-                itemBuilder: (context, index) {
-                  final country = countries[index];
-                  final isSelected = selectedCountryCode == country['code'];
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    leading: Text(country['flag']!, style: const TextStyle(fontSize: 28)),
-                    title: Text(
-                      country['name']!,
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
-                      ),
-                    ),
-                    trailing: Text(
-                      country['code']!,
-                      style: AppTypography.bodySmall.copyWith(
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected ? AppColors.primaryGold : AppColors.textSecondary,
-                      ),
-                    ),
-                    onTap: () {
-                      setState(() {
-                        selectedCountryCode = country['code']!;
-                        selectedCountryFlag = country['flag']!;
-                      });
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+      context:             context,
+      backgroundColor:     Colors.transparent,
+      isScrollControlled:  true,
+      builder: (_) => _CountryPickerSheet(
+        countries:    countries,
+        selectedCode: selectedCountryCode,
+        onSelected:   (code, flag) => setState(() {
+          selectedCountryCode = code;
+          selectedCountryFlag = flag;
+        }),
       ),
     );
   }
 
+  void _navigateToPassengerSignup() => Navigator.pushNamed(context, '/signup/passenger');
+  void _navigateToDriverSignup()    => Navigator.pushNamed(context, '/signup/driver');
+
+  // ─── Build ────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: const Color(0xFFF5F4F0),
       body: Stack(
         children: [
           SafeArea(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 20),
-                      _buildLogo(),
-                      const SizedBox(height: 48),
-                      _buildTitle(),
-                      const SizedBox(height: 32),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0.2, 0),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: isPhoneMode ? _buildPhoneField() : _buildEmailField(),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPasswordField(),
-                      if (!isPhoneMode) ...[
-                        const SizedBox(height: 16),
-                        _buildRememberAndForgot(),
-                      ],
-                      const SizedBox(height: 32),
-                      _buildLoginButton(),
-                      const SizedBox(height: 24),
-                      _buildDivider(),
-                      const SizedBox(height: 24),
-                      _buildToggleButton(),
-                      const SizedBox(height: 16),
-                      _buildGoogleLoginButton(),
-                      const SizedBox(height: 32),
-                      _buildSignUpLink(),
-                    ],
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  // Hero panel — no horizontal padding, full bleed
+                  FadeTransition(
+                    opacity: _heroFade,
+                    child: SlideTransition(
+                      position: _heroSlide,
+                      child: _buildHero(),
+                    ),
                   ),
-                ),
+                  // Form area
+                  FadeTransition(
+                    opacity: _formFade,
+                    child: SlideTransition(
+                      position: _formSlide,
+                      child: _buildFormArea(),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
           ),
@@ -608,101 +585,295 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildLogo() {
-    return Row(
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: AppColors.primaryDark,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowMedium,
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+  // ─── Hero Panel ──────────────────────────────────────────────────────────────
+
+  Widget _buildHero() {
+    return SizedBox(
+      height: 248,
+      child: Stack(
+        children: [
+          // Dark background
+          Positioned.fill(
+            child: Container(color: AppColors.primaryDark),
           ),
-          child: Center(
-            child: Image.asset(
-              'assets/images/logo.png',
-              width: 40,
-              height: 40,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Text(
-                  'W',
-                  style: AppTypography.displayMedium.copyWith(
-                    color: AppColors.primaryGold,
+
+          // Decorative rings
+          Positioned.fill(
+            child: CustomPaint(painter: const _RingsPainter()),
+          ),
+
+          // Wave cut-out at the bottom
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: SizedBox(
+              height: 56,
+              child: CustomPaint(
+                painter: _WavePainter(waveColor: const Color(0xFFF5F4F0)),
+              ),
+            ),
+          ),
+
+          // Content
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 52, 28, 56),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Logo row
+                Row(
+                  children: [
+                    _buildLogoBox(),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppConfig.appName,
+                          style: const TextStyle(
+                            fontFamily: AppTypography.primaryFont,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        Text(
+                          'Your ride, your way',
+                          style: TextStyle(
+                            fontFamily: AppTypography.secondaryFont,
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.45),
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  'Welcome back',
+                  style: const TextStyle(
+                    fontFamily: AppTypography.primaryFont,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -1.0,
+                    height: 1.1,
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Sign in to continue',
+                  style: TextStyle(
+                    fontFamily: AppTypography.secondaryFont,
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoBox() {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.primaryGold,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Center(
+        child: Image.asset(
+          'assets/images/logo.png',
+          width: 28, height: 28,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => Text(
+            AppConfig.appName.isNotEmpty ? AppConfig.appName[0] : 'W',
+            style: TextStyle(
+              fontFamily: AppTypography.primaryFont,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primaryDark,
             ),
           ),
         ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+
+  // ─── Form Area ────────────────────────────────────────────────────────────────
+
+  Widget _buildFormArea() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+
+          // Phone/Email toggle pill
+          _buildModePill(),
+          const SizedBox(height: 20),
+
+          // Identifier field
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.04, 0),
+                  end: Offset.zero,
+                ).animate(anim),
+                child: child,
+              ),
+            ),
+            child: isPhoneMode
+                ? _buildPhoneField()
+                : _buildEmailField(),
+          ),
+
+          const SizedBox(height: 14),
+
+          // Password
+          _buildLabel('Password'),
+          const SizedBox(height: 8),
+          _buildPasswordField(),
+
+          // Remember me + forgot
+          const SizedBox(height: 14),
+          _buildRememberAndForgot(),
+
+          const SizedBox(height: 26),
+
+          // Sign In button
+          _buildSignInButton(),
+          const SizedBox(height: 18),
+
+          // Divider
+          _buildDivider(),
+          const SizedBox(height: 18),
+
+          // Google button
+          _buildGoogleButton(),
+          const SizedBox(height: 12),
+
+          // Sign up strip — expandable
+          _buildSignupStrip(),
+        ],
+      ),
+    );
+  }
+
+  // ─── Mode Pill ────────────────────────────────────────────────────────────────
+
+  Widget _buildModePill() {
+    return GestureDetector(
+      onTap: _togglePhoneMode,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDECEA),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(AppConfig.appName, style: AppTypography.displayMedium),
+            Icon(
+              isPhoneMode ? Icons.email_outlined : Icons.phone_outlined,
+              size: 15,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
             Text(
-              'Your ride, your way',
-              style: AppTypography.bodySmall.copyWith(
+              isPhoneMode ? 'Use email instead' : 'Use phone instead',
+              style: TextStyle(
+                fontFamily: AppTypography.secondaryFont,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
                 color: AppColors.textSecondary,
               ),
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildTitle() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Welcome Back', style: AppTypography.displayLarge),
-        const SizedBox(height: 8),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: Text(
-            isPhoneMode
-                ? 'Enter your phone number to continue'
-                : 'Sign in to access your account',
-            key: ValueKey(isPhoneMode),
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // ─── Shared Input Decoration ──────────────────────────────────────────────────
+
+  BoxDecoration _inputDecoration(bool isFocused) => BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(14),
+    border: Border.all(
+      color: isFocused ? AppColors.primaryGold : const Color(0xFFE8E6E0),
+      width: isFocused ? 1.8 : 1.0,
+    ),
+    boxShadow: isFocused
+        ? [BoxShadow(color: AppColors.primaryGold.withOpacity(0.10), blurRadius: 10, offset: const Offset(0, 3))]
+        : [BoxShadow(color: Colors.black.withOpacity(0.035), blurRadius: 6, offset: const Offset(0, 2))],
+  );
+
+  TextStyle get _inputTextStyle => const TextStyle(
+    fontFamily: AppTypography.secondaryFont,
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textPrimary,
+  );
+
+  TextStyle get _hintStyle => TextStyle(
+    fontFamily: AppTypography.secondaryFont,
+    fontSize: 15,
+    color: AppColors.textLight,
+  );
+
+  Widget _buildLabel(String text) => Padding(
+    padding: const EdgeInsets.only(left: 2),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontFamily: AppTypography.secondaryFont,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
+        color: AppColors.textSecondary,
+      ),
+    ),
+  );
+
+  // ─── Email Field ──────────────────────────────────────────────────────────────
 
   Widget _buildEmailField() {
+    final focused = _emailFocus.hasFocus;
     return Column(
       key: const ValueKey('email'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Email', style: AppTypography.labelLarge),
+        _buildLabel('Email Address'),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.backgroundWhite,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderLight),
-            boxShadow: [BoxShadow(color: AppColors.shadowLight, blurRadius: 8)],
-          ),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: _inputDecoration(focused),
           child: TextField(
             controller: emailCtrl,
+            focusNode: _emailFocus,
             keyboardType: TextInputType.emailAddress,
-            style: AppTypography.inputText,
+            style: _inputTextStyle,
             decoration: InputDecoration(
               hintText: 'example@email.com',
-              hintStyle: AppTypography.inputHint,
-              prefixIcon: Icon(Icons.email_outlined, color: AppColors.textSecondary),
+              hintStyle: _hintStyle,
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 14, right: 10),
+                child: Icon(Icons.email_outlined, size: 19,
+                    color: focused ? AppColors.primaryGold : AppColors.textSecondary),
+              ),
+              prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
@@ -712,273 +883,202 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
+  // ─── Phone Field ──────────────────────────────────────────────────────────────
+
   Widget _buildPhoneField() {
+    final focused = _phoneFocus.hasFocus;
     return Column(
       key: const ValueKey('phone'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Phone Number', style: AppTypography.labelLarge),
+        _buildLabel('Phone Number'),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.backgroundWhite,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderLight),
-            boxShadow: [BoxShadow(color: AppColors.shadowLight, blurRadius: 8)],
-          ),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: _inputDecoration(focused),
           child: Row(
             children: [
-              InkWell(
+              GestureDetector(
                 onTap: _showCountryPicker,
-                child: Container(
+                child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(selectedCountryFlag, style: const TextStyle(fontSize: 24)),
-                      const SizedBox(width: 6),
-                      Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                      Text(selectedCountryFlag, style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 5),
+                      Text(
+                        selectedCountryCode,
+                        style: const TextStyle(
+                          fontFamily: AppTypography.secondaryFont,
+                          fontSize: 14, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
                     ],
                   ),
                 ),
               ),
-              Container(width: 1, height: 24, color: AppColors.borderLight),
+              Container(width: 1, height: 26, color: const Color(0xFFE8E6E0)),
               Expanded(
                 child: TextField(
                   controller: phoneCtrl,
+                  focusNode: _phoneFocus,
                   keyboardType: TextInputType.phone,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: AppTypography.inputText,
+                  style: _inputTextStyle,
                   decoration: InputDecoration(
                     hintText: '6 77 77 77 77',
-                    hintStyle: AppTypography.inputHint,
+                    hintStyle: _hintStyle,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                   ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        // ✅ Show full phone number that will be sent
-        if (phoneCtrl.text.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              'Full number: $selectedCountryCode${phoneCtrl.text}',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
       ],
     );
   }
 
+  // ─── Password Field ───────────────────────────────────────────────────────────
+
   Widget _buildPasswordField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Password', style: AppTypography.labelLarge),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.backgroundWhite,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderLight),
-            boxShadow: [BoxShadow(color: AppColors.shadowLight, blurRadius: 8)],
+    final focused = _passwordFocus.hasFocus;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      decoration: _inputDecoration(focused),
+      child: TextField(
+        controller: pwCtrl,
+        focusNode: _passwordFocus,
+        obscureText: _obscurePassword,
+        style: _inputTextStyle,
+        decoration: InputDecoration(
+          hintText: 'Enter your password',
+          hintStyle: _hintStyle,
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 14, right: 10),
+            child: Icon(Icons.lock_outline_rounded, size: 19,
+                color: focused ? AppColors.primaryGold : AppColors.textSecondary),
           ),
-          child: TextField(
-            controller: pwCtrl,
-            obscureText: _obscurePassword,
-            style: AppTypography.inputText,
-            decoration: InputDecoration(
-              hintText: 'Enter your password',
-              hintStyle: AppTypography.inputHint,
-              prefixIcon: Icon(Icons.lock_outline, color: AppColors.textSecondary),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: AppColors.textSecondary,
-                ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              size: 19, color: AppColors.textSecondary,
             ),
+            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            padding: const EdgeInsets.only(right: 14),
           ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
-      ],
+      ),
     );
   }
+
+  // ─── Remember & Forgot ────────────────────────────────────────────────────────
 
   Widget _buildRememberAndForgot() {
     return Row(
       children: [
-        InkWell(
-          onTap: () => setState(() => rememberMe = !rememberMe),
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => rememberMe = !rememberMe);
+          },
           child: Row(
             children: [
-              Container(
-                width: 20,
-                height: 20,
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 19, height: 19,
                 decoration: BoxDecoration(
-                  color: rememberMe ? AppColors.primaryDark : AppColors.backgroundWhite,
-                  borderRadius: BorderRadius.circular(4),
+                  color: rememberMe ? AppColors.primaryDark : Colors.transparent,
+                  borderRadius: BorderRadius.circular(5),
                   border: Border.all(
                     color: rememberMe ? AppColors.primaryDark : AppColors.borderMedium,
-                    width: 2,
+                    width: 1.5,
                   ),
                 ),
                 child: rememberMe
-                    ? Icon(Icons.check, color: AppColors.primaryGold, size: 14)
+                    ? const Icon(Icons.check_rounded, color: AppColors.primaryGold, size: 12)
                     : null,
               ),
-              const SizedBox(width: 10),
-              Text('Remember me', style: AppTypography.bodySmall),
+              const SizedBox(width: 8),
+              Text(
+                'Remember me',
+                style: TextStyle(
+                  fontFamily: AppTypography.secondaryFont,
+                  fontSize: 12, color: AppColors.textSecondary,
+                ),
+              ),
             ],
           ),
         ),
         const Spacer(),
-        InkWell(
+        GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/forgot-password'),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            child: Text(
-              'Forgot Password?',
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.primaryGold,
-                fontWeight: FontWeight.w600,
+          child: Text(
+            'Forgot password?',
+            style: const TextStyle(
+              fontFamily: AppTypography.secondaryFont,
+              fontSize: 12, fontWeight: FontWeight.w600,
+              color: AppColors.primaryGold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Sign In Button ───────────────────────────────────────────────────────────
+
+  Widget _buildSignInButton() {
+    return ScaleTransition(
+      scale: _buttonScale,
+      child: GestureDetector(
+        onTap: loading ? null : _login,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 54,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: loading ? AppColors.primaryGold.withOpacity(0.6) : AppColors.primaryGold,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryGold.withOpacity(0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
               ),
-            ),
+            ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoginButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: loading ? null : _login,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryDark,
-          disabledBackgroundColor: AppColors.buttonDisabled,
-          foregroundColor: AppColors.backgroundWhite,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: loading
-            ? SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.backgroundWhite),
-          ),
-        )
-            : Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Sign In', style: AppTypography.buttonLarge),
-            const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(child: Container(height: 1, color: AppColors.borderLight)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('OR', style: AppTypography.caption),
-        ),
-        Expanded(child: Container(height: 1, color: AppColors.borderLight)),
-      ],
-    );
-  }
-
-  Widget _buildToggleButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: OutlinedButton(
-        onPressed: _toggleMode,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.backgroundWhite,
-          foregroundColor: AppColors.textPrimary,
-          side: BorderSide(color: AppColors.borderMedium, width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isPhoneMode ? Icons.email_outlined : Icons.phone_outlined,
-              size: 20,
-              color: AppColors.textPrimary,
-            ),
-            const SizedBox(width: 10),
-            Text(
-              isPhoneMode ? 'Continue with Email' : 'Continue with Phone',
-              style: AppTypography.buttonMedium.copyWith(color: AppColors.textPrimary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGoogleLoginButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: OutlinedButton(
-        onPressed: _loginWithGoogle,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.backgroundWhite,
-          side: BorderSide(color: AppColors.borderMedium, width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.g_mobiledata, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              'Continue with Google',
-              style: AppTypography.buttonMedium.copyWith(color: AppColors.textPrimary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSignUpLink() {
-    return Center(
-      child: InkWell(
-        onTap: () => _showSignupOptions(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          child: RichText(
-            text: TextSpan(
-              text: "Don't have an account? ",
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+          child: Center(
+            child: loading
+                ? SizedBox(
+              width: 22, height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryDark),
+              ),
+            )
+                : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                TextSpan(
-                  text: 'Sign Up',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.primaryGold,
-                    fontWeight: FontWeight.w700,
+                Text(
+                  'Sign In',
+                  style: const TextStyle(
+                    fontFamily: AppTypography.primaryFont,
+                    fontSize: 16, fontWeight: FontWeight.w700,
+                    color: AppColors.primaryDark,
+                    letterSpacing: 0.2,
                   ),
                 ),
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_forward_rounded, size: 17, color: AppColors.primaryDark),
               ],
             ),
           ),
@@ -987,45 +1087,200 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
+  // ─── Divider ──────────────────────────────────────────────────────────────────
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: const Color(0xFFE0DED8))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text(
+            'OR',
+            style: TextStyle(
+              fontFamily: AppTypography.secondaryFont,
+              fontSize: 11, fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary, letterSpacing: 1,
+            ),
+          ),
+        ),
+        Expanded(child: Container(height: 1, color: const Color(0xFFE0DED8))),
+      ],
+    );
+  }
+
+  // ─── Google Button ────────────────────────────────────────────────────────────
+
+  Widget _buildGoogleButton() {
+    return _OutlinedActionButton(
+      onTap: _loginWithGoogle,
+      customIcon: const _GoogleIcon(),
+      label: 'Continue with Google',
+    );
+  }
+
+  // ─── Signup Strip (expandable) ────────────────────────────────────────────────
+
+  Widget _buildSignupStrip() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE8E6E0), width: 1),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Trigger row
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _toggleSignupExpanded,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 34, height: 34,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDECEA),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.person_add_outlined, size: 17, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        text: 'New here? ',
+                        style: TextStyle(
+                          fontFamily: AppTypography.secondaryFont,
+                          fontSize: 13, color: AppColors.textSecondary,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: 'Create an account',
+                            style: const TextStyle(
+                              fontFamily: AppTypography.secondaryFont,
+                              fontSize: 13, fontWeight: FontWeight.w700,
+                              color: AppColors.primaryGold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _signupExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeInOutCubic,
+                    child: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Expandable body
+          SizeTransition(
+            sizeFactor: _signupHeight,
+            axisAlignment: -1,
+            child: Column(
+              children: [
+                Divider(height: 1, color: const Color(0xFFF0EEE8)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    children: [
+                      _buildRoleOption(
+                        icon: Icons.person_outline_rounded,
+                        title: 'Passenger',
+                        subtitle: 'Book rides and travel comfortably',
+                        accentColor: AppColors.primaryGold,
+                        onTap: _navigateToPassengerSignup,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildRoleOption(
+                        icon: Icons.local_taxi_outlined,
+                        title: 'Driver',
+                        subtitle: 'Drive, deliver and earn money',
+                        accentColor: AppColors.primaryDark,
+                        onTap: _navigateToDriverSignup,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color accentColor,
+    required VoidCallback onTap,
+  }) {
+    return _SignupOption(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      accentColor: accentColor,
+      onTap: onTap,
+    );
+  }
+
+  // ─── Toast ────────────────────────────────────────────────────────────────────
+
   Widget _buildToast() {
     return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
+      top: 0, left: 0, right: 0,
       child: SafeArea(
         child: SlideTransition(
-          position: _toastSlideAnimation,
+          position: _toastSlide,
           child: FadeTransition(
-            opacity: _toastOpacityAnimation,
+            opacity: _toastOpacity,
             child: Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
               decoration: BoxDecoration(
-                color: _isToastSuccess ? AppColors.success : AppColors.error,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: AppColors.shadowMedium, blurRadius: 10)],
+                color: _isToastSuccess ? const Color(0xFF1A1A1A) : const Color(0xFFE53935),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 18, offset: const Offset(0, 6)),
+                ],
               ),
               child: Row(
                 children: [
-                  Icon(
-                    _isToastSuccess ? Icons.check_circle : Icons.error,
-                    color: AppColors.backgroundWhite,
-                    size: 24,
+                  Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _isToastSuccess ? Icons.check_rounded : Icons.error_outline_rounded,
+                      color: _isToastSuccess ? AppColors.primaryGold : Colors.white,
+                      size: 17,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       _toastMessage,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.backgroundWhite,
-                        fontWeight: FontWeight.w600,
+                      style: const TextStyle(
+                        fontFamily: AppTypography.secondaryFont,
+                        fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white,
                       ),
                     ),
                   ),
-                  IconButton(
-                    onPressed: _hideToast,
-                    icon: Icon(Icons.close, color: AppColors.backgroundWhite, size: 20),
-                    padding: EdgeInsets.zero,
+                  GestureDetector(
+                    onTap: _hideToast,
+                    child: Icon(Icons.close_rounded, color: Colors.white.withOpacity(0.6), size: 17),
                   ),
                 ],
               ),
@@ -1035,96 +1290,254 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       ),
     );
   }
+}
 
-  void _showSignupOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.backgroundWhite,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+// ═══════════════════════════════════════════════════════════════════════════════
+// REUSABLE WIDGETS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _OutlinedActionButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final IconData?  icon;
+  final Widget?    customIcon;
+  final String     label;
+
+  const _OutlinedActionButton({
+    required this.onTap,
+    this.icon,
+    this.customIcon,
+    required this.label,
+  });
+
+  @override
+  State<_OutlinedActionButton> createState() => _OutlinedActionButtonState();
+}
+
+class _OutlinedActionButtonState extends State<_OutlinedActionButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown:  (_) => setState(() => _pressed = true),
+      onTapUp:    (_) { setState(() => _pressed = false); widget.onTap(); },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        height: 50,
+        transform: Matrix4.identity()..scale(_pressed ? 0.97 : 1.0),
+        transformAlignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: _pressed ? const Color(0xFFF0EEE8) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE0DED8), width: 1),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.035), blurRadius: 6, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.secondaryLightGrey,
-                borderRadius: BorderRadius.circular(2),
+            if (widget.customIcon != null) widget.customIcon!
+            else if (widget.icon != null) Icon(widget.icon, size: 19, color: AppColors.textPrimary),
+            const SizedBox(width: 10),
+            Text(
+              widget.label,
+              style: const TextStyle(
+                fontFamily: AppTypography.primaryFont,
+                fontSize: 14, fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 24),
-            Text('Choose Account Type', style: AppTypography.headlineMedium),
-            const SizedBox(height: 24),
-            _buildSignupOption(
-              icon: Icons.person_outline,
-              title: 'Passenger',
-              subtitle: 'Book rides and travel',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/signup/passenger');
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildSignupOption(
-              icon: Icons.local_taxi_outlined,
-              title: 'Driver',
-              subtitle: 'Drive and earn money',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/signup/driver');
-              },
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildSignupOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
+// ═══════════════════════════════════════════════════════════════════════════════
+// SIGNUP OPTION CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _SignupOption extends StatefulWidget {
+  final IconData  icon;
+  final String    title;
+  final String    subtitle;
+  final Color     accentColor;
+  final VoidCallback onTap;
+
+  const _SignupOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  @override
+  State<_SignupOption> createState() => _SignupOptionState();
+}
+
+class _SignupOptionState extends State<_SignupOption> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown:  (_) => setState(() => _pressed = true),
+      onTapUp:    (_) { setState(() => _pressed = false); widget.onTap(); },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        transform: Matrix4.identity()..scale(_pressed ? 0.97 : 1.0),
+        transformAlignment: Alignment.center,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.backgroundLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderLight),
+          color: _pressed ? const Color(0xFFF7F5F0) : const Color(0xFFFAF9F6),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE8E6E0), width: 1),
         ),
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 42, height: 42,
               decoration: BoxDecoration(
-                color: AppColors.primaryGold.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: widget.accentColor.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(11),
               ),
-              child: Icon(icon, color: AppColors.primaryDark, size: 24),
+              child: Icon(widget.icon, color: widget.accentColor, size: 22),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppTypography.titleMedium),
-                  Text(subtitle, style: AppTypography.caption),
+                  Text(widget.title,
+                    style: const TextStyle(
+                      fontFamily: AppTypography.primaryFont,
+                      fontSize: 14, fontWeight: FontWeight.w700,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(widget.subtitle,
+                    style: TextStyle(
+                      fontFamily: AppTypography.secondaryFont,
+                      fontSize: 12, color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, color: AppColors.textSecondary, size: 16),
+            Container(
+              width: 28, height: 28,
+              decoration: BoxDecoration(
+                color: widget.accentColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Icon(Icons.arrow_forward_ios_rounded, size: 13, color: widget.accentColor),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COUNTRY PICKER SHEET
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _CountryPickerSheet extends StatelessWidget {
+  final List<Map<String, String>> countries;
+  final String selectedCode;
+  final void Function(String code, String flag) onSelected;
+
+  const _CountryPickerSheet({
+    required this.countries,
+    required this.selectedCode,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 36, height: 4,
+            decoration: BoxDecoration(color: const Color(0xFFE0E0E0), borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+            child: Row(
+              children: [
+                const Text(
+                  'Select Country',
+                  style: TextStyle(
+                    fontFamily: AppTypography.primaryFont,
+                    fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primaryDark,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(color: const Color(0xFFF0F0F0), borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.close_rounded, size: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          SizedBox(
+            height: 320,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: countries.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 20, endIndent: 20),
+              itemBuilder: (_, i) {
+                final c          = countries[i];
+                final isSelected = selectedCode == c['code'];
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+                  leading: Text(c['flag']!, style: const TextStyle(fontSize: 26)),
+                  title: Text(
+                    c['name']!,
+                    style: TextStyle(
+                      fontFamily: AppTypography.secondaryFont,
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
+                    ),
+                  ),
+                  trailing: Text(
+                    c['code']!,
+                    style: TextStyle(
+                      fontFamily: AppTypography.secondaryFont,
+                      fontSize: 13, fontWeight: FontWeight.w600,
+                      color: isSelected ? AppColors.primaryGold : AppColors.textSecondary,
+                    ),
+                  ),
+                  onTap: () {
+                    onSelected(c['code']!, c['flag']!);
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }

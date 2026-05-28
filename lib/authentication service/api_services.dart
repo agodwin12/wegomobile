@@ -13,15 +13,383 @@ class AuthService {
   // ═══════════════════════════════════════════════════════════════
   // CONFIGURATION
   // ═══════════════════════════════════════════════════════════════
+
   static String get baseUrl => AppConfig.apiBaseUrl;
   static Duration get timeout => Duration(milliseconds: AppConfig.apiTimeout);
 
   String? _accessToken;
   String? _refreshToken;
 
+  String? get accessToken => _accessToken;
+  String? get refreshToken => _refreshToken;
+
   // ═══════════════════════════════════════════════════════════════
-  // PASSENGER SIGNUP (with optional profile photo)
+  // STORAGE KEYS
   // ═══════════════════════════════════════════════════════════════
+
+  static const String kAccessToken = 'access_token';
+  static const String kRefreshToken = 'refresh_token';
+  static const String kUserData = 'user_data';
+
+  static const String kUserUuid = 'user_uuid';
+  static const String kUserType = 'user_type';
+  static const String kUserEmail = 'user_email';
+  static const String kUserPhone = 'user_phone';
+  static const String kFirstName = 'first_name';
+  static const String kLastName = 'last_name';
+  static const String kCivility = 'civility';
+  static const String kBirthDate = 'birth_date';
+  static const String kStatus = 'status';
+  static const String kAvatarUrl = 'avatar_url';
+  static const String kActiveMode = 'active_mode';
+
+  static const String kEmailVerified = 'email_verified';
+  static const String kPhoneVerified = 'phone_verified';
+
+  static const String kProfileData = 'profile_data';
+  static const String kAddressText = 'address_text';
+  static const String kNotes = 'notes';
+
+  static const String kCniNumber = 'cni_number';
+  static const String kLicenseNumber = 'license_number';
+  static const String kLicenseExpiry = 'license_expiry';
+  static const String kInsuranceNumber = 'insurance_number';
+  static const String kInsuranceExpiry = 'insurance_expiry';
+  static const String kVehicleType = 'vehicle_type';
+  static const String kVehicleMakeModel = 'vehicle_make_model';
+  static const String kVehicleColor = 'vehicle_color';
+  static const String kVehicleYear = 'vehicle_year';
+  static const String kVehiclePlate = 'vehicle_plate';
+  static const String kVerificationState = 'verification_state';
+  static const String kIsOnline = 'is_online';
+  static const String kIsAvailable = 'is_available';
+
+  static const String kDriverId = 'driver_id';
+  static const String kCurrentMode = 'current_mode';
+  static const String kWalletData = 'wallet_data';
+  static const String kWalletBalance = 'wallet_balance';
+
+  // Legacy key used by old AuthStore. We remove it during logout.
+  static const String kLegacyJwtToken = 'jwt_token';
+
+  // ═══════════════════════════════════════════════════════════════
+  // PRIVATE HELPERS
+  // ═══════════════════════════════════════════════════════════════
+
+  String _normalizeEndpoint(String endpoint) {
+    var clean = endpoint.trim();
+
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return clean;
+    }
+
+    if (clean.startsWith('/')) {
+      clean = clean.substring(1);
+    }
+
+    return '$baseUrl/$clean';
+  }
+
+  String _modeFromUserType(String userType) {
+    switch (userType) {
+      case 'PASSENGER':
+        return 'PASSENGER';
+      case 'DRIVER':
+        return 'DRIVER';
+      case 'DELIVERY_AGENT':
+        return 'DELIVERY_AGENT';
+      default:
+        return userType;
+    }
+  }
+
+  bool _shouldRefreshFromResponse(http.Response response) {
+    if (response.statusCode != 401) return false;
+
+    try {
+      final decoded = jsonDecode(response.body);
+
+      final code = decoded['code']?.toString();
+
+      if (decoded['shouldRefresh'] == true) return true;
+
+      return code == 'TOKEN_EXPIRED' ||
+          code == 'MODE_TOKEN_STALE' ||
+          code == 'STATUS_TOKEN_STALE';
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Map<String, dynamic> _decodeJsonResponse(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+
+      return {
+        'success': false,
+        'message': 'Invalid response format',
+        'data': decoded,
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Invalid JSON response from server',
+        'raw': response.body,
+      };
+    }
+  }
+
+  AuthException _exceptionFromResponse(http.Response response) {
+    final data = _decodeJsonResponse(response);
+
+    return AuthException(
+      message: data['message']?.toString() ?? 'Request failed',
+      statusCode: response.statusCode,
+      errorCode: data['code']?.toString(),
+    );
+  }
+
+  Future<void> _saveStringIfNotNull(
+      SharedPreferences prefs,
+      String key,
+      dynamic value,
+      ) async {
+    if (value == null) return;
+    await prefs.setString(key, value.toString());
+  }
+
+  Future<void> _saveBoolIfNotNull(
+      SharedPreferences prefs,
+      String key,
+      dynamic value,
+      ) async {
+    if (value == null) return;
+
+    if (value is bool) {
+      await prefs.setBool(key, value);
+      return;
+    }
+
+    if (value is String) {
+      await prefs.setBool(key, value.toLowerCase() == 'true');
+      return;
+    }
+  }
+
+  Future<void> _saveDoubleIfNotNull(
+      SharedPreferences prefs,
+      String key,
+      dynamic value,
+      ) async {
+    if (value == null) return;
+
+    if (value is num) {
+      await prefs.setDouble(key, value.toDouble());
+      return;
+    }
+
+    final parsed = double.tryParse(value.toString());
+    if (parsed != null) {
+      await prefs.setDouble(key, parsed);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SESSION STORAGE
+  // ═══════════════════════════════════════════════════════════════
+
+  Future<void> saveSessionFromAuthData(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final accessToken = data['access_token']?.toString();
+    final refreshToken = data['refresh_token']?.toString();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw AuthException(
+        message: 'No access token received from server',
+        statusCode: 500,
+        errorCode: 'NO_ACCESS_TOKEN',
+      );
+    }
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw AuthException(
+        message: 'No refresh token received from server',
+        statusCode: 500,
+        errorCode: 'NO_REFRESH_TOKEN',
+      );
+    }
+
+    final rawUser = data['user'];
+    final Map<String, dynamic> user = rawUser is Map
+        ? Map<String, dynamic>.from(rawUser)
+        : <String, dynamic>{};
+
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
+
+    await prefs.setString(kAccessToken, accessToken);
+    await prefs.setString(kRefreshToken, refreshToken);
+    await prefs.setString(kUserData, jsonEncode(user));
+
+    final userType = (user['user_type'] ?? '').toString().trim();
+    final activeMode = (user['active_mode'] ?? '').toString().trim();
+    final resolvedMode = activeMode.isNotEmpty
+        ? activeMode
+        : _modeFromUserType(userType);
+
+    await _saveStringIfNotNull(prefs, kUserUuid, user['uuid']);
+    await _saveStringIfNotNull(prefs, kUserType, userType);
+    await _saveStringIfNotNull(prefs, kUserEmail, user['email']);
+    await _saveStringIfNotNull(prefs, kUserPhone, user['phone_e164']);
+    await _saveStringIfNotNull(prefs, kFirstName, user['first_name']);
+    await _saveStringIfNotNull(prefs, kLastName, user['last_name']);
+    await _saveStringIfNotNull(prefs, kCivility, user['civility']);
+    await _saveStringIfNotNull(prefs, kBirthDate, user['birth_date']);
+    await _saveStringIfNotNull(prefs, kStatus, user['status']);
+    await _saveStringIfNotNull(prefs, kAvatarUrl, user['avatar_url']);
+
+    if (resolvedMode.isNotEmpty) {
+      await prefs.setString(kActiveMode, resolvedMode);
+    }
+
+    await _saveBoolIfNotNull(prefs, kEmailVerified, user['email_verified']);
+    await _saveBoolIfNotNull(prefs, kPhoneVerified, user['phone_verified']);
+
+    final profileRaw = user['profile'];
+    if (profileRaw is Map) {
+      final profile = Map<String, dynamic>.from(profileRaw);
+
+      await prefs.setString(kProfileData, jsonEncode(profile));
+
+      if (userType == 'PASSENGER') {
+        await _saveStringIfNotNull(prefs, kAddressText, profile['address_text']);
+        await _saveStringIfNotNull(prefs, kNotes, profile['notes']);
+      }
+
+      if (userType == 'DRIVER') {
+        await _saveStringIfNotNull(prefs, kCniNumber, profile['cni_number']);
+        await _saveStringIfNotNull(prefs, kLicenseNumber, profile['license_number']);
+        await _saveStringIfNotNull(prefs, kLicenseExpiry, profile['license_expiry']);
+        await _saveStringIfNotNull(prefs, kInsuranceNumber, profile['insurance_number']);
+        await _saveStringIfNotNull(prefs, kInsuranceExpiry, profile['insurance_expiry']);
+        await _saveStringIfNotNull(prefs, kVehicleType, profile['vehicle_type']);
+        await _saveStringIfNotNull(prefs, kVehicleMakeModel, profile['vehicle_make_model']);
+        await _saveStringIfNotNull(prefs, kVehicleColor, profile['vehicle_color']);
+        await _saveStringIfNotNull(prefs, kVehicleYear, profile['vehicle_year']);
+        await _saveStringIfNotNull(prefs, kVehiclePlate, profile['vehicle_plate']);
+        await _saveStringIfNotNull(prefs, kVerificationState, profile['verification_state']);
+        await _saveBoolIfNotNull(prefs, kIsOnline, profile['is_online']);
+        await _saveBoolIfNotNull(prefs, kIsAvailable, profile['is_available']);
+      }
+    }
+
+    // Backend may return driver_record for DELIVERY_AGENT.
+    // Older frontend code expected delivery_agent. Support both.
+    final dynamic agentRaw = user['delivery_agent'] ?? user['driver_record'];
+
+    if (userType == 'DELIVERY_AGENT' && agentRaw is Map) {
+      final agent = Map<String, dynamic>.from(agentRaw);
+
+      await _saveStringIfNotNull(
+        prefs,
+        kDriverId,
+        agent['driver_id'] ?? agent['id'],
+      );
+
+      await _saveStringIfNotNull(
+        prefs,
+        kVehicleMakeModel,
+        agent['vehicle_make_model'],
+      );
+
+      await _saveStringIfNotNull(
+        prefs,
+        kCurrentMode,
+        agent['current_mode'] ?? 'delivery',
+      );
+
+      final driverStatus = (agent['status'] ?? 'offline').toString();
+      await prefs.setBool(kIsOnline, driverStatus == 'online');
+
+      final walletRaw = agent['wallet'] ?? agent['delivery_wallet'];
+      if (walletRaw is Map) {
+        final wallet = Map<String, dynamic>.from(walletRaw);
+        await prefs.setString(kWalletData, jsonEncode(wallet));
+        await _saveDoubleIfNotNull(prefs, kWalletBalance, wallet['balance']);
+      }
+    }
+
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('💾 [AUTH SERVICE] Session saved');
+    debugPrint('   user_type   : $userType');
+    debugPrint('   active_mode : $resolvedMode');
+    debugPrint('   access      : ✅');
+    debugPrint('   refresh     : ✅');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  }
+
+  Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final keys = <String>[
+      kAccessToken,
+      kRefreshToken,
+      kUserData,
+      kUserUuid,
+      kUserType,
+      kUserEmail,
+      kUserPhone,
+      kFirstName,
+      kLastName,
+      kCivility,
+      kBirthDate,
+      kStatus,
+      kAvatarUrl,
+      kActiveMode,
+      kEmailVerified,
+      kPhoneVerified,
+      kProfileData,
+      kAddressText,
+      kNotes,
+      kCniNumber,
+      kLicenseNumber,
+      kLicenseExpiry,
+      kInsuranceNumber,
+      kInsuranceExpiry,
+      kVehicleType,
+      kVehicleMakeModel,
+      kVehicleColor,
+      kVehicleYear,
+      kVehiclePlate,
+      kVerificationState,
+      kIsOnline,
+      kIsAvailable,
+      kDriverId,
+      kCurrentMode,
+      kWalletData,
+      kWalletBalance,
+      kLegacyJwtToken,
+    ];
+
+    for (final key in keys) {
+      await prefs.remove(key);
+    }
+
+    _accessToken = null;
+    _refreshToken = null;
+
+    debugPrint('✅ [AUTH SERVICE] Local session cleared');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PASSENGER SIGNUP
+  // ═══════════════════════════════════════════════════════════════
+
   Future<Map<String, dynamic>> signupPassenger({
     required Map<String, dynamic> data,
     File? avatarFile,
@@ -37,27 +405,16 @@ class AuthService {
     try {
       final uri = Uri.parse('$baseUrl/auth/signup/passenger');
 
-      // ─────────────────────────────────────────────────────────
-      // CREATE MULTIPART REQUEST
-      // ─────────────────────────────────────────────────────────
-      var request = http.MultipartRequest('POST', uri);
+      final request = http.MultipartRequest('POST', uri);
 
-      // Add text fields
       data.forEach((key, value) {
         if (value != null) {
           request.fields[key] = value.toString();
         }
       });
 
-      debugPrint('📋 [AUTH SERVICE] Text fields added: ${request.fields.keys.join(", ")}');
-
-      // Add avatar file if provided
       if (avatarFile != null) {
-        debugPrint('📸 [AUTH SERVICE] Adding avatar file...');
-
-        // Check file size (max 5MB)
         final fileSize = await avatarFile.length();
-        debugPrint('   File size: ${(fileSize / 1024).toStringAsFixed(2)} KB');
 
         if (fileSize > 5 * 1024 * 1024) {
           throw AuthException(
@@ -73,68 +430,37 @@ class AuthService {
             avatarFile.path,
           ),
         );
-
-        debugPrint('   ✅ Avatar file added');
       }
 
-      // ─────────────────────────────────────────────────────────
-      // SEND REQUEST
-      // ─────────────────────────────────────────────────────────
-      debugPrint('📤 [AUTH SERVICE] Sending request...');
-
-      final streamedResponse = await request.send().timeout(
-        timeout,
-        onTimeout: () {
-          throw AuthException(
-            message: 'Request timeout. Please check your internet connection.',
-            statusCode: 0,
-            errorCode: 'TIMEOUT',
-          );
-        },
-      );
-
+      final streamedResponse = await request.send().timeout(timeout);
       final response = await http.Response.fromStream(streamedResponse);
-
-      debugPrint('📥 [AUTH SERVICE] Response received');
-      debugPrint('   Status: ${response.statusCode}');
-
-      final jsonResponse = json.decode(response.body);
-
-      debugPrint('   Success: ${jsonResponse['success']}');
-      debugPrint('   Message: ${jsonResponse['message']}');
+      final jsonResponse = _decodeJsonResponse(response);
 
       if (response.statusCode == 200 && jsonResponse['success'] == true) {
-        debugPrint('✅ [AUTH SERVICE] Passenger signup successful!');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        debugPrint('✅ [AUTH SERVICE] Passenger signup successful');
         return jsonResponse;
-      } else {
-        debugPrint('❌ [AUTH SERVICE] Signup failed');
-        debugPrint('   Error: ${jsonResponse['message']}');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-        throw AuthException(
-          message: jsonResponse['message'] ?? 'Signup failed',
-          statusCode: response.statusCode,
-          errorCode: jsonResponse['code'],
-        );
       }
+
+      throw AuthException(
+        message: jsonResponse['message']?.toString() ?? 'Signup failed',
+        statusCode: response.statusCode,
+        errorCode: jsonResponse['code']?.toString(),
+      );
     } on SocketException {
-      debugPrint('❌ [AUTH SERVICE] No internet connection');
       throw AuthException(
         message: 'No internet connection. Please check your network.',
         statusCode: 0,
         errorCode: 'NETWORK_ERROR',
       );
     } on TimeoutException {
-      debugPrint('❌ [AUTH SERVICE] Request timeout');
       throw AuthException(
         message: 'Request timeout. Please try again.',
         statusCode: 0,
         errorCode: 'TIMEOUT',
       );
     } catch (e) {
-      debugPrint('❌ [AUTH SERVICE] Exception: $e\n');
       if (e is AuthException) rethrow;
+
       throw AuthException(
         message: e.toString(),
         statusCode: 0,
@@ -144,8 +470,9 @@ class AuthService {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // DRIVER SIGNUP (with multiple file uploads)
+  // DRIVER SIGNUP
   // ═══════════════════════════════════════════════════════════════
+
   Future<Map<String, dynamic>> signupDriver({
     required Map<String, dynamic> data,
     File? avatarFile,
@@ -156,16 +483,8 @@ class AuthService {
     debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('🚗 [AUTH SERVICE] Driver Signup Request');
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('📧 Email: ${data['email'] ?? "N/A"}');
-    debugPrint('📱 Phone: ${data['phone_e164'] ?? "N/A"}');
-    debugPrint('👤 Name: ${data['first_name']} ${data['last_name']}');
-    debugPrint('📸 Avatar: ${avatarFile != null ? "YES" : "NO"}');
-    debugPrint('📄 License: ${licenseFile != null ? "YES" : "NO"}');
-    debugPrint('📄 Insurance: ${insuranceFile != null ? "YES" : "NO"}');
-    debugPrint('🚗 Vehicle Photo: ${vehiclePhotoFile != null ? "YES" : "NO"}');
 
     try {
-      // Validate required files
       if (licenseFile == null) {
         throw AuthException(
           message: 'Driver license document is required',
@@ -175,109 +494,57 @@ class AuthService {
       }
 
       final uri = Uri.parse('$baseUrl/auth/signup/driver');
+      final request = http.MultipartRequest('POST', uri);
 
-      // ─────────────────────────────────────────────────────────
-      // CREATE MULTIPART REQUEST
-      // ─────────────────────────────────────────────────────────
-      var request = http.MultipartRequest('POST', uri);
-
-      // Add text fields
       data.forEach((key, value) {
         if (value != null) {
           request.fields[key] = value.toString();
         }
       });
 
-      debugPrint('📋 [AUTH SERVICE] Text fields added: ${request.fields.keys.join(", ")}');
-
-      // ─────────────────────────────────────────────────────────
-      // ADD FILES
-      // ─────────────────────────────────────────────────────────
-
-      // Avatar (optional)
       if (avatarFile != null) {
-        debugPrint('📸 [AUTH SERVICE] Adding avatar...');
         await _addFileToRequest(request, avatarFile, 'avatar');
-        debugPrint('   ✅ Avatar added');
       }
 
-      // License document (REQUIRED)
-      debugPrint('📄 [AUTH SERVICE] Adding license document...');
       await _addFileToRequest(request, licenseFile, 'license');
-      debugPrint('   ✅ License document added');
 
-      // Insurance document (optional)
       if (insuranceFile != null) {
-        debugPrint('📄 [AUTH SERVICE] Adding insurance document...');
         await _addFileToRequest(request, insuranceFile, 'insurance');
-        debugPrint('   ✅ Insurance document added');
       }
 
-      // Vehicle photo (optional)
       if (vehiclePhotoFile != null) {
-        debugPrint('🚗 [AUTH SERVICE] Adding vehicle photo...');
         await _addFileToRequest(request, vehiclePhotoFile, 'vehicle_photo');
-        debugPrint('   ✅ Vehicle photo added');
       }
 
-      // ─────────────────────────────────────────────────────────
-      // SEND REQUEST
-      // ─────────────────────────────────────────────────────────
-      debugPrint('📤 [AUTH SERVICE] Sending request...');
-
-      final streamedResponse = await request.send().timeout(
-        timeout,
-        onTimeout: () {
-          throw AuthException(
-            message: 'Request timeout. Please check your internet connection.',
-            statusCode: 0,
-            errorCode: 'TIMEOUT',
-          );
-        },
-      );
-
+      final streamedResponse = await request.send().timeout(timeout);
       final response = await http.Response.fromStream(streamedResponse);
-
-      debugPrint('📥 [AUTH SERVICE] Response received');
-      debugPrint('   Status: ${response.statusCode}');
-
-      final jsonResponse = json.decode(response.body);
-
-      debugPrint('   Success: ${jsonResponse['success']}');
-      debugPrint('   Message: ${jsonResponse['message']}');
+      final jsonResponse = _decodeJsonResponse(response);
 
       if (response.statusCode == 200 && jsonResponse['success'] == true) {
-        debugPrint('✅ [AUTH SERVICE] Driver signup successful!');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        debugPrint('✅ [AUTH SERVICE] Driver signup successful');
         return jsonResponse;
-      } else {
-        debugPrint('❌ [AUTH SERVICE] Signup failed');
-        debugPrint('   Error: ${jsonResponse['message']}');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-        throw AuthException(
-          message: jsonResponse['message'] ?? 'Signup failed',
-          statusCode: response.statusCode,
-          errorCode: jsonResponse['code'],
-        );
       }
+
+      throw AuthException(
+        message: jsonResponse['message']?.toString() ?? 'Signup failed',
+        statusCode: response.statusCode,
+        errorCode: jsonResponse['code']?.toString(),
+      );
     } on SocketException {
-      debugPrint('❌ [AUTH SERVICE] No internet connection');
       throw AuthException(
         message: 'No internet connection. Please check your network.',
         statusCode: 0,
         errorCode: 'NETWORK_ERROR',
       );
     } on TimeoutException {
-      debugPrint('❌ [AUTH SERVICE] Request timeout');
       throw AuthException(
         message: 'Request timeout. Please try again.',
         statusCode: 0,
         errorCode: 'TIMEOUT',
       );
     } catch (e) {
-      debugPrint('❌ [AUTH SERVICE] Exception: $e\n');
       if (e is AuthException) rethrow;
+
       throw AuthException(
         message: e.toString(),
         statusCode: 0,
@@ -286,17 +553,12 @@ class AuthService {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // HELPER: Add file to multipart request with validation
-  // ═══════════════════════════════════════════════════════════════
   Future<void> _addFileToRequest(
       http.MultipartRequest request,
       File file,
       String fieldName,
       ) async {
-    // Check file size (max 10MB)
     final fileSize = await file.length();
-    debugPrint('   File size: ${(fileSize / 1024).toStringAsFixed(2)} KB');
 
     if (fileSize > 10 * 1024 * 1024) {
       throw AuthException(
@@ -315,27 +577,17 @@ class AuthService {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // SEND OTP
+  // OTP
   // ═══════════════════════════════════════════════════════════════
+
   Future<Map<String, dynamic>> sendOtp({
     required String identifier,
     required String channel,
     required String purpose,
   }) async {
-    debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('📨 [AUTH SERVICE] Send OTP Request');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('📧 Identifier: $identifier');
-    debugPrint('📡 Channel: $channel');
-    debugPrint('🎯 Purpose: $purpose');
-
     try {
-      // ✅ FIX: Changed from /auth/send-otp to /auth/otp/send
-      final url = Uri.parse('$baseUrl/auth/otp/send');
-      debugPrint('🌐 [AUTH SERVICE] Endpoint: $url');
-
       final response = await http.post(
-        url,
+        Uri.parse('$baseUrl/auth/otp/send'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -347,43 +599,32 @@ class AuthService {
         }),
       ).timeout(timeout);
 
-      debugPrint('📥 [AUTH SERVICE] Response status: ${response.statusCode}');
-      debugPrint('📦 [AUTH SERVICE] Response body: ${response.body}');
-
-      final jsonResponse = jsonDecode(response.body);
+      final jsonResponse = _decodeJsonResponse(response);
 
       if (response.statusCode == 200 && jsonResponse['success'] == true) {
-        debugPrint('✅ [AUTH SERVICE] OTP sent successfully');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         return jsonResponse;
-      } else {
-        debugPrint('❌ [AUTH SERVICE] Send OTP failed');
-        debugPrint('   Error: ${jsonResponse['message']}');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-        throw AuthException(
-          message: jsonResponse['message'] ?? 'Failed to send OTP',
-          statusCode: response.statusCode,
-          errorCode: jsonResponse['code'],
-        );
       }
+
+      throw AuthException(
+        message: jsonResponse['message']?.toString() ?? 'Failed to send OTP',
+        statusCode: response.statusCode,
+        errorCode: jsonResponse['code']?.toString(),
+      );
     } on SocketException {
-      debugPrint('❌ [AUTH SERVICE] No internet connection');
       throw AuthException(
         message: 'No internet connection',
         statusCode: 0,
         errorCode: 'NETWORK_ERROR',
       );
     } on TimeoutException {
-      debugPrint('❌ [AUTH SERVICE] Request timeout');
       throw AuthException(
         message: 'Request timeout',
         statusCode: 0,
         errorCode: 'TIMEOUT',
       );
     } catch (e) {
-      debugPrint('❌ [AUTH SERVICE] Exception: $e\n');
       if (e is AuthException) rethrow;
+
       throw AuthException(
         message: e.toString(),
         statusCode: 0,
@@ -392,28 +633,14 @@ class AuthService {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // VERIFY OTP
-  // ═══════════════════════════════════════════════════════════════
   Future<Map<String, dynamic>> verifyOtp({
     required String identifier,
     required String purpose,
     required String code,
   }) async {
-    debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('🔍 [AUTH SERVICE] Verify OTP Request');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('📧 Identifier: $identifier');
-    debugPrint('🎯 Purpose: $purpose');
-    debugPrint('🔢 Code: $code');
-
     try {
-      // ✅ FIX: Changed from /auth/verify-otp to /auth/otp/verify
-      final url = Uri.parse('$baseUrl/auth/otp/verify');
-      debugPrint('🌐 [AUTH SERVICE] Endpoint: $url');
-
       final response = await http.post(
-        url,
+        Uri.parse('$baseUrl/auth/otp/verify'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -425,43 +652,32 @@ class AuthService {
         }),
       ).timeout(timeout);
 
-      debugPrint('📥 [AUTH SERVICE] Response status: ${response.statusCode}');
-      debugPrint('📦 [AUTH SERVICE] Response body: ${response.body}');
-
-      final jsonResponse = jsonDecode(response.body);
+      final jsonResponse = _decodeJsonResponse(response);
 
       if (response.statusCode == 200 && jsonResponse['success'] == true) {
-        debugPrint('✅ [AUTH SERVICE] OTP verified successfully');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         return jsonResponse;
-      } else {
-        debugPrint('❌ [AUTH SERVICE] OTP verification failed');
-        debugPrint('   Error: ${jsonResponse['message']}');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-        throw AuthException(
-          message: jsonResponse['message'] ?? 'Invalid OTP code',
-          statusCode: response.statusCode,
-          errorCode: jsonResponse['code'],
-        );
       }
+
+      throw AuthException(
+        message: jsonResponse['message']?.toString() ?? 'Invalid OTP code',
+        statusCode: response.statusCode,
+        errorCode: jsonResponse['code']?.toString(),
+      );
     } on SocketException {
-      debugPrint('❌ [AUTH SERVICE] No internet connection');
       throw AuthException(
         message: 'No internet connection',
         statusCode: 0,
         errorCode: 'NETWORK_ERROR',
       );
     } on TimeoutException {
-      debugPrint('❌ [AUTH SERVICE] Request timeout');
       throw AuthException(
         message: 'Request timeout',
         statusCode: 0,
         errorCode: 'TIMEOUT',
       );
     } catch (e) {
-      debugPrint('❌ [AUTH SERVICE] Exception: $e\n');
       if (e is AuthException) rethrow;
+
       throw AuthException(
         message: e.toString(),
         statusCode: 0,
@@ -473,13 +689,13 @@ class AuthService {
   // ═══════════════════════════════════════════════════════════════
   // LOGIN
   // ═══════════════════════════════════════════════════════════════
+
   Future<Map<String, dynamic>> login(String identifier, String password) async {
     debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('🔐 [AUTH SERVICE] Login started');
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('📍 API URL: $baseUrl/auth/login');
     debugPrint('📧 Identifier: $identifier');
-    debugPrint('⏱️  Timeout: ${timeout.inSeconds}s');
 
     try {
       final response = await http.post(
@@ -494,70 +710,48 @@ class AuthService {
         }),
       ).timeout(timeout);
 
-      debugPrint('📡 [AUTH SERVICE] Response status: ${response.statusCode}');
+      final responseData = _decodeJsonResponse(response);
 
-      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        final rawData = responseData['data'];
 
-      if (response.statusCode == 200) {
-        debugPrint('✅ [AUTH SERVICE] Login API call successful');
+        if (rawData is! Map) {
+          throw AuthException(
+            message: 'Invalid login response from server',
+            statusCode: response.statusCode,
+            errorCode: 'INVALID_LOGIN_RESPONSE',
+          );
+        }
 
-        final data = responseData['data'];
+        final data = Map<String, dynamic>.from(rawData);
 
-        // Store both tokens
-        _accessToken = data['access_token'];
-        _refreshToken = data['refresh_token'];
+        await saveSessionFromAuthData(data);
 
-        debugPrint('🎫 [AUTH SERVICE] Tokens extracted');
-
-        // Save to storage
-        debugPrint('💾 [AUTH SERVICE] Saving tokens to SharedPreferences...');
-        final prefs = await SharedPreferences.getInstance();
-
-        await prefs.setString('access_token', _accessToken!);
-        debugPrint('   ✅ Access token saved');
-
-        await prefs.setString('refresh_token', _refreshToken!);
-        debugPrint('   ✅ Refresh token saved');
-
-        // Save user data
-        final userJson = jsonEncode(data['user']);
-        await prefs.setString('user_data', userJson);
-        debugPrint('   ✅ User data saved');
-
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         debugPrint('✅ [AUTH SERVICE] Login completed successfully');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
         return responseData;
-      } else {
-        debugPrint('❌ [AUTH SERVICE] Login failed with status: ${response.statusCode}');
-        debugPrint('   Error: ${responseData['message']}');
-        debugPrint('   Code: ${responseData['code']}');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-        throw AuthException(
-          message: responseData['message'] ?? 'Login failed',
-          statusCode: response.statusCode,
-          errorCode: responseData['code'],
-        );
       }
+
+      throw AuthException(
+        message: responseData['message']?.toString() ?? 'Login failed',
+        statusCode: response.statusCode,
+        errorCode: responseData['code']?.toString(),
+      );
     } on SocketException {
-      debugPrint('❌ [AUTH SERVICE] Network error - No internet connection');
       throw AuthException(
         message: 'No internet connection',
         statusCode: 0,
         errorCode: 'NETWORK_ERROR',
       );
     } on TimeoutException {
-      debugPrint('❌ [AUTH SERVICE] Request timeout');
       throw AuthException(
         message: 'Request timeout. Please try again.',
         statusCode: 0,
         errorCode: 'TIMEOUT',
       );
     } catch (e) {
-      debugPrint('❌ [AUTH SERVICE] Unexpected error: $e\n');
       if (e is AuthException) rethrow;
+
       throw AuthException(
         message: 'Login failed: ${e.toString()}',
         statusCode: 0,
@@ -567,8 +761,9 @@ class AuthService {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // REFRESH TOKEN
+  // REFRESH TOKEN / RESTORE SESSION
   // ═══════════════════════════════════════════════════════════════
+
   Future<bool> refreshAccessToken() async {
     debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('🔄 [AUTH SERVICE] Refresh token process started');
@@ -576,65 +771,119 @@ class AuthService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final refreshToken = prefs.getString('refresh_token');
+      final refreshToken = prefs.getString(kRefreshToken);
 
-      if (refreshToken == null) {
+      if (refreshToken == null || refreshToken.isEmpty) {
         debugPrint('❌ [AUTH SERVICE] No refresh token found');
         return false;
       }
 
-      debugPrint('✅ [AUTH SERVICE] Refresh token found');
-      debugPrint('📡 [AUTH SERVICE] Calling refresh token API...');
-
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/refresh-token'),
+        Uri.parse('$baseUrl/auth/refresh'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({'refresh_token': refreshToken}),
+        body: jsonEncode({
+          'refresh_token': refreshToken,
+        }),
       ).timeout(timeout);
 
-      debugPrint('📡 [AUTH SERVICE] Response status: ${response.statusCode}');
+      final responseData = _decodeJsonResponse(response);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        final rawData = responseData['data'];
+
+        if (rawData is! Map) {
+          debugPrint('❌ [AUTH SERVICE] Invalid refresh response shape');
+          return false;
+        }
+
+        final data = Map<String, dynamic>.from(rawData);
+
+        await saveSessionFromAuthData(data);
+
         debugPrint('✅ [AUTH SERVICE] Refresh successful');
-
-        final data = jsonDecode(response.body)['data'];
-
-        _accessToken = data['access_token'];
-        _refreshToken = data['refresh_token'];
-
-        // Update storage
-        await prefs.setString('access_token', _accessToken!);
-        await prefs.setString('refresh_token', _refreshToken!);
-
-        debugPrint('✅ [AUTH SERVICE] Tokens updated');
         debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
         return true;
-      } else {
-        debugPrint('❌ [AUTH SERVICE] Refresh failed: ${response.statusCode}');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-        return false;
       }
+
+      debugPrint('❌ [AUTH SERVICE] Refresh failed');
+      debugPrint('   Status : ${response.statusCode}');
+      debugPrint('   Code   : ${responseData['code']}');
+      debugPrint('   Message: ${responseData['message']}');
+
+      final shouldRelogin = responseData['shouldRelogin'] == true ||
+          responseData['code'] == 'INVALID_REFRESH_TOKEN' ||
+          responseData['code'] == 'ACCOUNT_NOT_FOUND' ||
+          responseData['code'] == 'ACCOUNT_DELETED';
+
+      if (shouldRelogin) {
+        await clearSession();
+      }
+
+      return false;
+    } on SocketException {
+      debugPrint('❌ [AUTH SERVICE] No internet during refresh');
+      return false;
+    } on TimeoutException {
+      debugPrint('❌ [AUTH SERVICE] Refresh timeout');
+      return false;
     } catch (e) {
       debugPrint('❌ [AUTH SERVICE] Refresh error: $e');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return false;
     }
   }
 
+  /// Used by SplashScreen.
+  /// This validates the persistent session using refresh_token.
+  Future<bool> restoreSession() async {
+    debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🚀 [AUTH SERVICE] Restoring session');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    final prefs = await SharedPreferences.getInstance();
+    final refreshToken = prefs.getString(kRefreshToken);
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      debugPrint('❌ [AUTH SERVICE] No refresh token saved');
+      await clearSession();
+      return false;
+    }
+
+    final refreshed = await refreshAccessToken();
+
+    if (!refreshed) {
+      debugPrint('❌ [AUTH SERVICE] Restore failed');
+      return false;
+    }
+
+    debugPrint('✅ [AUTH SERVICE] Session restored');
+    return true;
+  }
+
   // ═══════════════════════════════════════════════════════════════
-  // GET USER DATA FROM STORAGE
+  // USER DATA / TOKENS
   // ═══════════════════════════════════════════════════════════════
+
   Future<Map<String, dynamic>?> getUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString('user_data');
+      final userJson = prefs.getString(kUserData);
 
-      if (userJson != null) {
-        return jsonDecode(userJson) as Map<String, dynamic>;
+      if (userJson == null || userJson.isEmpty) return null;
+
+      final decoded = jsonDecode(userJson);
+
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
       }
+
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+
       return null;
     } catch (e) {
       debugPrint('❌ [AUTH SERVICE] Error getting user data: $e');
@@ -642,29 +891,64 @@ class AuthService {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // CHECK IF USER IS LOGGED IN
-  // ═══════════════════════════════════════════════════════════════
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('access_token') != null;
+
+    final refreshToken = prefs.getString(kRefreshToken);
+
+    return refreshToken != null && refreshToken.isNotEmpty;
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // GET ACCESS TOKEN
-  // ═══════════════════════════════════════════════════════════════
   Future<String?> getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('access_token');
+
+    _accessToken = prefs.getString(kAccessToken);
+
+    return _accessToken;
+  }
+
+  Future<String?> getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    _refreshToken = prefs.getString(kRefreshToken);
+
+    return _refreshToken;
+  }
+
+  Future<String?> getActiveMode() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final activeMode = prefs.getString(kActiveMode);
+    if (activeMode != null && activeMode.isNotEmpty) {
+      return activeMode;
+    }
+
+    final userType = prefs.getString(kUserType) ?? '';
+    if (userType.isEmpty) return null;
+
+    return _modeFromUserType(userType);
+  }
+
+  Future<String?> getUserType() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(kUserType);
+  }
+
+  Future<String?> getUserUuid() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(kUserUuid);
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // AUTHENTICATED REQUEST
+  // AUTHENTICATED REQUEST WITH AUTO REFRESH
   // ═══════════════════════════════════════════════════════════════
+
   Future<http.Response> authenticatedRequest(
       String method,
       String endpoint, {
         Map<String, dynamic>? body,
+        Map<String, String>? queryParams,
+        bool retryOnUnauthorized = true,
       }) async {
     debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('🔐 [AUTH SERVICE] Authenticated request');
@@ -672,38 +956,43 @@ class AuthService {
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     final prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('access_token');
+    String? token = prefs.getString(kAccessToken);
 
-    if (token != null) {
-      debugPrint('✅ [AUTH SERVICE] Access token found');
-    } else {
-      debugPrint('⚠️ [AUTH SERVICE] No access token');
-    }
+    var response = await _makeRequest(
+      method,
+      endpoint,
+      token,
+      body,
+      queryParams: queryParams,
+    );
 
-    var response = await _makeRequest(method, endpoint, token, body);
-    debugPrint('📡 [AUTH SERVICE] Response: ${response.statusCode}');
+    if (retryOnUnauthorized && _shouldRefreshFromResponse(response)) {
+      debugPrint('⚠️ [AUTH SERVICE] Token stale/expired, refreshing...');
 
-    // If token expired, refresh and retry
-    if (response.statusCode == 401) {
-      debugPrint('⚠️ [AUTH SERVICE] Token expired, refreshing...');
       final refreshed = await refreshAccessToken();
 
-      if (refreshed) {
-        debugPrint('✅ [AUTH SERVICE] Retrying with new token...');
-        token = prefs.getString('access_token');
-        response = await _makeRequest(method, endpoint, token, body);
-      } else {
-        debugPrint('❌ [AUTH SERVICE] Refresh failed');
+      if (!refreshed) {
+        debugPrint('❌ [AUTH SERVICE] Refresh failed during request');
+
         throw AuthException(
           message: 'Session expired. Please login again.',
           statusCode: 401,
           errorCode: 'SESSION_EXPIRED',
         );
       }
-    }
 
-    debugPrint('✅ [AUTH SERVICE] Request completed');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      token = prefs.getString(kAccessToken);
+
+      debugPrint('✅ [AUTH SERVICE] Retrying request with fresh token');
+
+      response = await _makeRequest(
+        method,
+        endpoint,
+        token,
+        body,
+        queryParams: queryParams,
+      );
+    }
 
     return response;
   }
@@ -712,15 +1001,20 @@ class AuthService {
       String method,
       String endpoint,
       String? token,
-      Map<String, dynamic>? body,
-      ) async {
+      Map<String, dynamic>? body, {
+        Map<String, String>? queryParams,
+      }) async {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
 
-    final uri = Uri.parse('$baseUrl/$endpoint');
+    var uri = Uri.parse(_normalizeEndpoint(endpoint));
+
+    if (queryParams != null && queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams);
+    }
 
     try {
       switch (method.toUpperCase()) {
@@ -728,24 +1022,41 @@ class AuthService {
           return await http.get(uri, headers: headers).timeout(timeout);
 
         case 'POST':
-          return await http.post(
+          return await http
+              .post(
             uri,
             headers: headers,
             body: body != null ? jsonEncode(body) : null,
-          ).timeout(timeout);
+          )
+              .timeout(timeout);
+
+        case 'PUT':
+          return await http
+              .put(
+            uri,
+            headers: headers,
+            body: body != null ? jsonEncode(body) : null,
+          )
+              .timeout(timeout);
 
         case 'PATCH':
-          return await http.patch(
+          return await http
+              .patch(
             uri,
             headers: headers,
             body: body != null ? jsonEncode(body) : null,
-          ).timeout(timeout);
+          )
+              .timeout(timeout);
 
         case 'DELETE':
           return await http.delete(uri, headers: headers).timeout(timeout);
 
         default:
-          throw Exception('Unsupported HTTP method: $method');
+          throw AuthException(
+            message: 'Unsupported HTTP method: $method',
+            statusCode: 0,
+            errorCode: 'UNSUPPORTED_METHOD',
+          );
       }
     } on SocketException {
       throw AuthException(
@@ -762,22 +1073,69 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> authenticatedJsonRequest(
+      String method,
+      String endpoint, {
+        Map<String, dynamic>? body,
+        Map<String, String>? queryParams,
+      }) async {
+    final response = await authenticatedRequest(
+      method,
+      endpoint,
+      body: body,
+      queryParams: queryParams,
+    );
+
+    final decoded = _decodeJsonResponse(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return decoded;
+    }
+
+    throw AuthException(
+      message: decoded['message']?.toString() ?? 'Request failed',
+      statusCode: response.statusCode,
+      errorCode: decoded['code']?.toString(),
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // LOGOUT
   // ═══════════════════════════════════════════════════════════════
-  Future<void> logout() async {
+
+  Future<void> logout({bool logoutAll = false, bool callBackend = true}) async {
     debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('🚪 [AUTH SERVICE] Logging out...');
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.remove('access_token');
-    await prefs.remove('refresh_token');
-    await prefs.remove('user_data');
+    final accessToken = prefs.getString(kAccessToken);
+    final refreshToken = prefs.getString(kRefreshToken);
 
-    _accessToken = null;
-    _refreshToken = null;
+    if (callBackend && accessToken != null && accessToken.isNotEmpty) {
+      try {
+        await http
+            .post(
+          Uri.parse('$baseUrl/auth/logout'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+          body: jsonEncode({
+            if (refreshToken != null && refreshToken.isNotEmpty)
+              'refresh_token': refreshToken,
+            'logout_all': logoutAll,
+          }),
+        )
+            .timeout(timeout);
+      } catch (e) {
+        debugPrint('⚠️ [AUTH SERVICE] Backend logout failed, clearing local session anyway: $e');
+      }
+    }
+
+    await clearSession();
 
     debugPrint('✅ [AUTH SERVICE] Logged out successfully');
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
@@ -787,6 +1145,7 @@ class AuthService {
 // ═══════════════════════════════════════════════════════════════
 // CUSTOM EXCEPTION CLASS
 // ═══════════════════════════════════════════════════════════════
+
 class AuthException implements Exception {
   final String message;
   final int? statusCode;

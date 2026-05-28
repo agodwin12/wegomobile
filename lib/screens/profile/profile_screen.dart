@@ -4,8 +4,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../main.dart';
 import '../../providers/profile_provider.dart';
 import '../../models/user_profile_model.dart';
+import '../../providers/services.dart';
+import '../../providers/trip_provider.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 import 'edit_profile_screen.dart';
@@ -1266,24 +1269,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _handleLogout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-
-    if (mounted) {
-      context.read<ProfileProvider>().reset();
-
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/login',
-            (route) => false,
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Logged out successfully'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 1: Disconnect socket FIRST (before clearing tokens)
+    // ═══════════════════════════════════════════════════════════════
+    try {
+      SocketHelper.disconnect();
+      debugPrint('✅ [LOGOUT] Socket disconnected');
+    } catch (e) {
+      debugPrint('⚠️  [LOGOUT] Socket disconnect error (non-fatal): $e');
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 2: Clear ALL SharedPreferences
+    // ═══════════════════════════════════════════════════════════════
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      debugPrint('✅ [LOGOUT] SharedPreferences cleared');
+    } catch (e) {
+      debugPrint('❌ [LOGOUT] Failed to clear prefs: $e');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 3: Reset all providers
+    // ═══════════════════════════════════════════════════════════════
+    if (!mounted) return;
+    try {
+      context.read<ProfileProvider>().reset();
+      context.read<TripProvider>().reset();
+      context.read<ServicesProvider>().reset();
+      debugPrint('✅ [LOGOUT] All providers reset');
+    } catch (e) {
+      debugPrint('⚠️  [LOGOUT] Provider reset error (non-fatal): $e');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 4: Navigate to login, wipe entire stack
+    // ═══════════════════════════════════════════════════════════════
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/login',
+          (route) => false,
+    );
+
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 5: Show confirmation snackbar
+    // ═══════════════════════════════════════════════════════════════
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            SizedBox(width: 10),
+            Text(
+              'Logged out successfully',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    debugPrint('✅ [LOGOUT] Complete — navigated to /login');
   }
 }

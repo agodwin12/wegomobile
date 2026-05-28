@@ -1,13 +1,13 @@
 // lib/screens/signup/driver_sign_up/signup_driver_screen.dart
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 
-// Import utilities
 import '../../../authentication service/api_services.dart';
 import '../../../core/config.dart';
 import '../../../utils/app_colors.dart';
@@ -20,39 +20,43 @@ class SignupDriverScreen extends StatefulWidget {
   State<SignupDriverScreen> createState() => _SignupDriverScreenState();
 }
 
-class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProviderStateMixin {
+class _SignupDriverScreenState extends State<SignupDriverScreen>
+    with TickerProviderStateMixin {
   int current = 0;
   bool isLoading = false;
+
+  // ═══════════════════════════════════════════════════════════════
+  // GOOGLE SIGNUP STATE
+  // ═══════════════════════════════════════════════════════════════
+
+  bool isGoogleSignup = false;
+  String? googleIdToken;
+  String? googleAvatarUrl;
 
   // ═══════════════════════════════════════════════════════════════
   // CONTROLLERS
   // ═══════════════════════════════════════════════════════════════
 
-  // Step 1 - Personal Info
   final emailCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
   final firstCtrl = TextEditingController();
   final lastCtrl = TextEditingController();
   final cniCtrl = TextEditingController();
 
-  // Step 2 - Vehicle Info
   final vehicleTypeCtrl = TextEditingController(text: 'Economy');
   final vehicleMakeModelCtrl = TextEditingController();
   final vehicleColorCtrl = TextEditingController();
   final vehicleYearCtrl = TextEditingController();
   final vehiclePlateCtrl = TextEditingController();
 
-  // Step 3 - Documents
   final licenseNumberCtrl = TextEditingController();
   final licenseExpiryCtrl = TextEditingController();
   final insuranceNumberCtrl = TextEditingController();
   final insuranceExpiryCtrl = TextEditingController();
 
-  // Step 4 - Security
   final pwCtrl = TextEditingController();
   final confirmPwCtrl = TextEditingController();
 
-  // Step 5 - OTP
   final otpCtrl = TextEditingController();
 
   // ═══════════════════════════════════════════════════════════════
@@ -61,10 +65,11 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
 
   String? msg;
   String? errorMsg;
+
   String channel = 'EMAIL';
   String purpose = 'EMAIL_VERIFY';
   String? identifier;
-  String? signupId; // ✅ NEW: Track pending signup UUID
+  String? signupId;
 
   String selectedCountryCode = '+237';
   String selectedCountryFlag = '🇨🇲';
@@ -72,7 +77,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  // Image files
   File? _profileImage;
   File? _licenseImage;
   File? _insuranceImage;
@@ -80,22 +84,19 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
 
   final ImagePicker _picker = ImagePicker();
 
-  // Animation controllers
   late AnimationController _stepAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Vehicle types
   final List<String> vehicleTypes = [
     'Economy',
     'Comfort',
     'Business',
     'Premium',
     'SUV',
-    'Van'
+    'Van',
   ];
 
-  // Country codes
   final List<Map<String, String>> countries = [
     {'code': '+237', 'flag': '🇨🇲', 'name': 'Cameroon'},
     {'code': '+1', 'flag': '🇺🇸', 'name': 'United States'},
@@ -111,6 +112,44 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   void initState() {
     super.initState();
     _initializeAnimations();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hydrateGoogleArguments();
+    });
+  }
+
+  void _hydrateGoogleArguments() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+
+    if (args is! Map) return;
+
+    final provider = args['signup_provider']?.toString();
+
+    if (provider != 'google') return;
+
+    setState(() {
+      isGoogleSignup = true;
+      googleIdToken = args['google_id_token']?.toString();
+      googleAvatarUrl = args['avatar_url']?.toString();
+
+      final email = args['email']?.toString() ?? '';
+      final firstName = args['first_name']?.toString() ?? '';
+      final lastName = args['last_name']?.toString() ?? '';
+
+      if (emailCtrl.text.trim().isEmpty) {
+        emailCtrl.text = email;
+      }
+
+      if (firstCtrl.text.trim().isEmpty) {
+        firstCtrl.text = firstName;
+      }
+
+      if (lastCtrl.text.trim().isEmpty) {
+        lastCtrl.text = lastName;
+      }
+
+      msg = 'Google account connected. Complete your driver documents.';
+    });
   }
 
   void _initializeAnimations() {
@@ -120,16 +159,21 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _stepAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _stepAnimationController,
+        curve: Curves.easeInOut,
+      ),
     );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.2, 0),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _stepAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: _stepAnimationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
     _stepAnimationController.forward();
   }
@@ -137,28 +181,33 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   @override
   void dispose() {
     _stepAnimationController.dispose();
+
     emailCtrl.dispose();
     phoneCtrl.dispose();
     firstCtrl.dispose();
     lastCtrl.dispose();
     cniCtrl.dispose();
+
     vehicleTypeCtrl.dispose();
     vehicleMakeModelCtrl.dispose();
     vehicleColorCtrl.dispose();
     vehicleYearCtrl.dispose();
     vehiclePlateCtrl.dispose();
+
     licenseNumberCtrl.dispose();
     licenseExpiryCtrl.dispose();
     insuranceNumberCtrl.dispose();
     insuranceExpiryCtrl.dispose();
+
     pwCtrl.dispose();
     confirmPwCtrl.dispose();
     otpCtrl.dispose();
+
     super.dispose();
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // IMAGE PICKER METHODS
+  // IMAGE PICKER
   // ═══════════════════════════════════════════════════════════════
 
   Future<void> _pickImage(String type) async {
@@ -170,28 +219,31 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
         imageQuality: 85,
       );
 
-      if (image != null) {
-        setState(() {
-          switch (type) {
-            case 'profile':
-              _profileImage = File(image.path);
-              break;
-            case 'license':
-              _licenseImage = File(image.path);
-              break;
-            case 'insurance':
-              _insuranceImage = File(image.path);
-              break;
-            case 'vehicle':
-              _vehicleImage = File(image.path);
-              break;
-          }
-        });
+      if (image == null) return;
 
-        debugPrint('✅ [IMAGE PICKER] ${type.toUpperCase()} image selected: ${image.path}');
-      }
+      setState(() {
+        switch (type) {
+          case 'profile':
+            _profileImage = File(image.path);
+            break;
+          case 'license':
+            _licenseImage = File(image.path);
+            break;
+          case 'insurance':
+            _insuranceImage = File(image.path);
+            break;
+          case 'vehicle':
+            _vehicleImage = File(image.path);
+            break;
+        }
+      });
+
+      debugPrint(
+        '✅ [IMAGE PICKER] ${type.toUpperCase()} image selected: ${image.path}',
+      );
     } catch (e) {
       debugPrint('❌ [IMAGE PICKER] Error: $e');
+
       setState(() {
         errorMsg = 'Error selecting image: $e';
       });
@@ -199,7 +251,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP VALIDATION & SUBMISSION
+  // STEP VALIDATION
   // ═══════════════════════════════════════════════════════════════
 
   Future<void> _submitStep1() async {
@@ -208,31 +260,36 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       errorMsg = null;
     });
 
-    // Validation
     if (firstCtrl.text.trim().isEmpty) {
       setState(() => errorMsg = 'First name is required');
       return;
     }
+
     if (lastCtrl.text.trim().isEmpty) {
       setState(() => errorMsg = 'Last name is required');
       return;
     }
+
     if (cniCtrl.text.trim().isEmpty) {
       setState(() => errorMsg = 'National identity card number is required');
       return;
     }
-    if (emailCtrl.text.trim().isEmpty && phoneCtrl.text.trim().isEmpty) {
-      setState(() => errorMsg = 'Email or phone number is required');
+
+    if (emailCtrl.text.trim().isEmpty) {
+      setState(() => errorMsg = 'Email is required');
       return;
     }
 
-    // Email validation
-    if (emailCtrl.text.trim().isNotEmpty) {
-      final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-      if (!emailRegex.hasMatch(emailCtrl.text.trim())) {
-        setState(() => errorMsg = 'Please enter a valid email address');
-        return;
-      }
+    if (phoneCtrl.text.trim().isEmpty) {
+      setState(() => errorMsg = 'Phone number is required');
+      return;
+    }
+
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+
+    if (!emailRegex.hasMatch(emailCtrl.text.trim())) {
+      setState(() => errorMsg = 'Please enter a valid email address');
+      return;
     }
 
     _animateToNextStep();
@@ -244,19 +301,21 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       errorMsg = null;
     });
 
-    // Validation
     if (vehicleMakeModelCtrl.text.trim().isEmpty) {
       setState(() => errorMsg = 'Vehicle make/model is required');
       return;
     }
+
     if (vehicleColorCtrl.text.trim().isEmpty) {
       setState(() => errorMsg = 'Vehicle color is required');
       return;
     }
+
     if (vehicleYearCtrl.text.trim().isEmpty) {
       setState(() => errorMsg = 'Vehicle year is required');
       return;
     }
+
     if (vehiclePlateCtrl.text.trim().isEmpty) {
       setState(() => errorMsg = 'Vehicle plate number is required');
       return;
@@ -271,7 +330,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       errorMsg = null;
     });
 
-    // Validation
     if (licenseNumberCtrl.text.trim().isEmpty) {
       setState(() => errorMsg = 'Driver\'s license number is required');
       return;
@@ -283,6 +341,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
     }
 
     final dateRegex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+
     if (!dateRegex.hasMatch(licenseExpiryCtrl.text.trim())) {
       setState(() => errorMsg = 'Invalid date format. Use YYYY-MM-DD');
       return;
@@ -296,6 +355,10 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
     _animateToNextStep();
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 4 — CREATE PENDING SIGNUP / GOOGLE DRIVER SIGNUP
+  // ═══════════════════════════════════════════════════════════════
+
   Future<void> _submitStep4() async {
     setState(() {
       msg = null;
@@ -304,54 +367,65 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
     });
 
     try {
-      // Validation
-      if (pwCtrl.text.trim().isEmpty) {
-        setState(() {
-          errorMsg = 'Password is required';
-          isLoading = false;
-        });
-        return;
-      }
-      if (confirmPwCtrl.text.trim().isEmpty) {
-        setState(() {
-          errorMsg = 'Please confirm your password';
-          isLoading = false;
-        });
-        return;
-      }
-      if (pwCtrl.text != confirmPwCtrl.text) {
-        setState(() {
-          errorMsg = 'Passwords do not match';
-          isLoading = false;
-        });
-        return;
-      }
-      if (pwCtrl.text.length < 8) {
-        setState(() {
-          errorMsg = 'Password must be at least 8 characters';
-          isLoading = false;
-        });
-        return;
+      if (isGoogleSignup) {
+        if (googleIdToken == null || googleIdToken!.trim().isEmpty) {
+          setState(() {
+            errorMsg = 'Google session expired. Please restart signup.';
+            isLoading = false;
+          });
+          return;
+        }
+      } else {
+        if (pwCtrl.text.trim().isEmpty) {
+          setState(() {
+            errorMsg = 'Password is required';
+            isLoading = false;
+          });
+          return;
+        }
+
+        if (confirmPwCtrl.text.trim().isEmpty) {
+          setState(() {
+            errorMsg = 'Please confirm your password';
+            isLoading = false;
+          });
+          return;
+        }
+
+        if (pwCtrl.text != confirmPwCtrl.text) {
+          setState(() {
+            errorMsg = 'Passwords do not match';
+            isLoading = false;
+          });
+          return;
+        }
+
+        if (pwCtrl.text.length < 8) {
+          setState(() {
+            errorMsg = 'Password must be at least 8 characters';
+            isLoading = false;
+          });
+          return;
+        }
       }
 
       debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('🚗 [DRIVER SIGNUP] Starting registration...');
+      debugPrint(
+        isGoogleSignup
+            ? '🚗 [GOOGLE DRIVER SIGNUP] Starting registration...'
+            : '🚗 [DRIVER SIGNUP] Starting registration...',
+      );
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-      // ═══════════════════════════════════════════════════════════
-      // PREPARE MULTIPART REQUEST
-      // ═══════════════════════════════════════════════════════════
       final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/signup/driver');
 
       debugPrint('📡 [SIGNUP] API URL: $uri');
 
-      var request = http.MultipartRequest('POST', uri);
+      final request = http.MultipartRequest('POST', uri);
 
-      // ─────────────────────────────────────────────────────────
-      // ADD TEXT FIELDS
-      // ─────────────────────────────────────────────────────────
       final email = emailCtrl.text.trim();
       final phone = phoneCtrl.text.trim();
+      final fullPhone = '$selectedCountryCode$phone';
 
       if (email.isNotEmpty) {
         request.fields['email'] = email;
@@ -359,16 +433,25 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       }
 
       if (phone.isNotEmpty) {
-        final fullPhone = '$selectedCountryCode$phone';
         request.fields['phone_e164'] = fullPhone;
         debugPrint('📱 Phone: $fullPhone');
       }
 
       request.fields['first_name'] = firstCtrl.text.trim();
       request.fields['last_name'] = lastCtrl.text.trim();
-      request.fields['password'] = pwCtrl.text;
       request.fields['cni_number'] = cniCtrl.text.trim();
       request.fields['license_number'] = licenseNumberCtrl.text.trim();
+
+      if (isGoogleSignup) {
+        request.fields['provider'] = 'google';
+        request.fields['google_id_token'] = googleIdToken!.trim();
+
+        if (googleAvatarUrl != null && googleAvatarUrl!.trim().isNotEmpty) {
+          request.fields['google_avatar_url'] = googleAvatarUrl!.trim();
+        }
+      } else {
+        request.fields['password'] = pwCtrl.text;
+      }
 
       if (licenseExpiryCtrl.text.trim().isNotEmpty) {
         request.fields['license_expiry'] = licenseExpiryCtrl.text.trim();
@@ -382,111 +465,149 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
         request.fields['insurance_expiry'] = insuranceExpiryCtrl.text.trim();
       }
 
-      // Vehicle info
       request.fields['vehicle_type'] = vehicleTypeCtrl.text.trim();
       request.fields['vehicle_make_model'] = vehicleMakeModelCtrl.text.trim();
       request.fields['vehicle_color'] = vehicleColorCtrl.text.trim();
       request.fields['vehicle_year'] = vehicleYearCtrl.text.trim();
       request.fields['vehicle_plate'] = vehiclePlateCtrl.text.trim();
 
-      debugPrint('📋 [SIGNUP] All text fields added');
+      debugPrint('📋 [SIGNUP] Text fields added');
 
-      // ─────────────────────────────────────────────────────────
-      // ADD IMAGE FILES
-      // ─────────────────────────────────────────────────────────
-
-      // Profile picture (optional)
       if (_profileImage != null) {
         debugPrint('📸 [SIGNUP] Adding profile picture...');
-        request.files.add(await http.MultipartFile.fromPath(
-          'avatar',
-          _profileImage!.path,
-        ));
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'avatar',
+            _profileImage!.path,
+          ),
+        );
+
         debugPrint('   ✅ Profile picture added');
       }
 
-      // Driver's license (REQUIRED)
       if (_licenseImage != null) {
         debugPrint('📄 [SIGNUP] Adding license document...');
-        request.files.add(await http.MultipartFile.fromPath(
-          'license',
-          _licenseImage!.path,
-        ));
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'license',
+            _licenseImage!.path,
+          ),
+        );
+
         debugPrint('   ✅ License document added');
       }
 
-      // Insurance (optional)
       if (_insuranceImage != null) {
         debugPrint('📄 [SIGNUP] Adding insurance document...');
-        request.files.add(await http.MultipartFile.fromPath(
-          'insurance',
-          _insuranceImage!.path,
-        ));
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'insurance',
+            _insuranceImage!.path,
+          ),
+        );
+
         debugPrint('   ✅ Insurance document added');
       }
 
-      // Vehicle photo (optional)
       if (_vehicleImage != null) {
         debugPrint('🚗 [SIGNUP] Adding vehicle photo...');
-        request.files.add(await http.MultipartFile.fromPath(
-          'vehicle_photo',
-          _vehicleImage!.path,
-        ));
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'vehicle_photo',
+            _vehicleImage!.path,
+          ),
+        );
+
         debugPrint('   ✅ Vehicle photo added');
       }
 
       debugPrint('\n📤 [SIGNUP] Sending registration request...');
 
-      // ═══════════════════════════════════════════════════════════
-      // SEND REQUEST
-      // ═══════════════════════════════════════════════════════════
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
 
       debugPrint('📥 [SIGNUP] Response received');
       debugPrint('   Status Code: ${response.statusCode}');
+      debugPrint('   Body: $responseBody');
 
-      final jsonResponse = jsonDecode(responseBody);
+      final decoded = jsonDecode(responseBody);
+
+      if (decoded is! Map<String, dynamic>) {
+        setState(() {
+          errorMsg = 'Invalid server response';
+        });
+        return;
+      }
+
+      final jsonResponse = decoded;
 
       debugPrint('   Success: ${jsonResponse['success']}');
       debugPrint('   Message: ${jsonResponse['message']}');
 
-      // ✅ UPDATED: Check for 200 status (not 201) - pending signup created
-      if (response.statusCode == 200 && jsonResponse['success'] == true) {
-        debugPrint('\n✅ [SIGNUP] Pending signup created successfully!');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          jsonResponse['success'] == true) {
         final data = jsonResponse['data'];
 
-        // ✅ NEW: Store signup_id for tracking
-        signupId = data['signup_id'];
+        if (isGoogleSignup) {
+          debugPrint('\n✅ [GOOGLE DRIVER SIGNUP] Completed successfully!');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-        debugPrint('📋 Pending Signup Info:');
-        debugPrint('   Signup ID: $signupId');
-        debugPrint('   User Type: ${data['user_type']}');
-        debugPrint('   Name: ${data['first_name']} ${data['last_name']}');
-        debugPrint('   Email: ${data['email'] ?? "N/A"}');
-        debugPrint('   Phone: ${data['phone_e164'] ?? "N/A"}');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+          setState(() {
+            msg = jsonResponse['message']?.toString() ??
+                'Driver account created successfully. You can now login.';
+          });
 
-        // Determine OTP channel
-        final otpDelivery = data['otp_delivery'];
-        if (otpDelivery != null) {
-          if (otpDelivery['email'] != null) {
-            channel = 'EMAIL';
-            purpose = 'EMAIL_VERIFY';
-            identifier = email;
-            debugPrint('📧 [OTP] Will verify via EMAIL: $identifier');
-          } else if (otpDelivery['phone'] != null) {
-            channel = 'SMS';
-            purpose = 'PHONE_VERIFY';
-            identifier = '$selectedCountryCode$phone';
-            debugPrint('📱 [OTP] Will verify via SMS: $identifier');
+          await Future.delayed(const Duration(seconds: 2));
+
+          if (!mounted) return;
+
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/login',
+                (route) => false,
+          );
+
+          return;
+        }
+
+        if (data is Map<String, dynamic>) {
+          signupId = data['signup_id']?.toString();
+
+          debugPrint('\n✅ [SIGNUP] Pending signup created successfully!');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('📋 Pending Signup Info:');
+          debugPrint('   Signup ID: $signupId');
+          debugPrint('   User Type: ${data['user_type']}');
+          debugPrint('   Name: ${data['first_name']} ${data['last_name']}');
+          debugPrint('   Email: ${data['email'] ?? "N/A"}');
+          debugPrint('   Phone: ${data['phone_e164'] ?? "N/A"}');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+          final otpDelivery = data['otp_delivery'];
+
+          if (otpDelivery is Map) {
+            if (otpDelivery['email'] != null) {
+              channel = 'EMAIL';
+              purpose = 'EMAIL_VERIFY';
+              identifier = email;
+
+              debugPrint('📧 [OTP] Will verify via EMAIL: $identifier');
+            } else if (otpDelivery['phone'] != null) {
+              channel = 'SMS';
+              purpose = 'PHONE_VERIFY';
+              identifier = fullPhone;
+
+              debugPrint('📱 [OTP] Will verify via SMS: $identifier');
+            }
           }
         }
 
         setState(() {
-          msg = jsonResponse['message'];
+          msg = jsonResponse['message']?.toString();
         });
 
         _animateToNextStep();
@@ -495,17 +616,21 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
         debugPrint('   Error: ${jsonResponse['message']}');
         debugPrint('   Code: ${jsonResponse['code']}\n');
 
-        // ✅ IMPROVED: Better error handling
-        String errorMessage = jsonResponse['message'] ?? 'Registration failed';
+        String errorMessage =
+            jsonResponse['message']?.toString() ?? 'Registration failed';
 
-        // Handle specific error codes
-        final errorCode = jsonResponse['code'];
+        final errorCode = jsonResponse['code']?.toString();
+
         if (errorCode == 'EMAIL_ALREADY_EXISTS') {
           errorMessage = 'This email is already registered';
         } else if (errorCode == 'PHONE_ALREADY_EXISTS') {
           errorMessage = 'This phone number is already registered';
         } else if (errorCode == 'PLATE_EXISTS') {
           errorMessage = 'This vehicle plate is already registered';
+        } else if (errorCode == 'GOOGLE_ACCOUNT_ALREADY_EXISTS') {
+          errorMessage = 'This Google account is already registered.';
+        } else if (errorCode == 'INVALID_GOOGLE_TOKEN') {
+          errorMessage = 'Invalid Google session. Please restart signup.';
         }
 
         setState(() {
@@ -520,36 +645,15 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
         errorMsg = 'Registration failed: ${e.toString()}';
       });
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
-  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().add(const Duration(days: 365)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primaryGold,
-              onPrimary: AppColors.textPrimary,
-              surface: AppColors.backgroundWhite,
-              onSurface: AppColors.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      final formattedDate = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-      controller.text = formattedDate;
-    }
-  }
+  // ═══════════════════════════════════════════════════════════════
+  // OTP
+  // ═══════════════════════════════════════════════════════════════
 
   Future<void> _verifyOtpAndComplete() async {
     setState(() {
@@ -566,6 +670,14 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       return;
     }
 
+    if (identifier == null || identifier!.trim().isEmpty) {
+      setState(() {
+        errorMsg = 'Verification identifier missing. Please restart signup.';
+        isLoading = false;
+      });
+      return;
+    }
+
     try {
       debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       debugPrint('🔐 [OTP] Verifying OTP and creating account...');
@@ -576,11 +688,13 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       debugPrint('OTP: ${otpCtrl.text}');
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-      // ✅ UPDATED: Use new OTP verification endpoint
       final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/otp/verify');
+
       final response = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: const {
+          'Content-Type': 'application/json',
+        },
         body: jsonEncode({
           'identifier': identifier,
           'purpose': purpose,
@@ -588,7 +702,16 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
         }),
       );
 
-      final jsonResponse = jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is! Map<String, dynamic>) {
+        setState(() {
+          errorMsg = 'Invalid server response';
+        });
+        return;
+      }
+
+      final jsonResponse = decoded;
 
       debugPrint('📥 [OTP] Response received');
       debugPrint('   Status Code: ${response.statusCode}');
@@ -599,34 +722,34 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
         debugPrint('\n✅ [OTP] Verification successful!');
         debugPrint('✅ [ACCOUNT] Account created successfully!\n');
 
-        // ✅ UPDATED: Show new success message
         setState(() {
           msg = 'Account created successfully! You can now login.';
         });
 
-        // Navigate to login after 2 seconds
         await Future.delayed(const Duration(seconds: 2));
 
-        if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/login',
-                (route) => false,
-          );
-        }
+        if (!mounted) return;
+
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login',
+              (route) => false,
+        );
       } else {
         debugPrint('❌ [OTP] Verification failed');
         debugPrint('   Error: ${jsonResponse['message']}\n');
 
-        // ✅ IMPROVED: Handle specific error codes
-        String errorMessage = jsonResponse['message'] ?? 'Invalid OTP code';
+        String errorMessage =
+            jsonResponse['message']?.toString() ?? 'Invalid OTP code';
 
-        final errorCode = jsonResponse['code'];
+        final errorCode = jsonResponse['code']?.toString();
+
         if (errorCode == 'OTP_EXPIRED') {
           errorMessage = 'OTP code has expired. Please request a new one.';
         } else if (errorCode == 'TOO_MANY_ATTEMPTS') {
           errorMessage = 'Too many failed attempts. Please request a new code.';
         } else if (errorCode == 'SIGNUP_EXPIRED') {
-          errorMessage = 'Signup session expired. Please start registration again.';
+          errorMessage =
+          'Signup session expired. Please start registration again.';
         } else if (errorCode == 'INVALID_OTP') {
           errorMessage = 'Invalid OTP code. Please try again.';
         }
@@ -637,11 +760,14 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       }
     } catch (e) {
       debugPrint('❌ [OTP] Exception: $e\n');
+
       setState(() {
         errorMsg = 'Verification failed: ${e.toString()}';
       });
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -651,13 +777,23 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       errorMsg = null;
     });
 
+    if (identifier == null || identifier!.trim().isEmpty) {
+      setState(() {
+        errorMsg = 'Cannot resend code. Please restart signup.';
+      });
+      return;
+    }
+
     try {
       debugPrint('🔄 [OTP] Resending OTP...');
 
-      final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/send');
+      final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/otp/send');
+
       final response = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: const {
+          'Content-Type': 'application/json',
+        },
         body: jsonEncode({
           'identifier': identifier,
           'channel': channel,
@@ -665,41 +801,96 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
         }),
       );
 
-      final jsonResponse = jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is! Map<String, dynamic>) {
+        setState(() {
+          errorMsg = 'Invalid server response';
+        });
+        return;
+      }
+
+      final jsonResponse = decoded;
 
       if (response.statusCode == 200 && jsonResponse['success'] == true) {
         debugPrint('✅ [OTP] OTP resent successfully\n');
+
         setState(() {
           msg = 'Verification code sent successfully';
         });
       } else {
         debugPrint('❌ [OTP] Resend failed: ${jsonResponse['message']}\n');
+
         setState(() {
-          errorMsg = jsonResponse['message'] ?? 'Failed to resend OTP';
+          errorMsg = jsonResponse['message']?.toString() ??
+              'Failed to resend verification code';
         });
       }
     } catch (e) {
       debugPrint('❌ [OTP] Resend failed: $e\n');
+
       setState(() {
         errorMsg = 'Failed to resend code';
       });
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // NAVIGATION HELPERS
+  // ═══════════════════════════════════════════════════════════════
+
   void _animateToNextStep() {
     _stepAnimationController.reset();
+
     setState(() {
       current += 1;
     });
+
     _stepAnimationController.forward();
   }
 
   void _animateToPreviousStep() {
+    if (current <= 0) return;
+
     _stepAnimationController.reset();
+
     setState(() {
       current -= 1;
     });
+
     _stepAnimationController.forward();
+  }
+
+  Future<void> _selectDate(
+      BuildContext context,
+      TextEditingController controller,
+      ) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryGold,
+              onPrimary: AppColors.textPrimary,
+              surface: AppColors.backgroundWhite,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked == null) return;
+
+    final formattedDate =
+        '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+
+    controller.text = formattedDate;
   }
 
   void _showCountryPicker() {
@@ -708,7 +899,9 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       backgroundColor: AppColors.backgroundWhite,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
       ),
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.65,
@@ -726,11 +919,17 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
             const SizedBox(height: 20),
             Row(
               children: [
-                Text('Select Country', style: AppTypography.headlineSmall),
+                Text(
+                  'Select Country',
+                  style: AppTypography.headlineSmall,
+                ),
                 const Spacer(),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                  icon: const Icon(
+                    Icons.close,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -741,17 +940,29 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
                 itemBuilder: (context, index) {
                   final country = countries[index];
                   final isSelected = selectedCountryCode == country['code'];
+
                   return ListTile(
-                    leading: Text(country['flag']!, style: const TextStyle(fontSize: 28)),
-                    title: Text(country['name']!, style: AppTypography.bodyMedium),
-                    trailing: Text(country['code']!, style: AppTypography.bodySmall),
+                    leading: Text(
+                      country['flag']!,
+                      style: const TextStyle(fontSize: 28),
+                    ),
+                    title: Text(
+                      country['name']!,
+                      style: AppTypography.bodyMedium,
+                    ),
+                    trailing: Text(
+                      country['code']!,
+                      style: AppTypography.bodySmall,
+                    ),
                     selected: isSelected,
-                    selectedTileColor: AppColors.primaryGold.withOpacity(0.1),
+                    selectedTileColor:
+                    AppColors.primaryGold.withOpacity(0.1),
                     onTap: () {
                       setState(() {
                         selectedCountryCode = country['code']!;
                         selectedCountryFlag = country['flag']!;
                       });
+
                       Navigator.pop(context);
                     },
                   );
@@ -765,7 +976,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // BUILD METHODS
+  // BUILD
   // ═══════════════════════════════════════════════════════════════
 
   @override
@@ -811,14 +1022,24 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               decoration: BoxDecoration(
                 color: AppColors.backgroundWhite,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: AppColors.shadowLight, blurRadius: 10)],
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadowLight,
+                    blurRadius: 10,
+                  ),
+                ],
               ),
-              child: const Icon(Icons.arrow_back_ios_new, size: 18),
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 18,
+              ),
             ),
           ),
           Expanded(
             child: Text(
-              'Driver Registration',
+              isGoogleSignup
+                  ? 'Google Driver Registration'
+                  : 'Driver Registration',
               textAlign: TextAlign.center,
               style: AppTypography.headlineSmall,
             ),
@@ -830,13 +1051,15 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   }
 
   Widget _buildProgressIndicator() {
+    final totalSteps = isGoogleSignup ? 4 : 5;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Row(
         children: [
-          for (int i = 0; i < 5; i++) ...[
+          for (int i = 0; i < totalSteps; i++) ...[
             _buildStepCircle(i, '${i + 1}'),
-            if (i < 4) _buildProgressLine(i),
+            if (i < totalSteps - 1) _buildProgressLine(i),
           ],
         ],
       ),
@@ -855,16 +1078,27 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
         color: isCompleted || isActive ? null : AppColors.secondaryLightGrey,
         shape: BoxShape.circle,
         boxShadow: isActive
-            ? [BoxShadow(color: AppColors.primaryGold.withOpacity(0.4), blurRadius: 12)]
+            ? [
+          BoxShadow(
+            color: AppColors.primaryGold.withOpacity(0.4),
+            blurRadius: 12,
+          ),
+        ]
             : null,
       ),
       child: Center(
         child: isCompleted
-            ? const Icon(Icons.check, color: AppColors.textPrimary, size: 16)
+            ? const Icon(
+          Icons.check,
+          color: AppColors.textPrimary,
+          size: 16,
+        )
             : Text(
           label,
           style: AppTypography.bodySmall.copyWith(
-            color: isActive ? AppColors.textPrimary : AppColors.textLight,
+            color: isActive
+                ? AppColors.textPrimary
+                : AppColors.textLight,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -874,6 +1108,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
 
   Widget _buildProgressLine(int step) {
     final isCompleted = current > step;
+
     return Expanded(
       child: Container(
         height: 2,
@@ -904,7 +1139,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP 1: PERSONAL INFO
+  // STEP 1 — PERSONAL INFO
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildPersonalInfoStep() {
@@ -912,31 +1147,28 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       padding: const EdgeInsets.all(20),
       child: Container(
         padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundWhite,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
+        decoration: _cardDecoration(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Personal Information', style: AppTypography.displaySmall),
+            Text(
+              'Personal Information',
+              style: AppTypography.displaySmall,
+            ),
             const SizedBox(height: 8),
             Text(
-              'Provide your personal and identification details',
+              isGoogleSignup
+                  ? 'Your Google information was added. Complete the remaining fields.'
+                  : 'Provide your personal and identification details',
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 32),
-
-            // Profile Photo
+            const SizedBox(height: 24),
+            if (isGoogleSignup) ...[
+              _buildGoogleConnectedBox(),
+              const SizedBox(height: 24),
+            ],
             Center(
               child: Stack(
                 children: [
@@ -947,9 +1179,8 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
                       height: 110,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: _profileImage == null
-                            ? AppColors.primaryGradient
-                            : null,
+                        gradient:
+                        _profileImage == null ? AppColors.primaryGradient : null,
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primaryGold.withOpacity(0.3),
@@ -1004,7 +1235,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               ),
             ),
             const SizedBox(height: 32),
-
             _buildTextField(
               controller: firstCtrl,
               label: 'First Name',
@@ -1012,7 +1242,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: lastCtrl,
               label: 'Last Name',
@@ -1020,7 +1249,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: cniCtrl,
               label: 'National Identity Card (CNI)',
@@ -1028,7 +1256,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.badge_outlined,
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: emailCtrl,
               label: 'Email Address',
@@ -1037,19 +1264,9 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.email_outlined,
             ),
             const SizedBox(height: 20),
-
             _buildPhoneField(),
             const SizedBox(height: 32),
-
-            if (errorMsg != null) ...[
-              _buildMessageBox(errorMsg!, isError: true),
-              const SizedBox(height: 20),
-            ],
-            if (msg != null) ...[
-              _buildMessageBox(msg!, isError: false),
-              const SizedBox(height: 20),
-            ],
-
+            _buildMessages(),
             _buildPrimaryButton(
               text: 'Next',
               onPressed: _submitStep1,
@@ -1062,8 +1279,40 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
     );
   }
 
+  Widget _buildGoogleConnectedBox() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.successLight,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.success,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.verified_rounded,
+            color: AppColors.success,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Google account connected: ${emailCtrl.text.trim().isNotEmpty ? emailCtrl.text.trim() : "verified account"}',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.success,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════
-  // STEP 2: VEHICLE INFO
+  // STEP 2 — VEHICLE INFO
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildVehicleInfoStep() {
@@ -1071,60 +1320,23 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       padding: const EdgeInsets.all(20),
       child: Container(
         padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundWhite,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
+        decoration: _cardDecoration(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.directions_car,
-                    color: AppColors.textPrimary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Vehicle Information',
-                          style: AppTypography.displaySmall),
-                      Text(
-                        'Tell us about your vehicle',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            _buildStepTitle(
+              icon: Icons.directions_car,
+              title: 'Vehicle Information',
+              subtitle: 'Tell us about your vehicle',
             ),
             const SizedBox(height: 32),
-
-            // Vehicle Type Dropdown
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Vehicle Type', style: AppTypography.labelLarge),
+                Text(
+                  'Vehicle Type',
+                  style: AppTypography.labelLarge,
+                ),
                 const SizedBox(height: 10),
                 Container(
                   decoration: BoxDecoration(
@@ -1137,11 +1349,13 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
                   ),
                   child: DropdownButtonFormField<String>(
                     value: vehicleTypeCtrl.text,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.category_outlined,
-                          color: AppColors.textSecondary),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(
+                        Icons.category_outlined,
+                        color: AppColors.textSecondary,
+                      ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
+                      contentPadding: EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 18,
                       ),
@@ -1149,22 +1363,24 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
                     items: vehicleTypes.map((String type) {
                       return DropdownMenuItem<String>(
                         value: type,
-                        child: Text(type, style: AppTypography.inputText),
+                        child: Text(
+                          type,
+                          style: AppTypography.inputText,
+                        ),
                       );
                     }).toList(),
                     onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          vehicleTypeCtrl.text = newValue;
-                        });
-                      }
+                      if (newValue == null) return;
+
+                      setState(() {
+                        vehicleTypeCtrl.text = newValue;
+                      });
                     },
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: vehicleMakeModelCtrl,
               label: 'Vehicle Make & Model',
@@ -1172,7 +1388,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.car_rental,
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: vehicleColorCtrl,
               label: 'Vehicle Color',
@@ -1180,7 +1395,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.palette_outlined,
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: vehicleYearCtrl,
               label: 'Vehicle Year',
@@ -1189,7 +1403,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.calendar_today_outlined,
             ),
             const SizedBox(height: 20),
-
             _buildTextField(
               controller: vehiclePlateCtrl,
               label: 'Vehicle Plate Number',
@@ -1197,8 +1410,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.pin_outlined,
             ),
             const SizedBox(height: 32),
-
-            // Vehicle Photo Upload
             _buildImageUploadCard(
               title: 'Vehicle Photo',
               subtitle: 'Upload a clear photo of your vehicle (Optional)',
@@ -1207,16 +1418,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               onTap: () => _pickImage('vehicle'),
             ),
             const SizedBox(height: 32),
-
-            if (errorMsg != null) ...[
-              _buildMessageBox(errorMsg!, isError: true),
-              const SizedBox(height: 20),
-            ],
-            if (msg != null) ...[
-              _buildMessageBox(msg!, isError: false),
-              const SizedBox(height: 20),
-            ],
-
+            _buildMessages(),
             _buildPrimaryButton(
               text: 'Continue',
               onPressed: _submitStep2,
@@ -1230,7 +1432,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP 3: DOCUMENTS
+  // STEP 3 — DOCUMENTS
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildDocumentsStep() {
@@ -1238,54 +1440,16 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       padding: const EdgeInsets.all(20),
       child: Container(
         padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundWhite,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
+        decoration: _cardDecoration(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.description_outlined,
-                    color: AppColors.textPrimary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Documents', style: AppTypography.displaySmall),
-                      Text(
-                        'Upload your driver documents',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            _buildStepTitle(
+              icon: Icons.description_outlined,
+              title: 'Documents',
+              subtitle: 'Upload your driver documents',
             ),
             const SizedBox(height: 32),
-
             _buildTextField(
               controller: licenseNumberCtrl,
               label: 'Driver\'s License Number',
@@ -1293,7 +1457,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.credit_card,
             ),
             const SizedBox(height: 20),
-
             GestureDetector(
               onTap: () => _selectDate(context, licenseExpiryCtrl),
               child: AbsorbPointer(
@@ -1305,7 +1468,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
                 ),
               ),
             ),
-
             const SizedBox(height: 8),
             Text(
               'Required - Format: YYYY-MM-DD',
@@ -1314,8 +1476,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               ),
             ),
             const SizedBox(height: 24),
-
-            // License Document Upload (REQUIRED)
             _buildImageUploadCard(
               title: 'Driver\'s License Document',
               subtitle: 'Upload a clear photo of your license (Required)',
@@ -1325,7 +1485,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               isRequired: true,
             ),
             const SizedBox(height: 24),
-
             _buildTextField(
               controller: insuranceNumberCtrl,
               label: 'Insurance Policy Number (Optional)',
@@ -1333,16 +1492,18 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               prefixIcon: Icons.shield_outlined,
             ),
             const SizedBox(height: 20),
-
-            _buildTextField(
-              controller: insuranceExpiryCtrl,
-              label: 'Insurance Expiry Date (Optional)',
-              hint: 'YYYY-MM-DD',
-              prefixIcon: Icons.event_outlined,
+            GestureDetector(
+              onTap: () => _selectDate(context, insuranceExpiryCtrl),
+              child: AbsorbPointer(
+                child: _buildTextField(
+                  controller: insuranceExpiryCtrl,
+                  label: 'Insurance Expiry Date (Optional)',
+                  hint: 'YYYY-MM-DD',
+                  prefixIcon: Icons.event_outlined,
+                ),
+              ),
             ),
             const SizedBox(height: 24),
-
-            // Insurance Document Upload (Optional)
             _buildImageUploadCard(
               title: 'Insurance Document',
               subtitle: 'Upload your insurance document (Optional)',
@@ -1351,16 +1512,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               onTap: () => _pickImage('insurance'),
             ),
             const SizedBox(height: 32),
-
-            if (errorMsg != null) ...[
-              _buildMessageBox(errorMsg!, isError: true),
-              const SizedBox(height: 20),
-            ],
-            if (msg != null) ...[
-              _buildMessageBox(msg!, isError: false),
-              const SizedBox(height: 20),
-            ],
-
+            _buildMessages(),
             _buildPrimaryButton(
               text: 'Continue',
               onPressed: _submitStep3,
@@ -1374,62 +1526,28 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP 4: SECURITY
+  // STEP 4 — SECURITY / GOOGLE CONFIRMATION
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildSecurityStep() {
+    if (isGoogleSignup) {
+      return _buildGoogleFinalStep();
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Container(
         padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundWhite,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
+        decoration: _cardDecoration(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.lock_outline,
-                    color: AppColors.textPrimary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Security', style: AppTypography.displaySmall),
-                      Text(
-                        'Create a strong password',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            _buildStepTitle(
+              icon: Icons.lock_outline,
+              title: 'Security',
+              subtitle: 'Create a strong password',
             ),
             const SizedBox(height: 40),
-
             _buildTextField(
               controller: pwCtrl,
               label: 'Password',
@@ -1456,7 +1574,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               style: AppTypography.caption,
             ),
             const SizedBox(height: 24),
-
             _buildTextField(
               controller: confirmPwCtrl,
               label: 'Confirm Password',
@@ -1478,18 +1595,11 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               ),
             ),
             const SizedBox(height: 40),
-
-            if (errorMsg != null) ...[
-              _buildMessageBox(errorMsg!, isError: true),
-              const SizedBox(height: 20),
-            ],
-            if (msg != null) ...[
-              _buildMessageBox(msg!, isError: false),
-              const SizedBox(height: 20),
-            ],
-
+            _buildMessages(),
             _buildPrimaryButton(
-              text: isLoading ? 'Creating Pending Signup...' : 'Continue to Verification',
+              text: isLoading
+                  ? 'Creating Pending Signup...'
+                  : 'Continue to Verification',
               onPressed: isLoading ? () {} : _submitStep4,
             ),
             const SizedBox(height: 20),
@@ -1500,8 +1610,116 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
     );
   }
 
+  Widget _buildGoogleFinalStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: _cardDecoration(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStepTitle(
+              icon: Icons.verified_user_outlined,
+              title: 'Complete Google Registration',
+              subtitle:
+              'Your Google account will be used instead of password and OTP.',
+            ),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundLight,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.borderLight,
+                ),
+              ),
+              child: Column(
+                children: [
+                  _buildSummaryRow(
+                    icon: Icons.person_outline,
+                    label: 'Name',
+                    value:
+                    '${firstCtrl.text.trim()} ${lastCtrl.text.trim()}'.trim(),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildSummaryRow(
+                    icon: Icons.email_outlined,
+                    label: 'Email',
+                    value: emailCtrl.text.trim(),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildSummaryRow(
+                    icon: Icons.phone_outlined,
+                    label: 'Phone',
+                    value: '$selectedCountryCode${phoneCtrl.text.trim()}',
+                  ),
+                  const SizedBox(height: 14),
+                  _buildSummaryRow(
+                    icon: Icons.directions_car_outlined,
+                    label: 'Vehicle',
+                    value: vehiclePlateCtrl.text.trim(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildMessageBox(
+              'Password and OTP will be skipped because your Google account is already verified. Your driver documents are still required.',
+              isError: false,
+            ),
+            const SizedBox(height: 28),
+            _buildMessages(),
+            _buildPrimaryButton(
+              text: isLoading ? 'Creating Account...' : 'Create Driver Account',
+              onPressed: isLoading ? () {} : _submitStep4,
+            ),
+            const SizedBox(height: 20),
+            _buildLoginLink(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: AppColors.textSecondary,
+          size: 22,
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 72,
+          child: Text(
+            label,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value.isNotEmpty ? value : 'N/A',
+            style: AppTypography.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════
-  // STEP 5: OTP VERIFICATION
+  // STEP 5 — OTP
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildOtpStep() {
@@ -1509,17 +1727,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       padding: const EdgeInsets.all(20),
       child: Container(
         padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundWhite,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
+        decoration: _cardDecoration(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -1544,7 +1752,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               ),
             ),
             const SizedBox(height: 24),
-
             Text(
               'Verification Code',
               style: AppTypography.displaySmall,
@@ -1568,7 +1775,6 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
-
             Container(
               decoration: BoxDecoration(
                 color: AppColors.inputBackground,
@@ -1602,22 +1808,14 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               ),
             ),
             const SizedBox(height: 40),
-
-            if (errorMsg != null) ...[
-              _buildMessageBox(errorMsg!, isError: true),
-              const SizedBox(height: 20),
-            ],
-            if (msg != null) ...[
-              _buildMessageBox(msg!, isError: false),
-              const SizedBox(height: 20),
-            ],
-
+            _buildMessages(),
             _buildPrimaryButton(
-              text: isLoading ? 'Creating Account...' : 'Verify & Create Account',
+              text: isLoading
+                  ? 'Creating Account...'
+                  : 'Verify & Create Account',
               onPressed: isLoading ? () {} : _verifyOtpAndComplete,
             ),
             const SizedBox(height: 32),
-
             Column(
               children: [
                 Text(
@@ -1630,8 +1828,10 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
                 GestureDetector(
                   onTap: _resendOtp,
                   child: Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(
                         color: AppColors.primaryGold,
@@ -1657,8 +1857,79 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // HELPER WIDGETS
+  // SHARED WIDGETS
   // ═══════════════════════════════════════════════════════════════
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: AppColors.backgroundWhite,
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.shadowLight,
+          blurRadius: 20,
+          offset: const Offset(0, 10),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepTitle({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.textPrimary,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTypography.displaySmall,
+              ),
+              Text(
+                subtitle,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessages() {
+    return Column(
+      children: [
+        if (errorMsg != null) ...[
+          _buildMessageBox(errorMsg!, isError: true),
+          const SizedBox(height: 20),
+        ],
+        if (msg != null) ...[
+          _buildMessageBox(msg!, isError: false),
+          const SizedBox(height: 20),
+        ],
+      ],
+    );
+  }
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -1672,7 +1943,10 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppTypography.labelLarge),
+        Text(
+          label,
+          style: AppTypography.labelLarge,
+        ),
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
@@ -1692,12 +1966,18 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               hintText: hint,
               hintStyle: AppTypography.inputHint,
               prefixIcon: prefixIcon != null
-                  ? Icon(prefixIcon, color: AppColors.textSecondary, size: 22)
+                  ? Icon(
+                prefixIcon,
+                color: AppColors.textSecondary,
+                size: 22,
+              )
                   : null,
               suffixIcon: suffixIcon,
               border: InputBorder.none,
-              contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 18,
+              ),
             ),
           ),
         ),
@@ -1709,7 +1989,10 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Phone Number', style: AppTypography.labelLarge),
+        Text(
+          'Phone Number',
+          style: AppTypography.labelLarge,
+        ),
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
@@ -1725,8 +2008,10 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               GestureDetector(
                 onTap: _showCountryPicker,
                 child: Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 18,
+                  ),
                   decoration: BoxDecoration(
                     border: Border(
                       right: BorderSide(
@@ -1756,14 +2041,18 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
                 child: TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   style: AppTypography.inputText,
                   decoration: InputDecoration(
                     hintText: '6 77 77 77 77',
                     hintStyle: AppTypography.inputHint,
                     border: InputBorder.none,
-                    contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 18,
+                    ),
                   ),
                 ),
               ),
@@ -1787,9 +2076,8 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: image != null
-              ? AppColors.successLight
-              : AppColors.backgroundLight,
+          color:
+          image != null ? AppColors.successLight : AppColors.backgroundLight,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: image != null
@@ -1869,7 +2157,9 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
               ),
             ),
             Icon(
-              image != null ? Icons.check_circle : Icons.cloud_upload_outlined,
+              image != null
+                  ? Icons.check_circle
+                  : Icons.cloud_upload_outlined,
               color: image != null ? AppColors.success : AppColors.textSecondary,
               size: 24,
             ),
@@ -1912,8 +2202,9 @@ class _SignupDriverScreenState extends State<SignupDriverScreen> with TickerProv
           height: 24,
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
-            valueColor:
-            AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              AppColors.textPrimary,
+            ),
           ),
         )
             : Text(

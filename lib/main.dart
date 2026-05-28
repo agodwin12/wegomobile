@@ -7,10 +7,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wego_v1/screens/delivery%20agent/dashboard/delivery_agent_dashboard.dart';
+import 'package:wego_v1/screens/services/dispute_filling_screen.dart';
+import 'package:wego_v1/screens/services/edit_listing_screen.dart';
+import 'package:wego_v1/screens/services/search_screen.dart';
+import 'package:wego_v1/screens/splash/splash.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 // SCREENS - AUTHENTICATION
 // ═══════════════════════════════════════════════════════════════════════
+import 'models/services/service_listing_model.dart';
+import 'models/services/service_request_model.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/signup/sign_up_passenger/signup_passenger_screen.dart';
 import 'screens/signup/driver sign up/signup_driver_screen.dart';
@@ -261,7 +268,7 @@ class WegoApp extends StatelessWidget {
         // ════════════════════════════════════════════════════════
         // ROUTING
         // ════════════════════════════════════════════════════════
-        initialRoute: '/login',
+        initialRoute: '/',
         onGenerateRoute: (settings) {
           debugPrint('🧭 [NAVIGATION] Route: ${settings.name}');
 
@@ -269,6 +276,11 @@ class WegoApp extends StatelessWidget {
           // ══════════════════════════════════════════════════
           // AUTHENTICATION ROUTES
           // ══════════════════════════════════════════════════
+
+            case '/':
+              return MaterialPageRoute(
+                builder: (_) => const SplashScreen(),
+              );
             case '/login':
               return MaterialPageRoute(
                 builder: (_) => const LoginScreen(),
@@ -303,6 +315,11 @@ class WegoApp extends StatelessWidget {
                   initialAccessToken: settings.arguments as String?,
                 ),
               );
+            case '/dashboard/delivery-agent':
+              return MaterialPageRoute(
+                builder: (_) => DeliveryAgentDashboard(
+                ),
+              );
 
           // ══════════════════════════════════════════════════
           // ACCOUNT ROUTES
@@ -316,7 +333,7 @@ class WegoApp extends StatelessWidget {
               );
 
           // ══════════════════════════════════════════════════
-          // PROFILE ROUTES ✅ NEW
+          // PROFILE
           // ══════════════════════════════════════════════════
             case '/profile':
               return MaterialPageRoute(
@@ -477,13 +494,11 @@ class WegoApp extends StatelessWidget {
                   message: 'Browse all available services',
                 ),
               );
-
-          // Search Results (Coming Soon)
             case '/services/search':
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
               return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Search Results',
-                  message: 'Search results will appear here',
+                builder: (_) => ServiceSearchScreen(
+                  initialQuery: args?['query'] as String?,
                 ),
               );
 
@@ -493,6 +508,21 @@ class WegoApp extends StatelessWidget {
                 builder: (_) => const _ComingSoonScreen(
                   title: 'Reviews',
                   message: 'Read all reviews for this service',
+                ),
+              );
+            case '/services/dispute':
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              return MaterialPageRoute(
+                builder: (_) => DisputeFilingScreen(
+                  request: args?['request'] as ServiceRequest,
+                ),
+              );
+            case '/services/edit-listing':
+              final args = ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?;
+              return MaterialPageRoute(
+                builder: (_) => EditListingScreen(
+                  listing: args?['listing'] as ServiceListing,
                 ),
               );
 
