@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:http_parser/http_parser.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config.dart';
 import '../../../utils/app_colors.dart';
@@ -433,11 +434,11 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     setState(() => _uploadingPhoto = true);
 
     try {
-      final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload');
+      final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload/package-photo');
       final request = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $_accessToken'
         ..files.add(await http.MultipartFile.fromPath(
-          'file',
+          'image',
           _pickupPhoto!.path,
           contentType: MediaType('image', 'jpeg'),
         ));
@@ -492,7 +493,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                           fontFamily: 'Poppins',
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary)),
+                          color: AppColors.darkTextPrimary)),
                   const SizedBox(height: 6),
                   Text(
                     'Ask ${_delivery.recipientName} for the 4-digit PIN sent to their phone.',
@@ -554,7 +555,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         onPressed: _verifyingPin
                             ? null
                             : () async {
-                          if (_pinCtrl.text.length < 4) {
+                          if (_pinCtrl.text.length != 4) {
                             setDialogState(() => _pinError = 'Enter 4 digits');
                             return;
                           }
@@ -680,7 +681,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       fontFamily: 'Poppins',
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary)),
+                      color: AppColors.darkTextPrimary)),
               const SizedBox(height: 8),
               const Text(
                 'You will lose the commission fee as a penalty for cancelling an accepted delivery.',
@@ -794,7 +795,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     if (_stage == _Stage.delivered) return _buildDeliveredView();
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.darkBg,
       body: Stack(
         children: [
           CustomScrollView(
@@ -916,14 +917,14 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.darkBorder),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
         ],
       ),
       child: Row(
@@ -1054,14 +1055,14 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.darkBorder),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
         ],
       ),
       child: Column(
@@ -1075,7 +1076,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     fontFamily: 'Poppins',
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary)),
+                    color: AppColors.darkTextSecondary)),
           ]),
           const SizedBox(height: 14),
           _addressRow(
@@ -1143,7 +1144,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     style: const TextStyle(
                         fontFamily: 'Roboto',
                         fontSize: 10,
-                        color: AppColors.textSecondary)),
+                        color: AppColors.darkTextSecondary)),
             ],
           ),
         ),
@@ -1157,14 +1158,14 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.darkBorder),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
         ],
       ),
       child: Row(
@@ -1196,7 +1197,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                           fontFamily: 'Poppins',
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary)),
+                          color: AppColors.darkTextPrimary)),
                   if (_delivery.isFragile) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -1220,7 +1221,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   style: const TextStyle(
                       fontFamily: 'Roboto',
                       fontSize: 11,
-                      color: AppColors.textSecondary),
+                      color: AppColors.darkTextSecondary),
                 ),
                 if (_delivery.packageDescription != null) ...[
                   const SizedBox(height: 3),
@@ -1229,7 +1230,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     style: const TextStyle(
                         fontFamily: 'Roboto',
                         fontSize: 11,
-                        color: AppColors.textSecondary),
+                        color: AppColors.darkTextSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1246,7 +1247,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     width: 60,
     height: 60,
     decoration: BoxDecoration(
-        color: AppColors.backgroundLight,
+        color: AppColors.darkSurfaceAlt,
         borderRadius: BorderRadius.circular(10)),
     child: Center(
         child: Text(_delivery.categoryEmoji,
@@ -1259,14 +1260,14 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.darkBorder),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
         ],
       ),
       child: Column(
@@ -1281,7 +1282,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     fontFamily: 'Poppins',
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary)),
+                    color: AppColors.darkTextSecondary)),
           ]),
           const SizedBox(height: 10),
           Row(
@@ -1316,19 +1317,22 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                             fontFamily: 'Poppins',
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary)),
+                            color: AppColors.darkTextPrimary)),
                     Text(_delivery.recipientPhone,
                         style: const TextStyle(
                             fontFamily: 'Roboto',
                             fontSize: 11,
-                            color: AppColors.textSecondary)),
+                            color: AppColors.darkTextSecondary)),
                   ],
                 ),
               ),
               // Call button
               GestureDetector(
-                onTap: () {
-                  // TODO: launch phone dialer
+                onTap: () async {
+                  final uri = Uri.parse('tel:${_delivery.recipientPhone}');
+                  try {
+                    if (await canLaunchUrl(uri)) await launchUrl(uri);
+                  } catch (_) {}
                 },
                 child: Container(
                   width: 38,
@@ -1436,14 +1440,14 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.darkBorder),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
         ],
       ),
       child: Column(
@@ -1457,7 +1461,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       fontFamily: 'Poppins',
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary)),
+                      color: AppColors.darkTextPrimary)),
               Container(
                 padding:
                 const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -1479,7 +1483,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
               style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 11,
-                  color: AppColors.textSecondary)),
+                  color: AppColors.darkTextSecondary)),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: _pickPickupPhoto,
@@ -1524,7 +1528,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 : Container(
               height: 70,
               decoration: BoxDecoration(
-                color: AppColors.backgroundLight,
+                color: AppColors.darkSurfaceAlt,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                     color: AppColors.borderMedium,
@@ -1651,7 +1655,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     final isCash = _delivery.paymentMethod == 'cash';
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.darkBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -1675,14 +1679,14 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       fontFamily: 'Poppins',
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary)),
+                      color: AppColors.darkTextPrimary)),
               const SizedBox(height: 8),
               Text(
                 _delivery.deliveryCode,
                 style: const TextStyle(
                     fontFamily: 'Roboto',
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: AppColors.darkTextSecondary,
                     letterSpacing: 1),
               ),
               const SizedBox(height: 28),
@@ -1691,7 +1695,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.darkSurface,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.borderLight),
                   boxShadow: [
@@ -1840,7 +1844,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
           style: const TextStyle(
               fontFamily: 'Roboto',
               fontSize: 12,
-              color: AppColors.textSecondary)),
+              color: AppColors.darkTextSecondary)),
       Text(value,
           style: TextStyle(
               fontFamily: 'Poppins',
@@ -1854,7 +1858,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
 
   Widget _buildCancelledView() {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.darkBg,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -1878,7 +1882,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         fontFamily: 'Poppins',
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary)),
+                        color: AppColors.darkTextPrimary)),
                 const SizedBox(height: 8),
                 const Text(
                   'This delivery was cancelled. Your commission fee has been released.',

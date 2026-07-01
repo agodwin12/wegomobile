@@ -95,6 +95,13 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
   final _phoneCtrl = TextEditingController();
   final _noteCtrl  = TextEditingController();
 
+  // ── Coupon ────────────────────────────────────────────────────────────────────
+  final _couponCtrl   = TextEditingController();
+  bool    _applyingCoupon = false;
+  bool    _couponValid    = false;
+  double  _couponDiscount = 0;
+  String? _couponMessage;
+
   // ── Payment ───────────────────────────────────────────────────────────────────
   String _paymentMethod = 'mtn_mobile_money';
 
@@ -139,6 +146,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _noteCtrl.dispose();
+    _couponCtrl.dispose();
     _fadeCtrl.dispose();
     super.dispose();
   }
@@ -150,15 +158,19 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
   Future<void> _fetchEstimate() async {
     setState(() { _estimating = true; _estimateError = null; });
     try {
-      final uri = Uri.parse('${AppConfig.apiBaseUrl}/deliveries/estimate')
-          .replace(queryParameters: {
+      final params = {
         'pickup_lat':    widget.pickupLat.toString(),
         'pickup_lng':    widget.pickupLng.toString(),
         'dropoff_lat':   widget.dropoffLat.toString(),
         'dropoff_lng':   widget.dropoffLng.toString(),
         'package_size':  widget.packageSize,
         'delivery_type': widget.deliveryType,
-      });
+      };
+      final couponCode = _couponCtrl.text.trim();
+      if (couponCode.isNotEmpty) params['coupon_code'] = couponCode;
+
+      final uri = Uri.parse('${AppConfig.apiBaseUrl}/deliveries/estimate')
+          .replace(queryParameters: params);
 
       final res = await http.get(
         uri,
@@ -167,8 +179,18 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+        final est  = data['estimate'] as Map<String, dynamic>;
+        // Read the optional coupon preview the backend attaches.
+        final coupon = est['coupon'] as Map<String, dynamic>?;
         if (mounted) setState(() {
-          _estimate  = _Estimate.fromJson(data['estimate'] as Map<String, dynamic>);
+          _estimate  = _Estimate.fromJson(est);
+          if (coupon != null) {
+            _couponValid    = coupon['valid'] == true;
+            _couponDiscount = (coupon['discount'] as num?)?.toDouble() ?? 0;
+            _couponMessage  = coupon['message'] as String?;
+          } else {
+            _couponValid = false; _couponDiscount = 0; _couponMessage = null;
+          }
           _estimating = false;
         });
         return;
@@ -181,6 +203,15 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         _estimating    = false;
       });
     }
+  }
+
+  // Re-run the estimate with the entered coupon so the backend validates it and
+  // returns the discount preview. Keeps one source of truth (the server).
+  Future<void> _applyCoupon() async {
+    if (_couponCtrl.text.trim().isEmpty) return;
+    setState(() => _applyingCoupon = true);
+    await _fetchEstimate();
+    if (mounted) setState(() => _applyingCoupon = false);
   }
 
   Future<void> _book() async {
@@ -213,6 +244,8 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         body['package_description'] = widget.description;
       if (_noteCtrl.text.trim().isNotEmpty)
         body['recipient_note']   = _noteCtrl.text.trim();
+      if (_couponValid && _couponCtrl.text.trim().isNotEmpty)
+        body['coupon_code']      = _couponCtrl.text.trim();
 
       final res = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/deliveries/book'),
@@ -344,6 +377,8 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                       _buildFareCard(),
                       const SizedBox(height: 16),
                       _buildRecipientCard(),
+                      const SizedBox(height: 16),
+                      _buildCouponCard(),
                       const SizedBox(height: 16),
                       _buildPaymentCard(),
                       const SizedBox(height: 32),
@@ -722,6 +757,86 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
               ),
             ]),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ── Coupon card ────────────────────────────────────────────────────────────
+
+  Widget _buildCouponCard() {
+    final applied = _couponValid && _couponDiscount > 0;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withOpacity(0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: const [
+            Icon(Icons.local_offer_outlined, size: 18, color: AppColors.primaryGold),
+            SizedBox(width: 8),
+            Text('Have a coupon?',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _couponCtrl,
+                textCapitalization: TextCapitalization.characters,
+                enabled: !applied,
+                decoration: InputDecoration(
+                  hintText: 'Enter code',
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            applied
+                ? TextButton(
+                    onPressed: () => setState(() {
+                      _couponCtrl.clear();
+                      _couponValid = false;
+                      _couponDiscount = 0;
+                      _couponMessage = null;
+                      _fetchEstimate();
+                    }),
+                    child: const Text('Remove'),
+                  )
+                : ElevatedButton(
+                    onPressed: _applyingCoupon ? null : _applyCoupon,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGold,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: _applyingCoupon
+                        ? const SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Apply'),
+                  ),
+          ]),
+          if (_couponMessage != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              applied
+                  ? '✓ Coupon applied — you save ${_couponDiscount.toStringAsFixed(0)} XAF'
+                  : _couponMessage!,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: applied ? Colors.green.shade700 : Colors.red.shade600,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );

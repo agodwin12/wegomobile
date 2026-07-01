@@ -9,6 +9,7 @@ import '../../providers/profile_provider.dart';
 import '../../models/user_profile_model.dart';
 import '../../providers/services.dart';
 import '../../providers/trip_provider.dart';
+import '../../service/notification_service.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 import 'edit_profile_screen.dart';
@@ -1280,7 +1281,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // STEP 2: Clear ALL SharedPreferences
+    // STEP 2: Deactivate FCM token on backend
+    // Must happen BEFORE clearing SharedPrefs — token still available
+    // ═══════════════════════════════════════════════════════════════
+    try {
+      await NotificationService.instance.deactivateTokenOnLogout();
+      debugPrint('✅ [LOGOUT] FCM token deactivated');
+    } catch (e) {
+      debugPrint('⚠️  [LOGOUT] FCM token deactivation error (non-fatal): $e');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 3: Clear ALL SharedPreferences
     // ═══════════════════════════════════════════════════════════════
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1291,7 +1303,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // STEP 3: Reset all providers
+    // STEP 4: Reset all providers
     // ═══════════════════════════════════════════════════════════════
     if (!mounted) return;
     try {
@@ -1304,7 +1316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // STEP 4: Navigate to login, wipe entire stack
+    // STEP 5: Navigate to login, wipe entire stack
     // ═══════════════════════════════════════════════════════════════
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
@@ -1313,7 +1325,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     // ═══════════════════════════════════════════════════════════════
-    // STEP 5: Show confirmation snackbar
+    // STEP 6: Show confirmation snackbar
     // ═══════════════════════════════════════════════════════════════
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

@@ -1,28 +1,30 @@
 // lib/screens/driver/trip/driver_trip_in_progress_screen.dart
 //
-// Dependencies to add to pubspec.yaml:
-//   flutter_tts: ^4.0.2
-//
-// ════════════════════════════════════════════════════════════════
+// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// All logic preserved: TTS, auto-rerouting, trip progress, duration timer,
+// near-destination dialog, TripProvider cancellation listener.
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wego_v1/providers/trip_provider.dart';
 import 'package:wego_v1/utils/app_colors.dart';
 import 'package:wego_v1/utils/app_typography.dart';
+import 'package:wego_v1/utils/car_marker_painter.dart';
+import 'package:wego_v1/utils/map_style.dart';
+import 'package:wego_v1/widgets/map_style_button.dart';
 import '../../../service/chat_service.dart';
 import '../../../service/socket_service.dart';
 import '../../chat/trip_chat_screen.dart';
@@ -32,16 +34,9 @@ import '../trip complete/trip_complete.dart';
 // CONSTANTS
 // ════════════════════════════════════════════════════════════════
 
-/// Distance in metres that triggers a reroute when the driver
-/// deviates from the polyline.
-const double _kRerouteThresholdMeters = 50.0;
-
-/// Minimum interval between automatic reroute calls (throttle).
-const Duration _kRerouteThrottle = Duration(seconds: 20);
-
-/// Distance threshold (metres) from destination to show the
-/// "Almost There" dialog.
-const double _kNearDestinationMeters = 100.0;
+const double   _kRerouteThresholdMeters  = 50.0;
+const Duration _kRerouteThrottle         = Duration(seconds: 20);
+const double   _kNearDestinationMeters   = 100.0;
 
 class DriverTripInProgressScreen extends StatefulWidget {
   final String tripId;
@@ -64,13 +59,13 @@ class _DriverTripInProgressScreenState
     extends State<DriverTripInProgressScreen> with TickerProviderStateMixin {
 
   // ── Map ──────────────────────────────────────────────────────
-  GoogleMapController?    _mapController;
-  final Set<Marker>       _markers   = {};
-  final Set<Polyline>     _polylines = {};
+  final MapController _mapCtrl           = MapController();
+  List<Polyline>      _polylines         = [];
+  bool                _isFollowingDriver = true;
 
   // ── Draggable sheet ──────────────────────────────────────────
   final DraggableScrollableController _sheetController =
-  DraggableScrollableController();
+      DraggableScrollableController();
 
   // ── TTS ──────────────────────────────────────────────────────
   final FlutterTts _tts = FlutterTts();
@@ -86,20 +81,21 @@ class _DriverTripInProgressScreenState
   Position?                     _currentPosition;
   Timer?                        _locationTimer;
   StreamSubscription<Position>? _positionStream;
+  double                        _driverHeading = 0.0;
 
   // ── Route ────────────────────────────────────────────────────
-  List<LatLng> _routePoints           = [];
-  double       _distanceToDestination = 0.0;
-  int          _etaMinutes            = 0;
-  double       _currentSpeed          = 0.0;
-  bool         _isLoadingRoute        = true;
-  double       _tripProgress          = 0.0;
-  bool         _routeFetched          = false;
+  List<LatLng> _routePoints            = [];
+  double       _distanceToDestination  = 0.0;
+  int          _etaMinutes             = 0;
+  double       _currentSpeed           = 0.0;
+  bool         _isLoadingRoute         = true;
+  double       _tripProgress           = 0.0;
+  bool         _routeFetched           = false;
 
   // ── Rerouting ────────────────────────────────────────────────
-  bool      _isRerouting        = false;
+  bool      _isRerouting    = false;
   DateTime? _lastRerouteTime;
-  int       _rerouteCount       = 0;
+  int       _rerouteCount   = 0;
 
   // ── Locations ────────────────────────────────────────────────
   late LatLng _pickupLocation;
@@ -120,16 +116,14 @@ class _DriverTripInProgressScreenState
   bool _isCanceled           = false;
   bool _tripStartedAnnounced = false;
 
-  // ── Car marker ───────────────────────────────────────────────
-  BitmapDescriptor? _carMarkerIcon;
-
   // ── Provider ─────────────────────────────────────────────────
   TripProvider? _tripProvider;
   VoidCallback? _tripListener;
 
-  // ── API ──────────────────────────────────────────────────────
-  String get _gmapsKey   => dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
-  String get _apiBaseUrl => dotenv.env['API_BASE_URL'] ?? '';
+  // ── Tokens ───────────────────────────────────────────────────
+  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  MapStyle _mapStyle = MapStyle.navigationDay;
+  String get _apiBaseUrl  => dotenv.env['API_BASE_URL']        ?? '';
 
   // ════════════════════════════════════════════════════════════
   // INIT
@@ -142,10 +136,9 @@ class _DriverTripInProgressScreenState
     _parseLocations();
     _setupAnimations();
     _initTts();
-    _loadCarMarker();
-    _setupMarkers();
     _startDurationTimer();
     _initializeLocation();
+    loadMapStylePref().then((s) { if (mounted) setState(() => _mapStyle = s); });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -153,25 +146,23 @@ class _DriverTripInProgressScreenState
       _tripListener = () => _checkTripStatus(_tripProvider!);
       _tripProvider!.addListener(_tripListener!);
       _checkTripStatus(_tripProvider!);
-      // ✅ Announce trip started after first frame so TTS is ready
-      Future.delayed(const Duration(milliseconds: 800), _announceTripStarted);
+      Future.delayed(
+          const Duration(milliseconds: 800), _announceTripStarted);
     });
   }
 
   // ════════════════════════════════════════════════════════════
-  // TTS SETUP & HELPERS
+  // TTS
   // ════════════════════════════════════════════════════════════
 
   Future<void> _initTts() async {
     try {
       await _tts.setLanguage('en-US');
-      await _tts.setSpeechRate(0.48);   // slightly slower for clarity
+      await _tts.setSpeechRate(0.48);
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.0);
-      // On Android, prefer a network-quality voice when available
       await _tts.setSharedInstance(true);
       _ttsReady = true;
-      debugPrint('🔊 [TTS] Initialized');
     } catch (e) {
       debugPrint('⚠️ [TTS] Init failed: $e');
     }
@@ -182,13 +173,9 @@ class _DriverTripInProgressScreenState
     try {
       if (interrupt) await _tts.stop();
       await _tts.speak(text);
-      debugPrint('🔊 [TTS] "$text"');
-    } catch (e) {
-      debugPrint('⚠️ [TTS] Speak failed: $e');
-    }
+    } catch (_) {}
   }
 
-  /// Called once when the screen first loads to say "Trip has started".
   Future<void> _announceTripStarted() async {
     if (_tripStartedAnnounced) return;
     _tripStartedAnnounced = true;
@@ -208,49 +195,14 @@ class _DriverTripInProgressScreenState
   }
 
   // ════════════════════════════════════════════════════════════
-  // CAR MARKER
-  // ════════════════════════════════════════════════════════════
-
-// ════════════════════════════════════════════════════════════════
-// CAR MARKER  —  replace the old _loadCarMarker + _drawCarMarker
-// ════════════════════════════════════════════════════════════════
-
-  Future<void> _loadCarMarker() async {
-    try {
-      // Load assets/car.png and resize it to 80×80 logical px
-      final byteData = await rootBundle.load('assets/car.png');
-      final codec = await ui.instantiateImageCodec(
-        byteData.buffer.asUint8List(),
-        targetWidth: 80,
-        targetHeight: 80,
-      );
-      final frame    = await codec.getNextFrame();
-      final pngBytes = await frame.image
-          .toByteData(format: ui.ImageByteFormat.png);
-
-      if (pngBytes != null) {
-        _carMarkerIcon =
-            BitmapDescriptor.fromBytes(pngBytes.buffer.asUint8List());
-        debugPrint('✅ [CAR-MARKER] Loaded from assets/car.png');
-        return;
-      }
-    } catch (e) {
-      debugPrint('⚠️ [CAR-MARKER] Failed to load assets/car.png: $e');
-    }
-
-    // ── Fallback: yellow default pin if asset fails ─────────────
-    _carMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueYellow);
-    debugPrint('⚠️ [CAR-MARKER] Using fallback yellow marker');
-  }
-
-  // ════════════════════════════════════════════════════════════
   // PARSE LOCATIONS
   // ════════════════════════════════════════════════════════════
 
   void _parseLocations() {
-    final pickup  = widget.trip['pickup']  ?? widget.trip['pickup_location'];
-    final dropoff = widget.trip['dropoff'] ?? widget.trip['dropoff_location'];
+    final pickup  =
+        widget.trip['pickup']  ?? widget.trip['pickup_location'];
+    final dropoff =
+        widget.trip['dropoff'] ?? widget.trip['dropoff_location'];
 
     if (pickup != null) {
       _pickupLocation = LatLng(
@@ -264,8 +216,10 @@ class _DriverTripInProgressScreenState
           ?? 'Pickup Location';
     } else {
       _pickupLocation = LatLng(
-        double.tryParse(widget.trip['pickupLat']?.toString()  ?? '0') ?? 0,
-        double.tryParse(widget.trip['pickupLng']?.toString()  ?? '0') ?? 0,
+        double.tryParse(
+            widget.trip['pickupLat']?.toString() ?? '0') ?? 0,
+        double.tryParse(
+            widget.trip['pickupLng']?.toString() ?? '0') ?? 0,
       );
       _pickupAddress =
           widget.trip['pickupAddress']?.toString() ?? 'Pickup Location';
@@ -283,8 +237,10 @@ class _DriverTripInProgressScreenState
           ?? 'Destination';
     } else {
       _dropoffLocation = LatLng(
-        double.tryParse(widget.trip['dropoffLat']?.toString() ?? '0') ?? 0,
-        double.tryParse(widget.trip['dropoffLng']?.toString() ?? '0') ?? 0,
+        double.tryParse(
+            widget.trip['dropoffLat']?.toString() ?? '0') ?? 0,
+        double.tryParse(
+            widget.trip['dropoffLng']?.toString() ?? '0') ?? 0,
       );
       _dropoffAddress =
           widget.trip['dropoffAddress']?.toString() ?? 'Destination';
@@ -304,7 +260,7 @@ class _DriverTripInProgressScreenState
   void _setupAnimations() {
     _pulseController = AnimationController(
         duration: const Duration(milliseconds: 1500), vsync: this);
-    _pulseAnimation  = Tween<double>(begin: 1.0, end: 1.1).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
         CurvedAnimation(
             parent: _pulseController, curve: Curves.easeInOut));
     _pulseController.repeat(reverse: true);
@@ -313,37 +269,11 @@ class _DriverTripInProgressScreenState
         duration: const Duration(milliseconds: 1000), vsync: this);
   }
 
-  // ════════════════════════════════════════════════════════════
-  // MARKERS
-  // ════════════════════════════════════════════════════════════
-
-  void _setupMarkers() {
-    _markers.add(Marker(
-      markerId: const MarkerId('pickup'),
-      position: _pickupLocation,
-      icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueViolet),
-      alpha: 0.4,
-      infoWindow:
-      InfoWindow(title: 'Pickup', snippet: _pickupAddress),
-    ));
-    _markers.add(Marker(
-      markerId: const MarkerId('dropoff'),
-      position: _dropoffLocation,
-      icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueRed),
-      infoWindow:
-      InfoWindow(title: 'Destination', snippet: _dropoffAddress),
-    ));
-    if (mounted) setState(() {});
-  }
-
   void _startDurationTimer() {
-    _durationTimer =
-        Timer.periodic(const Duration(seconds: 1), (t) {
-          if (!mounted) { t.cancel(); return; }
-          setState(() => _tripDurationSeconds++);
-        });
+    _durationTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _tripDurationSeconds++);
+    });
   }
 
   // ════════════════════════════════════════════════════════════
@@ -354,11 +284,15 @@ class _DriverTripInProgressScreenState
     try {
       _currentPosition = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
-      _updateDriverMarker();
+      _driverHeading = _currentPosition!.heading;
       _calculateDistanceAndProgress();
       _startLocationTracking();
       await _fetchRoute();
-      if (_mapController != null) _fitMapToRoute();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) _fitMapToRoute();
+        });
+      });
     } catch (e) {
       _showSnackBar('Unable to get location. Check GPS.', isError: true);
       await _fetchRoute();
@@ -372,13 +306,14 @@ class _DriverTripInProgressScreenState
     ).listen((pos) {
       if (!mounted) return;
       _currentPosition = pos;
-      _currentSpeed    = pos.speed * 3.6; // m/s → km/h
-      _updateDriverMarker();
+      _driverHeading   = pos.heading;
+      _currentSpeed    = pos.speed * 3.6;
+      setState(() {});
+      _moveCameraToDriver();
       _calculateDistanceAndProgress();
       _emitLocationUpdate();
-      _checkDeviation();   // ← reroute check on every update
+      _checkDeviation();
 
-      // Near destination alert
       if (_distanceToDestination < _kNearDestinationMeters &&
           !_isNearDestination) {
         _isNearDestination = true;
@@ -387,54 +322,51 @@ class _DriverTripInProgressScreenState
       }
     });
 
-    // Fallback timer — keeps position fresh even when distanceFilter
-    // prevents stream updates.
     _locationTimer =
         Timer.periodic(const Duration(seconds: 10), (_) async {
           if (!mounted) return;
           try {
             final pos = await Geolocator.getCurrentPosition();
-            if (mounted) {
-              _currentPosition = pos;
-              _updateDriverMarker();
-              _calculateDistanceAndProgress();
-              _emitLocationUpdate();
-              _checkDeviation();
-            }
+            if (!mounted) return;
+            _currentPosition = pos;
+            _driverHeading   = pos.heading;
+            _currentSpeed    = pos.speed * 3.6;
+            setState(() {});
+            _moveCameraToDriver();
+            _calculateDistanceAndProgress();
+            _emitLocationUpdate();
+            _checkDeviation();
           } catch (_) {}
         });
+  }
+
+  void _moveCameraToDriver() {
+    if (_currentPosition == null || !_isFollowingDriver) return;
+    try {
+      _mapCtrl.move(
+        LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        16,
+      );
+    } catch (_) {}
   }
 
   // ════════════════════════════════════════════════════════════
   // DEVIATION / REROUTING
   // ════════════════════════════════════════════════════════════
 
-  /// Checks whether the driver has drifted more than
-  /// [_kRerouteThresholdMeters] from the nearest polyline point.
-  /// If so — and if the throttle allows — triggers a reroute.
   void _checkDeviation() {
-    if (_currentPosition == null) return;
-    if (_routePoints.isEmpty) return;
-    if (_isRerouting) return;
-
-    // Throttle: don't reroute more than once per [_kRerouteThrottle].
+    if (_currentPosition == null || _routePoints.isEmpty || _isRerouting) return;
     if (_lastRerouteTime != null &&
         DateTime.now().difference(_lastRerouteTime!) <
             _kRerouteThrottle) return;
 
-    final driverPt = LatLng(
-        _currentPosition!.latitude, _currentPosition!.longitude);
-    final deviation = _distanceToNearestRoutePoint(driverPt);
-
-    if (deviation > _kRerouteThresholdMeters) {
-      debugPrint(
-          '↩️  [REROUTE] Deviation ${deviation.toStringAsFixed(0)} m — rerouting');
+    final driverPt =
+        LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
+    if (_distanceToNearestRoutePoint(driverPt) > _kRerouteThresholdMeters) {
       _rerouteNow();
     }
   }
 
-  /// Finds the Euclidean distance (metres) from [point] to the
-  /// nearest point in [_routePoints].
   double _distanceToNearestRoutePoint(LatLng point) {
     double minDist = double.infinity;
     for (final rp in _routePoints) {
@@ -452,52 +384,17 @@ class _DriverTripInProgressScreenState
     _lastRerouteTime = DateTime.now();
     _rerouteCount++;
 
-    // Announce the reroute via TTS
     await _speak('Recalculating route.', interrupt: true);
-
-    // Reset flag so _fetchRoute runs again
     _routeFetched = false;
     await _fetchRoute();
 
     if (mounted) setState(() => _isRerouting = false);
     await _speak('Route updated. Continue to your destination.');
-    debugPrint('✅ [REROUTE] Complete — total reroutes: $_rerouteCount');
   }
 
   // ════════════════════════════════════════════════════════════
-  // DRIVER MARKER
+  // LOCATION EMIT
   // ════════════════════════════════════════════════════════════
-
-  void _updateDriverMarker() {
-    if (_currentPosition == null) return;
-    final driverLatLng =
-    LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
-
-    _markers.removeWhere((m) => m.markerId.value == 'driver');
-    _markers.add(Marker(
-      markerId: const MarkerId('driver'),
-      position: driverLatLng,
-      icon: _carMarkerIcon ??
-          BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueYellow),
-      rotation: _currentPosition!.heading,
-      anchor:   const Offset(0.5, 0.5),
-      flat:     true,
-      zIndex:   10,
-      infoWindow: const InfoWindow(title: 'You (Driver)'),
-    ));
-
-    if (mounted) setState(() {});
-
-    _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-      CameraPosition(
-        target:  driverLatLng,
-        zoom:    16,
-        bearing: _currentPosition!.heading,
-        tilt:    45,
-      ),
-    ));
-  }
 
   void _emitLocationUpdate() {
     if (_currentPosition == null) return;
@@ -519,8 +416,8 @@ class _DriverTripInProgressScreenState
       _dropoffLocation.latitude,   _dropoffLocation.longitude,
     );
     final traveled =
-    (_totalTripDistance - _distanceToDestination)
-        .clamp(0.0, _totalTripDistance);
+        (_totalTripDistance - _distanceToDestination)
+            .clamp(0.0, _totalTripDistance);
     _tripProgress = _totalTripDistance > 0
         ? (traveled / _totalTripDistance).clamp(0.0, 1.0)
         : 0.0;
@@ -534,57 +431,90 @@ class _DriverTripInProgressScreenState
   }
 
   // ════════════════════════════════════════════════════════════
-  // DIRECTIONS API
+  // MARKERS
+  // ════════════════════════════════════════════════════════════
+
+  List<Marker> _buildMarkers() {
+    final markers = <Marker>[];
+
+    // Faded pickup pin (already visited)
+    markers.add(Marker(
+      point:  _pickupLocation,
+      width:  40,
+      height: 50,
+      child: Opacity(
+        opacity: 0.4,
+        child: const Icon(Icons.location_on,
+            color: Colors.purple, size: 40),
+      ),
+    ));
+
+    // Dropoff pin
+    markers.add(Marker(
+      point:  _dropoffLocation,
+      width:  40,
+      height: 50,
+      child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+    ));
+
+    // Car marker (driver)
+    if (_currentPosition != null) {
+      markers.add(Marker(
+        point:  LatLng(
+            _currentPosition!.latitude, _currentPosition!.longitude),
+        width:  60,
+        height: 60,
+        child: CarMarkerWidget(
+          heading: _driverHeading,
+          color:   const Color(0xFF1A1A1A),
+        ),
+      ));
+    }
+
+    return markers;
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // ROUTE — Mapbox Directions v5
   // ════════════════════════════════════════════════════════════
 
   Future<void> _fetchRoute() async {
     if (_routeFetched) return;
     _routeFetched = true;
 
-    final origin = _currentPosition != null
-        ? '${_currentPosition!.latitude},${_currentPosition!.longitude}'
-        : '${_pickupLocation.latitude},${_pickupLocation.longitude}';
-    final destination =
-        '${_dropoffLocation.latitude},${_dropoffLocation.longitude}';
+    final originLat = _currentPosition?.latitude  ?? _pickupLocation.latitude;
+    final originLng = _currentPosition?.longitude ?? _pickupLocation.longitude;
+    final destLat   = _dropoffLocation.latitude;
+    final destLng   = _dropoffLocation.longitude;
 
     try {
-      debugPrint('🗺️ Fetching Directions API route...');
       final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/directions/json'
-            '?origin=$origin'
-            '&destination=$destination'
-            '&key=$_gmapsKey'
-            '&mode=driving'
-            '&alternatives=false',
+        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        '$originLng,$originLat;$destLng,$destLat'
+        '?access_token=$_mapboxToken'
+        '&geometries=polyline'
+        '&overview=full',
       );
       final response =
-      await http.get(url).timeout(const Duration(seconds: 12));
+          await http.get(url).timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK' &&
-            (data['routes'] as List).isNotEmpty) {
-          final route           = data['routes'][0];
-          final leg             = route['legs'][0];
-          final encodedPolyline =
-          route['overview_polyline']['points'] as String;
-
-          _routePoints           = _decodePolyline(encodedPolyline);
-          _distanceToDestination =
-              (leg['distance']['value'] as num).toDouble();
-          _etaMinutes =
-              ((leg['duration']['value'] as num) / 60).ceil();
+        final data   = json.decode(response.body);
+        final routes = data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final route = routes[0];
+          _routePoints           = _decodePolyline(route['geometry'] as String);
+          _distanceToDestination = (route['distance'] as num).toDouble();
+          _etaMinutes            = ((route['duration'] as num) / 60).ceil();
 
           _polylines
             ..clear()
             ..add(Polyline(
-              polylineId: const PolylineId('route'),
-              points:    _routePoints,
-              color:     AppColors.primaryGold,
-              width:     5,
-              startCap:  Cap.roundCap,
-              endCap:    Cap.roundCap,
-              jointType: JointType.round,
+              points:      _routePoints,
+              color:       AppColors.primaryGold,
+              strokeWidth: 5,
+              strokeCap:   StrokeCap.round,
+              strokeJoin:  StrokeJoin.round,
             ));
 
           if (mounted) {
@@ -593,87 +523,68 @@ class _DriverTripInProgressScreenState
           }
           return;
         }
-        throw Exception('Directions API: ${data['status']}');
+        throw Exception('No routes in Mapbox response');
       }
       throw Exception('HTTP ${response.statusCode}');
     } catch (e) {
-      debugPrint('❌ Route fetch error: $e — falling back to straight line');
+      debugPrint('❌ Route fetch error: $e — fallback line');
       _polylines
         ..clear()
         ..add(Polyline(
-          polylineId: const PolylineId('route'),
           points: [
             if (_currentPosition != null)
-              LatLng(_currentPosition!.latitude,
-                  _currentPosition!.longitude),
+              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
             _dropoffLocation,
           ],
-          color:    AppColors.primaryGold,
-          width:    4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+          color:       AppColors.primaryGold.withOpacity(0.5),
+          strokeWidth: 4,
+          pattern:     const StrokePattern.dotted(),
         ));
       if (mounted) setState(() => _isLoadingRoute = false);
     }
   }
 
   List<LatLng> _decodePolyline(String encoded) {
-    final pts  = <LatLng>[];
-    int index  = 0;
-    final len  = encoded.length;
+    final pts   = <LatLng>[];
+    int index   = 0;
+    final len   = encoded.length;
     int lat = 0, lng = 0;
     while (index < len) {
       int b, shift = 0, result = 0;
       do {
-        b = encoded.codeUnitAt(index++) - 63;
+        b       = encoded.codeUnitAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift  += 5;
       } while (b >= 0x20);
-      lat += ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
       shift = 0; result = 0;
       do {
-        b = encoded.codeUnitAt(index++) - 63;
+        b       = encoded.codeUnitAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift  += 5;
       } while (b >= 0x20);
-      lng += ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
       pts.add(LatLng(lat / 1E5, lng / 1E5));
     }
     return pts;
   }
 
   void _fitMapToRoute() {
-    if (_mapController == null) return;
-    if (_routePoints.length >= 2) {
-      double minLat =  90, maxLat = -90;
-      double minLng = 180, maxLng = -180;
-      for (final p in _routePoints) {
-        if (p.latitude  < minLat) minLat = p.latitude;
-        if (p.latitude  > maxLat) maxLat = p.latitude;
-        if (p.longitude < minLng) minLng = p.longitude;
-        if (p.longitude > maxLng) maxLng = p.longitude;
-      }
-      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(
-        LatLngBounds(
-            southwest: LatLng(minLat, minLng),
-            northeast: LatLng(maxLat, maxLng)),
-        80,
+    try {
+      final points = _routePoints.length >= 2
+          ? _routePoints
+          : [
+              if (_currentPosition != null)
+                LatLng(_currentPosition!.latitude,
+                    _currentPosition!.longitude),
+              _dropoffLocation,
+            ];
+      if (points.isEmpty) return;
+      _mapCtrl.fitCamera(CameraFit.bounds(
+        bounds:  LatLngBounds.fromPoints(points),
+        padding: const EdgeInsets.all(80),
       ));
-      return;
-    }
-    if (_currentPosition == null) return;
-    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(
-      LatLngBounds(
-        southwest: LatLng(
-          math.min(_currentPosition!.latitude,  _dropoffLocation.latitude),
-          math.min(_currentPosition!.longitude, _dropoffLocation.longitude),
-        ),
-        northeast: LatLng(
-          math.max(_currentPosition!.latitude,  _dropoffLocation.latitude),
-          math.max(_currentPosition!.longitude, _dropoffLocation.longitude),
-        ),
-      ),
-      80,
-    ));
+    } catch (_) {}
   }
 
   // ════════════════════════════════════════════════════════════
@@ -703,7 +614,7 @@ class _DriverTripInProgressScreenState
         ]),
         content: const Text(
             'You\'re within 100 meters of the destination. '
-                'Have you arrived?'),
+            'Have you arrived?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -732,27 +643,24 @@ class _DriverTripInProgressScreenState
       final token    = await _getAccessToken();
       final response = await http
           .post(
-        Uri.parse(
-            '$_apiBaseUrl/driver/trips/${widget.tripId}/complete'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'final_fare': widget.trip['fare_estimate']
-              ?? widget.trip['fareEstimate'],
-          'distance_traveled': _totalTripDistance.toInt(),
-          'duration_seconds':  _tripDurationSeconds,
-        }),
-      )
+            Uri.parse(
+                '$_apiBaseUrl/driver/trips/${widget.tripId}/complete'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type':  'application/json',
+            },
+            body: json.encode({
+              'final_fare':        widget.trip['fare_estimate']
+                  ?? widget.trip['fareEstimate'],
+              'distance_traveled': _totalTripDistance.toInt(),
+              'duration_seconds':  _tripDurationSeconds,
+            }),
+          )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        SocketService.instance.socket?.emit('trip:completed', {
-          'tripId':    widget.tripId,
-          'timestamp': DateTime.now().toIso8601String(),
-        });
+        // HTTP /complete is authoritative; backend emits trip:completed to passenger.
         await _speak('Trip completed. Great job!', interrupt: true);
         _hasNavigated = true;
         if (!mounted) return;
@@ -772,20 +680,15 @@ class _DriverTripInProgressScreenState
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isCompleting = false;
-          _hasNavigated = false;
-        });
-        _showSnackBar('Failed to complete trip. Try again.',
-            isError: true);
+        setState(() { _isCompleting = false; _hasNavigated = false; });
+        _showSnackBar('Failed to complete trip. Try again.', isError: true);
       }
     }
   }
 
   Future<void> _callPassenger() async {
     final phone = widget.passenger['phone']?.toString()
-        ?? widget.passenger['phone_e164']?.toString()
-        ?? '';
+        ?? widget.passenger['phone_e164']?.toString() ?? '';
     if (phone.isEmpty) {
       _showSnackBar('Phone number not available', isError: true);
       return;
@@ -840,7 +743,7 @@ class _DriverTripInProgressScreenState
                   fontSize: 18, fontWeight: FontWeight.w700)),
         ]),
         content:
-        const Text('Do you need emergency assistance?'),
+            const Text('Do you need emergency assistance?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -864,8 +767,7 @@ class _DriverTripInProgressScreenState
   void _checkTripStatus(TripProvider provider) {
     if (_hasNavigated || !mounted) return;
     if (provider.status == TripStatus.canceled) {
-      _handleCancellation(
-          provider.errorMessage ?? 'Trip canceled');
+      _handleCancellation(provider.errorMessage ?? 'Trip canceled');
     }
   }
 
@@ -909,9 +811,9 @@ class _DriverTripInProgressScreenState
               ),
               child: const Text('Return Home',
                   style: TextStyle(
-                      fontSize: 16,
+                      fontSize:   16,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white)),
+                      color:      Colors.white)),
             ),
           ),
         ],
@@ -1007,7 +909,6 @@ class _DriverTripInProgressScreenState
     _pulseController.dispose();
     _progressController.dispose();
     _sheetController.dispose();
-    _mapController?.dispose();
     _locationTimer?.cancel();
     _durationTimer?.cancel();
     _positionStream?.cancel();
@@ -1034,37 +935,51 @@ class _DriverTripInProgressScreenState
       child: Scaffold(
         body: Stack(
           children: [
+
             // ── FULL-SCREEN MAP ──────────────────────────────
             Positioned.fill(
-              child: GoogleMap(
-                initialCameraPosition:
-                CameraPosition(target: _dropoffLocation, zoom: 15),
-                markers:                 _markers,
-                polylines:               _polylines,
-                myLocationEnabled:       false,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled:     false,
-                mapToolbarEnabled:       false,
-                compassEnabled:          true,
-                onMapCreated: (c) {
-                  _mapController = c;
-                  if (_currentPosition != null) _fitMapToRoute();
-                },
+              child: FlutterMap(
+                mapController: _mapCtrl,
+                options: MapOptions(
+                  initialCenter: _dropoffLocation,
+                  initialZoom:   15.0,
+                  onPositionChanged: (_, hasGesture) {
+                    if (hasGesture && _isFollowingDriver) {
+                      setState(() => _isFollowingDriver = false);
+                    }
+                  },
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                    userAgentPackageName: 'com.wego.app',
+                    tileProvider: NetworkTileProvider(),
+                  ),
+                  PolylineLayer(polylines: _polylines),
+                  MarkerLayer(markers: _buildMarkers()),
+                ],
               ),
+            ),
+
+            MapStyleButton(
+              current: _mapStyle,
+              onChanged: (s) { setState(() => _mapStyle = s); saveMapStylePref(s); },
             ),
 
             // ── TOP SCRIM ────────────────────────────────────
             Positioned(
               top: 0, left: 0, right: 0, height: 200,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end:   Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withOpacity(0.88),
-                      Colors.transparent,
-                    ],
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin:  Alignment.topCenter,
+                      end:    Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withOpacity(0.88),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1076,16 +991,14 @@ class _DriverTripInProgressScreenState
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 12),
                 child: Row(children: [
-                  // Emergency
                   _TopBtn(
-                    icon:    Icons.warning_rounded,
-                    bg:      AppColors.error,
-                    fg:      Colors.white,
-                    shadow:  AppColors.error.withOpacity(0.4),
-                    onTap:   _showEmergencyDialog,
+                    icon:   Icons.warning_rounded,
+                    bg:     AppColors.error,
+                    fg:     Colors.white,
+                    shadow: AppColors.error.withOpacity(0.4),
+                    onTap:  _showEmergencyDialog,
                   ),
                   const SizedBox(width: 10),
-                  // Mute / unmute voice
                   _TopBtn(
                     icon:   _isMuted
                         ? Icons.volume_off_rounded
@@ -1098,7 +1011,6 @@ class _DriverTripInProgressScreenState
                     onTap:  _toggleMute,
                   ),
                   const Spacer(),
-                  // Rerouting indicator
                   if (_isRerouting)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -1127,7 +1039,6 @@ class _DriverTripInProgressScreenState
                       ),
                     )
                   else
-                  // Pulsing trip timer pill
                     AnimatedBuilder(
                       animation: _pulseAnimation,
                       builder: (_, __) => Transform.scale(
@@ -1136,9 +1047,8 @@ class _DriverTripInProgressScreenState
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 9),
                           decoration: BoxDecoration(
-                            color: AppColors.success,
-                            borderRadius:
-                            BorderRadius.circular(50),
+                            color:        AppColors.success,
+                            borderRadius: BorderRadius.circular(50),
                             boxShadow: [
                               BoxShadow(
                                   color: AppColors.success
@@ -1152,17 +1062,14 @@ class _DriverTripInProgressScreenState
                             children: [
                               const Icon(
                                   Icons.directions_car_rounded,
-                                  size: 16,
+                                  size:  16,
                                   color: Colors.white),
                               const SizedBox(width: 8),
                               Text(
-                                _formatDuration(
-                                    _tripDurationSeconds),
-                                style: AppTypography.caption
-                                    .copyWith(
-                                    color: Colors.white,
-                                    fontWeight:
-                                    FontWeight.w700),
+                                _formatDuration(_tripDurationSeconds),
+                                style: AppTypography.caption.copyWith(
+                                    color:      Colors.white,
+                                    fontWeight: FontWeight.w700),
                               ),
                             ],
                           ),
@@ -1180,16 +1087,15 @@ class _DriverTripInProgressScreenState
               child: FloatingActionButton.small(
                 heroTag:         'recenter',
                 onPressed: () {
+                  setState(() => _isFollowingDriver = true);
                   if (_currentPosition != null) {
-                    _mapController?.animateCamera(
-                      CameraUpdate.newCameraPosition(CameraPosition(
-                        target: LatLng(_currentPosition!.latitude,
+                    try {
+                      _mapCtrl.move(
+                        LatLng(_currentPosition!.latitude,
                             _currentPosition!.longitude),
-                        zoom:    16,
-                        bearing: _currentPosition!.heading,
-                        tilt:    45,
-                      )),
-                    );
+                        16,
+                      );
+                    } catch (_) {}
                   }
                 },
                 backgroundColor: Colors.white,
@@ -1209,22 +1115,22 @@ class _DriverTripInProgressScreenState
               snapSizes:        [minFraction, initFraction, maxFraction],
               builder: (context, scrollController) {
                 return _SheetContent(
-                  scrollController: scrollController,
-                  tripProgress:       _tripProgress,
-                  etaMinutes:         _etaMinutes,
+                  scrollController:      scrollController,
+                  tripProgress:          _tripProgress,
+                  etaMinutes:            _etaMinutes,
                   distanceToDestination: _distanceToDestination,
-                  passengerName:      _passengerName,
-                  passengerInitial:   _passengerInitial,
-                  passengerAvatarUrl: _passengerAvatarUrl,
-                  passengerRating:    _passengerRating,
-                  dropoffAddress:     _dropoffAddress,
-                  rerouteCount:       _rerouteCount,
-                  isCompleting:       _isCompleting,
-                  formatDistance:     _formatDistance,
-                  formatETA:          _formatETA,
-                  onCompleteTrip:     _completeTrip,
-                  onCallPassenger:    _callPassenger,
-                  onOpenChat:         _openChat,
+                  passengerName:         _passengerName,
+                  passengerInitial:      _passengerInitial,
+                  passengerAvatarUrl:    _passengerAvatarUrl,
+                  passengerRating:       _passengerRating,
+                  dropoffAddress:        _dropoffAddress,
+                  rerouteCount:          _rerouteCount,
+                  isCompleting:          _isCompleting,
+                  formatDistance:        _formatDistance,
+                  formatETA:             _formatETA,
+                  onCompleteTrip:        _completeTrip,
+                  onCallPassenger:       _callPassenger,
+                  onOpenChat:            _openChat,
                 );
               },
             ),
@@ -1348,7 +1254,6 @@ class _SheetContent extends StatelessWidget {
         padding:    EdgeInsets.zero,
         physics:    const ClampingScrollPhysics(),
         children: [
-          // ── DRAG HANDLE ────────────────────────────────────
           Center(
             child: Container(
               margin:    const EdgeInsets.only(top: 12, bottom: 4),
@@ -1367,10 +1272,9 @@ class _SheetContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
 
-                // ── PROGRESS ──────────────────────────────────
+                // PROGRESS BAR
                 Row(
-                  mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Trip Progress',
                         style: AppTypography.titleMedium
@@ -1397,7 +1301,7 @@ class _SheetContent extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // ── ETA / DISTANCE TILES ──────────────────────
+                // ETA / DISTANCE TILES
                 Row(children: [
                   Expanded(child: _InfoTile(
                     icon:   Icons.access_time_rounded,
@@ -1414,14 +1318,13 @@ class _SheetContent extends StatelessWidget {
                   )),
                 ]),
 
-                // ── REROUTE BADGE ─────────────────────────────
                 if (rerouteCount > 0) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.10),
+                      color:        AppColors.warning.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                           color: AppColors.warning.withOpacity(0.35)),
@@ -1432,10 +1335,10 @@ class _SheetContent extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         'Rerouted $rerouteCount '
-                            '${rerouteCount == 1 ? 'time' : 'times'} '
-                            'during this trip',
+                        '${rerouteCount == 1 ? 'time' : 'times'} '
+                        'during this trip',
                         style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.warning,
+                            color:      AppColors.warning,
                             fontWeight: FontWeight.w600),
                       ),
                     ]),
@@ -1444,7 +1347,6 @@ class _SheetContent extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // ── PASSENGER CARD ────────────────────────────
                 _PassengerCard(
                   name:      passengerName,
                   initial:   passengerInitial,
@@ -1456,45 +1358,38 @@ class _SheetContent extends StatelessWidget {
 
                 const SizedBox(height: 14),
 
-                // ── DESTINATION ROW ───────────────────────────
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color:        AppColors.backgroundLight,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: AppColors.borderLight),
+                    border: Border.all(color: AppColors.borderLight),
                   ),
                   child: Row(children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                           color: AppColors.errorLight,
-                          borderRadius:
-                          BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12)),
                       child: const Icon(Icons.flag_rounded,
                           color: AppColors.error, size: 20),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Destination',
-                              style: AppTypography.labelSmall
-                                  .copyWith(
-                                  color: AppColors
-                                      .textSecondary)),
+                              style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.textSecondary)),
                           const SizedBox(height: 3),
                           Text(
                             dropoffAddress,
                             style: AppTypography.titleMedium
-                                .copyWith(
-                                fontWeight: FontWeight.w600),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                                .copyWith(fontWeight: FontWeight.w600),
+                            maxLines:  2,
+                            overflow:  TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -1504,39 +1399,32 @@ class _SheetContent extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // ── COMPLETE BUTTON ───────────────────────────
                 Container(
-                  width: double.infinity,
+                  width:  double.infinity,
                   height: 58,
                   decoration: BoxDecoration(
                     gradient:     AppColors.primaryGradient,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                          color: AppColors.primaryGold
-                              .withOpacity(0.3),
+                          color:      AppColors.primaryGold.withOpacity(0.3),
                           blurRadius: 12,
-                          offset: const Offset(0, 4))
+                          offset:     const Offset(0, 4))
                     ],
                   ),
                   child: ElevatedButton.icon(
                     onPressed: isCompleting ? null : onCompleteTrip,
                     icon: isCompleting
                         ? const SizedBox(
-                        width: 20, height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor:
-                            AlwaysStoppedAnimation(
-                                Colors.black)))
-                        : const Icon(
-                        Icons.check_circle_rounded,
-                        color: Colors.black,
-                        size: 22),
+                            width: 20, height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation(
+                                    Colors.black)))
+                        : const Icon(Icons.check_circle_rounded,
+                            color: Colors.black, size: 22),
                     label: Text(
-                      isCompleting
-                          ? 'Completing…'
-                          : 'Complete Trip',
+                      isCompleting ? 'Completing…' : 'Complete Trip',
                       style: const TextStyle(
                           fontSize:   17,
                           fontWeight: FontWeight.w800,
@@ -1546,8 +1434,7 @@ class _SheetContent extends StatelessWidget {
                       backgroundColor: Colors.transparent,
                       shadowColor:     Colors.transparent,
                       shape: RoundedRectangleBorder(
-                          borderRadius:
-                          BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16)),
                     ),
                   ),
                 ),
@@ -1591,8 +1478,7 @@ class _PassengerCard extends StatelessWidget {
         border:       Border.all(color: AppColors.borderLight),
       ),
       child: Row(children: [
-        _PassengerAvatar(
-            initial: initial, avatarUrl: avatarUrl, size: 50),
+        _PassengerAvatar(initial: initial, avatarUrl: avatarUrl, size: 50),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -1636,10 +1522,6 @@ class _PassengerCard extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════
-// PASSENGER AVATAR
-// ════════════════════════════════════════════════════════════════
-
 class _PassengerAvatar extends StatelessWidget {
   final String  initial;
   final String? avatarUrl;
@@ -1663,22 +1545,22 @@ class _PassengerAvatar extends StatelessWidget {
       width:  size,
       height: size,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        shape:  BoxShape.circle,
         border: Border.all(
             color: AppColors.primaryGold.withOpacity(0.5), width: 2),
       ),
       child: ClipOval(
         child: _hasValidPhoto
             ? CachedNetworkImage(
-          imageUrl:    avatarUrl!,
-          width:       size,
-          height:      size,
-          fit:         BoxFit.cover,
-          placeholder: (_, __) =>
-              _AvatarFallback(initial: initial, size: size),
-          errorWidget: (_, __, ___) =>
-              _AvatarFallback(initial: initial, size: size),
-        )
+                imageUrl:    avatarUrl!,
+                width:       size,
+                height:      size,
+                fit:         BoxFit.cover,
+                placeholder: (_, __) =>
+                    _AvatarFallback(initial: initial, size: size),
+                errorWidget: (_, __, ___) =>
+                    _AvatarFallback(initial: initial, size: size),
+              )
             : _AvatarFallback(initial: initial, size: size),
       ),
     );
@@ -1688,9 +1570,7 @@ class _PassengerAvatar extends StatelessWidget {
 class _AvatarFallback extends StatelessWidget {
   final String initial;
   final double size;
-
-  const _AvatarFallback(
-      {required this.initial, required this.size});
+  const _AvatarFallback({required this.initial, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -1728,13 +1608,11 @@ class _InfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          vertical: 14, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       decoration: BoxDecoration(
         color:        accent.withOpacity(0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: accent.withOpacity(0.25), width: 1.5),
+        border: Border.all(color: accent.withOpacity(0.25), width: 1.5),
       ),
       child: Column(children: [
         Icon(icon, color: accent, size: 22),

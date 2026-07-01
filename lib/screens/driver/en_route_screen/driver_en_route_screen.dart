@@ -1,45 +1,30 @@
 // lib/screens/driver/en_route_screen/driver_en_route_screen.dart
 //
-// CHANGES vs previous version:
-//  ✅ Positioned.fill map  — map truly fills the screen behind the sheet
-//  ✅ DraggableScrollableSheet — replaces static Positioned + SlideTransition
-//  ✅ _slideController removed — no longer needed
-//  ✅ StreamSubscription<Position> — correctly typed
-//  ✅ Speed tile — 3rd info tile alongside ETA + Distance
-//  ✅ Directional arrow markers every ~200 m along the polyline
-//  ✅ Double-layer polyline — gold solid + thin white inner stripe
-//  ✅ flutter_tts voice guidance — en-route announcement + 500 m / 200 m /
-//     50 m callouts + rerouting + cancel
-//  ✅ Automatic rerouting — detects >50 m deviation, throttled 20 s
-//  ✅ Mute / unmute button in top bar
-//  ✅ Re-center FAB above the sheet
-//  ✅ Race-condition fix — _fetchRoute() called inside _initializeLocation()
-//     after position is known, not directly from initState
-//  ✅ tilt: 30 on camera updates — natural driving perspective
-//
-// pubspec.yaml — add if not already present:
-//   flutter_tts: ^4.0.2
-// ═══════════════════════════════════════════════════════════════════
+// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// All logic preserved: TTS, auto-rerouting, double-layer polyline,
+// direction-arrow Widget markers, location streaming, DraggableScrollableSheet.
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wego_v1/main.dart';
 import 'package:wego_v1/utils/app_colors.dart';
 import 'package:wego_v1/utils/app_typography.dart';
+import 'package:wego_v1/utils/car_marker_painter.dart';
+import 'package:wego_v1/utils/map_style.dart';
+import 'package:wego_v1/widgets/map_style_button.dart';
 import '../../../service/chat_service.dart';
 import '../../chat/trip_chat_screen.dart';
 import '../arrived_screen/driver_arrived.dart';
@@ -48,17 +33,10 @@ import '../arrived_screen/driver_arrived.dart';
 // CONSTANTS
 // ───────────────────────────────────────────────────────────────
 
-/// How far off-route (metres) before we reroute automatically.
-const double _kRerouteThreshold = 50.0;
-
-/// Minimum gap between two automatic reroutes.
-const Duration _kRerouteThrottle = Duration(seconds: 20);
-
-/// Distance (metres) from pickup that auto-triggers the arrived dialog.
-const double _kArrivedThreshold = 50.0;
-
-/// Gap (metres) between direction-arrow markers along the polyline.
-const double _kArrowInterval = 200.0;
+const double   _kRerouteThreshold = 50.0;
+const Duration _kRerouteThrottle  = Duration(seconds: 20);
+const double   _kArrivedThreshold = 50.0;
+const double   _kArrowInterval    = 200.0;
 
 // ═══════════════════════════════════════════════════════════════
 // WIDGET
@@ -84,44 +62,44 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     with TickerProviderStateMixin {
 
   // ── Map ──────────────────────────────────────────────────────
-  GoogleMapController?  _mapController;
-  final Set<Marker>     _markers   = {};
-  final Set<Polyline>   _polylines = {};
+  final MapController _mapCtrl              = MapController();
+  List<Polyline>      _polylines            = [];
+  List<Marker>        _directionArrowMarkers = [];
+  bool                _isFollowingDriver    = true;
 
-  // ── Draggable sheet controller ───────────────────────────────
+  // ── Draggable sheet ──────────────────────────────────────────
   final DraggableScrollableController _sheetCtrl =
-  DraggableScrollableController();
+      DraggableScrollableController();
 
   // ── TTS ──────────────────────────────────────────────────────
   final FlutterTts _tts      = FlutterTts();
   bool             _ttsReady = false;
   bool             _isMuted  = false;
 
-  // Distance callout flags — fire once per trip
   bool _said500m = false;
   bool _said200m = false;
   bool _said50m  = false;
 
-  // ── Animation ────────────────────────────────────────────────
+  // ── Animations ───────────────────────────────────────────────
   late AnimationController _pulseController;
   late Animation<double>   _pulseAnimation;
-  // NOTE: _slideController removed — DraggableScrollableSheet handles entrance
 
   // ── Location ─────────────────────────────────────────────────
   Position?                     _currentPosition;
   Timer?                        _locationTimer;
   StreamSubscription<Position>? _positionStream;
+  double                        _driverHeading = 0.0;
 
   // ── Route ────────────────────────────────────────────────────
   List<LatLng> _routePoints      = [];
-  double       _distanceToPickup = 0.0; // metres
+  double       _distanceToPickup = 0.0;
   int          _etaMinutes       = 0;
-  double       _currentSpeed     = 0.0; // km/h
+  double       _currentSpeed     = 0.0;
   bool         _isLoadingRoute   = true;
   bool         _routeFetched     = false;
 
   // ── Rerouting ────────────────────────────────────────────────
-  bool      _isRerouting = false;
+  bool      _isRerouting  = false;
   DateTime? _lastRerouteAt;
   int       _rerouteCount = 0;
 
@@ -135,13 +113,10 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   bool _hasNavigated = false;
   bool _isArriving   = false;
 
-  // ── Marker icons ─────────────────────────────────────────────
-  BitmapDescriptor? _carMarkerIcon;
-  BitmapDescriptor? _arrowIcon; // cached — built once
-
-  // ── Keys ─────────────────────────────────────────────────────
-  String get _gmapsKey   => dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
-  String get _apiBaseUrl => dotenv.env['API_BASE_URL'] ?? '';
+  // ── Tokens ───────────────────────────────────────────────────
+  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  MapStyle _mapStyle = MapStyle.navigationDay;
+  String get _apiBaseUrl  => dotenv.env['API_BASE_URL']        ?? '';
 
   // ═══════════════════════════════════════════════════════════
   // INIT / DISPOSE
@@ -154,17 +129,14 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     _parseLocations();
     _setupAnimations();
     _initTts();
-    _loadCarMarker();
-    _setupPickupMarker();
-    // ✅ Route is fetched INSIDE _initializeLocation() after we have a position
     _initializeLocation();
+    loadMapStylePref().then((s) { if (mounted) setState(() => _mapStyle = s); });
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _sheetCtrl.dispose();
-    _mapController?.dispose();
     _locationTimer?.cancel();
     _positionStream?.cancel();
     _tts.stop();
@@ -183,7 +155,6 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
       await _tts.setPitch(1.0);
       await _tts.setSharedInstance(true);
       _ttsReady = true;
-      debugPrint('🔊 [TTS] Ready');
     } catch (e) {
       debugPrint('⚠️ [TTS] Init error: $e');
     }
@@ -201,7 +172,6 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     _speak('Heading to pickup. Collect $_passengerName.', interrupt: true);
   }
 
-  /// Fires TTS distance callouts as the driver approaches pickup.
   void _checkDistanceCallouts() {
     if (_distanceToPickup <= 0) return;
     if (!_said500m && _distanceToPickup <= 500) {
@@ -225,106 +195,6 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
       _speak('Voice guidance on.');
       _showSnackBar('Voice enabled', isError: false);
     }
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // CAR MARKER — drawn programmatically (WEGO gold stripe)
-  // ═══════════════════════════════════════════════════════════
-
-
-  Future<void> _loadCarMarker() async {
-    try {
-      // Load assets/car.png and resize it to 80×80 logical px
-      final byteData = await rootBundle.load('assets/car.png');
-      final codec = await ui.instantiateImageCodec(
-        byteData.buffer.asUint8List(),
-        targetWidth: 80,
-        targetHeight: 80,
-      );
-      final frame    = await codec.getNextFrame();
-      final pngBytes = await frame.image
-          .toByteData(format: ui.ImageByteFormat.png);
-
-      if (pngBytes != null) {
-        _carMarkerIcon =
-            BitmapDescriptor.fromBytes(pngBytes.buffer.asUint8List());
-        debugPrint('✅ [CAR-MARKER] Loaded from assets/car.png');
-        return;
-      }
-    } catch (e) {
-      debugPrint('⚠️ [CAR-MARKER] Failed to load assets/car.png: $e');
-    }
-
-    // ── Fallback: yellow default pin if asset fails ─────────────
-    _carMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueYellow);
-    debugPrint('⚠️ [CAR-MARKER] Using fallback yellow marker');
-  }
-
-
-
-  Future<BitmapDescriptor> _buildArrowIcon() async {
-    const double sz = 36.0;
-    final rec    = ui.PictureRecorder();
-    final canvas = Canvas(rec,
-        Rect.fromPoints(Offset.zero, const Offset(sz, sz)));
-
-    final path = Path()
-      ..moveTo(sz * 0.50, sz * 0.05)  // tip (north)
-      ..lineTo(sz * 0.85, sz * 0.90)  // bottom-right
-      ..lineTo(sz * 0.15, sz * 0.90)  // bottom-left
-      ..close();
-
-    // Drop-shadow
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color      = Colors.black.withOpacity(0.22)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3)
-        ..style      = PaintingStyle.fill,
-    );
-    // Fill
-    canvas.drawPath(path, Paint()..color = Colors.white);
-    // Gold outline
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color       = AppColors.primaryGold
-        ..style       = PaintingStyle.stroke
-        ..strokeWidth = 1.8,
-    );
-
-    final pic  = rec.endRecording();
-    final img  = await pic.toImage(sz.toInt(), sz.toInt());
-    final data = await img.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
-  }
-
-  /// Compass bearing (0–360°) from point [a] to point [b].
-  double _bearing(LatLng a, LatLng b) {
-    final lat1 = a.latitude  * math.pi / 180;
-    final lat2 = b.latitude  * math.pi / 180;
-    final dLon = (b.longitude - a.longitude) * math.pi / 180;
-    final y    = math.sin(dLon) * math.cos(lat2);
-    final x    = math.cos(lat1) * math.sin(lat2) -
-        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
-    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // SETUP MARKERS
-  // ═══════════════════════════════════════════════════════════
-
-  void _setupPickupMarker() {
-    _markers.add(Marker(
-      markerId: const MarkerId('pickup'),
-      position: _pickupLocation,
-      icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueGreen),
-      infoWindow:
-      InfoWindow(title: 'Pickup', snippet: _pickupAddress),
-    ));
-    if (mounted) setState(() {});
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -365,9 +235,8 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   void _setupAnimations() {
     _pulseController = AnimationController(
         duration: const Duration(milliseconds: 1500), vsync: this);
-    _pulseAnimation  = Tween<double>(begin: 1.0, end: 1.1).animate(
-        CurvedAnimation(
-            parent: _pulseController, curve: Curves.easeInOut));
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
     _pulseController.repeat(reverse: true);
   }
 
@@ -379,19 +248,18 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     try {
       _currentPosition = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
-      _updateDriverMarker();
+      _driverHeading = _currentPosition!.heading;
       _calculateDistanceAndETA();
       _startLocationTracking();
-      // ✅ fetch route only AFTER we have a position
       await _fetchRoute();
-      if (_mapController != null) _fitMapToRoute();
-      // Announce after route is drawn and map is settled
-      Future.delayed(
-          const Duration(milliseconds: 800), _announceEnRoute);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) _fitMapToRoute();
+        });
+      });
+      Future.delayed(const Duration(milliseconds: 800), _announceEnRoute);
     } catch (e) {
-      _showSnackBar(
-          'Unable to get your location. Check GPS.', isError: true);
-      // Still try to draw the route with fallback straight line
+      _showSnackBar('Unable to get your location. Check GPS.', isError: true);
       await _fetchRoute();
     }
   }
@@ -403,8 +271,10 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     ).listen((pos) {
       if (!mounted) return;
       _currentPosition = pos;
-      _currentSpeed    = pos.speed * 3.6; // m/s → km/h
-      _updateDriverMarker();
+      _driverHeading   = pos.heading;
+      _currentSpeed    = pos.speed * 3.6;
+      if (mounted) setState(() {});
+      _moveCameraToDriver();
       _calculateDistanceAndETA();
       _emitLocationUpdate();
       _checkDistanceCallouts();
@@ -416,22 +286,30 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
       }
     });
 
-    // Fallback 10-second timer in case stream is suppressed
-    _locationTimer =
-        Timer.periodic(const Duration(seconds: 10), (_) async {
-          if (!mounted) return;
-          try {
-            final pos = await Geolocator.getCurrentPosition();
-            if (!mounted) return;
-            _currentPosition = pos;
-            _currentSpeed    = pos.speed * 3.6;
-            _updateDriverMarker();
-            _calculateDistanceAndETA();
-            _emitLocationUpdate();
-            _checkDistanceCallouts();
-            _checkDeviation();
-          } catch (_) {}
-        });
+    _locationTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      if (!mounted) return;
+      try {
+        final pos = await Geolocator.getCurrentPosition();
+        if (!mounted) return;
+        _currentPosition = pos;
+        _driverHeading   = pos.heading;
+        _currentSpeed    = pos.speed * 3.6;
+        setState(() {});
+        _moveCameraToDriver();
+        _calculateDistanceAndETA();
+        _emitLocationUpdate();
+        _checkDistanceCallouts();
+        _checkDeviation();
+      } catch (_) {}
+    });
+  }
+
+  void _moveCameraToDriver() {
+    if (_currentPosition == null || !_isFollowingDriver) return;
+    try {
+      _mapCtrl.move(
+        LatLng(_currentPosition!.latitude, _currentPosition!.longitude), 16);
+    } catch (_) {}
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -439,17 +317,13 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   // ═══════════════════════════════════════════════════════════
 
   void _checkDeviation() {
-    if (_currentPosition == null) return;
-    if (_routePoints.isEmpty) return;
-    if (_isRerouting) return;
+    if (_currentPosition == null || _routePoints.isEmpty || _isRerouting) return;
     if (_lastRerouteAt != null &&
-        DateTime.now().difference(_lastRerouteAt!) < _kRerouteThrottle)
-      return;
+        DateTime.now().difference(_lastRerouteAt!) < _kRerouteThrottle) return;
 
-    final driver = LatLng(
-        _currentPosition!.latitude, _currentPosition!.longitude);
-    final deviation = _nearestRouteDistance(driver);
-    if (deviation > _kRerouteThreshold) _rerouteNow();
+    final driver =
+        LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
+    if (_nearestRouteDistance(driver) > _kRerouteThreshold) _rerouteNow();
   }
 
   double _nearestRouteDistance(LatLng pt) {
@@ -477,38 +351,22 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   }
 
   // ═══════════════════════════════════════════════════════════
-  // DRIVER MARKER
+  // COMPASS BEARING  (0–360°, a→b)
   // ═══════════════════════════════════════════════════════════
 
-  void _updateDriverMarker() {
-    if (_currentPosition == null) return;
-    final pos = LatLng(
-        _currentPosition!.latitude, _currentPosition!.longitude);
-
-    _markers.removeWhere((m) => m.markerId.value == 'driver');
-    _markers.add(Marker(
-      markerId: const MarkerId('driver'),
-      position: pos,
-      icon: _carMarkerIcon ??
-          BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueYellow),
-      rotation: _currentPosition!.heading,
-      anchor:   const Offset(0.5, 0.5),
-      flat:     true,  // rotates with map bearing
-      zIndex:   10,
-    ));
-    if (mounted) setState(() {});
-
-    // ✅ tilt: 30 for a natural driving perspective
-    _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-      CameraPosition(
-        target:  pos,
-        zoom:    16,
-        bearing: _currentPosition!.heading,
-        tilt:    30,
-      ),
-    ));
+  double _bearing(LatLng a, LatLng b) {
+    final lat1 = a.latitude  * math.pi / 180;
+    final lat2 = b.latitude  * math.pi / 180;
+    final dLon = (b.longitude - a.longitude) * math.pi / 180;
+    final y    = math.sin(dLon) * math.cos(lat2);
+    final x    = math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // LOCATION EMIT
+  // ═══════════════════════════════════════════════════════════
 
   void _emitLocationUpdate() {
     if (_currentPosition == null) return;
@@ -525,8 +383,8 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   void _calculateDistanceAndETA() {
     if (_currentPosition == null) return;
     _distanceToPickup = Geolocator.distanceBetween(
-      _currentPosition!.latitude,  _currentPosition!.longitude,
-      _pickupLocation.latitude,    _pickupLocation.longitude,
+      _currentPosition!.latitude, _currentPosition!.longitude,
+      _pickupLocation.latitude,   _pickupLocation.longitude,
     );
     final km  = _distanceToPickup / 1000;
     final spd = _currentSpeed > 5 ? _currentSpeed : 30.0;
@@ -535,8 +393,39 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ROUTE  —  gold solid line + thin white inner stripe
-  //           + direction-arrow markers every ~200 m
+  // MARKERS
+  // ═══════════════════════════════════════════════════════════
+
+  List<Marker> _buildMarkers() {
+    final markers = <Marker>[];
+
+    markers.add(Marker(
+      point:  _pickupLocation,
+      width:  40,
+      height: 50,
+      child: const Icon(Icons.location_on, color: Colors.green, size: 40),
+    ));
+
+    if (_currentPosition != null) {
+      markers.add(Marker(
+        point:  LatLng(
+            _currentPosition!.latitude, _currentPosition!.longitude),
+        width:  60,
+        height: 60,
+        child: CarMarkerWidget(
+          heading: _driverHeading,
+          color:   const Color(0xFF1A1A1A),
+        ),
+      ));
+    }
+
+    markers.addAll(_directionArrowMarkers);
+    return markers;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ROUTE — Mapbox Directions v5
+  //         gold solid line + white inner stripe + arrow markers
   // ═══════════════════════════════════════════════════════════
 
   Future<void> _fetchRoute() async {
@@ -551,33 +440,30 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
       }
     }
 
-    final origin =
-        '${_currentPosition!.latitude},${_currentPosition!.longitude}';
-    final destination =
-        '${_pickupLocation.latitude},${_pickupLocation.longitude}';
+    final driverLat = _currentPosition!.latitude;
+    final driverLng = _currentPosition!.longitude;
+    final pickupLat = _pickupLocation.latitude;
+    final pickupLng = _pickupLocation.longitude;
 
     try {
       final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/directions/json'
-            '?origin=$origin'
-            '&destination=$destination'
-            '&key=$_gmapsKey'
-            '&mode=driving'
-            '&alternatives=false',
+        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        '$driverLng,$driverLat;$pickupLng,$pickupLat'
+        '?access_token=$_mapboxToken'
+        '&geometries=polyline'
+        '&overview=full',
       );
       final response =
-      await http.get(url).timeout(const Duration(seconds: 10));
+          await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK' &&
-            (data['routes'] as List).isNotEmpty) {
-          final route = data['routes'][0];
-          final leg   = route['legs'][0];
-          _routePoints      =
-              _decodePolyline(route['overview_polyline']['points']);
-          _distanceToPickup = leg['distance']['value'].toDouble();
-          _etaMinutes       = (leg['duration']['value'] / 60).ceil();
+        final data   = json.decode(response.body);
+        final routes = data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final route = routes[0];
+          _routePoints      = _decodePolyline(route['geometry'] as String);
+          _distanceToPickup = (route['distance'] as num).toDouble();
+          _etaMinutes       = ((route['duration'] as num) / 60).ceil();
           await _buildPolylines();
           if (mounted) {
             setState(() => _isLoadingRoute = false);
@@ -585,11 +471,11 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
           }
           return;
         }
-        throw Exception('Directions API: ${data['status']}');
+        throw Exception('No routes in Mapbox response');
       }
       throw Exception('HTTP ${response.statusCode}');
     } catch (e) {
-      debugPrint('❌ Route fetch error: $e — fallback line');
+      debugPrint('❌ Route fetch error: $e — fallback straight line');
       if (_currentPosition != null) {
         _routePoints = [
           LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
@@ -601,52 +487,37 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     }
   }
 
-  // Builds:  (1) gold solid line  (2) thin white inner stripe
-  //          (3) rotated arrow markers every _kArrowInterval metres
   Future<void> _buildPolylines() async {
     _polylines.clear();
 
-    // 1 — Main gold route line
+    // Gold main route
     _polylines.add(Polyline(
-      polylineId: const PolylineId('route_main'),
-      points:    _routePoints,
-      color:     AppColors.primaryGold,
-      width:     6,
-      startCap:  Cap.roundCap,
-      endCap:    Cap.roundCap,
-      jointType: JointType.round,
+      points:      _routePoints,
+      color:       AppColors.primaryGold,
+      strokeWidth: 6,
+      strokeCap:   StrokeCap.round,
+      strokeJoin:  StrokeJoin.round,
     ));
 
-    // 2 — Thin white inner stripe (3-D road look)
+    // White inner stripe (3-D road look)
     _polylines.add(Polyline(
-      polylineId: const PolylineId('route_inner'),
-      points:    _routePoints,
-      color:     Colors.white.withOpacity(0.55),
-      width:     2,
-      startCap:  Cap.roundCap,
-      endCap:    Cap.roundCap,
-      jointType: JointType.round,
+      points:      _routePoints,
+      color:       Colors.white.withOpacity(0.55),
+      strokeWidth: 2,
+      strokeCap:   StrokeCap.round,
+      strokeJoin:  StrokeJoin.round,
     ));
 
-    // 3 — Directional arrow markers
-    await _placeDirectionArrows();
-
+    _placeDirectionArrows();
     if (mounted) setState(() {});
   }
 
-  Future<void> _placeDirectionArrows() async {
+  void _placeDirectionArrows() {
     if (_routePoints.length < 2) return;
-
-    // Build & cache the arrow icon
-    _arrowIcon ??= await _buildArrowIcon();
-
-    // Remove old arrows
-    _markers.removeWhere(
-            (m) => m.markerId.value.startsWith('dir_arrow_'));
+    _directionArrowMarkers.clear();
 
     double accumulated = 0.0;
     double nextAt      = _kArrowInterval;
-    int    idx         = 0;
 
     for (int i = 1; i < _routePoints.length; i++) {
       final prev    = _routePoints[i - 1];
@@ -657,18 +528,29 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
       accumulated += segDist;
 
       if (accumulated >= nextAt) {
-        _markers.add(Marker(
-          markerId: MarkerId('dir_arrow_${idx++}'),
-          position: LatLng(
-            (prev.latitude  + curr.latitude)  / 2,
-            (prev.longitude + curr.longitude) / 2,
+        final midLat = (prev.latitude  + curr.latitude)  / 2;
+        final midLng = (prev.longitude + curr.longitude) / 2;
+        final angle  = _bearing(prev, curr) * math.pi / 180;
+
+        _directionArrowMarkers.add(Marker(
+          point:  LatLng(midLat, midLng),
+          width:  28,
+          height: 28,
+          child: Transform.rotate(
+            angle: angle,
+            child: Container(
+              decoration: BoxDecoration(
+                color:  Colors.white,
+                shape:  BoxShape.circle,
+                border: Border.all(
+                    color: AppColors.primaryGold, width: 1.5),
+              ),
+              child: const Icon(
+                  Icons.arrow_upward_rounded,
+                  size:  14,
+                  color: Colors.black87),
+            ),
           ),
-          icon:             _arrowIcon!,
-          rotation:         _bearing(prev, curr),
-          anchor:           const Offset(0.5, 0.5),
-          flat:             true,
-          zIndex:           5,
-          consumeTapEvents: true, // no info-window pop-up
         ));
         nextAt += _kArrowInterval;
       }
@@ -676,9 +558,9 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   }
 
   List<LatLng> _decodePolyline(String encoded) {
-    final pts  = <LatLng>[];
-    int index  = 0;
-    final len  = encoded.length;
+    final pts   = <LatLng>[];
+    int index   = 0;
+    final len   = encoded.length;
     int lat = 0, lng = 0;
     while (index < len) {
       int b, shift = 0, result = 0;
@@ -701,36 +583,19 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   }
 
   void _fitMapToRoute() {
-    if (_mapController == null || _currentPosition == null) return;
-    if (_routePoints.length >= 2) {
-      double minLat =  90, maxLat = -90;
-      double minLng = 180, maxLng = -180;
-      for (final p in _routePoints) {
-        if (p.latitude  < minLat) minLat = p.latitude;
-        if (p.latitude  > maxLat) maxLat = p.latitude;
-        if (p.longitude < minLng) minLng = p.longitude;
-        if (p.longitude > maxLng) maxLng = p.longitude;
-      }
-      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(
-          LatLngBounds(
-              southwest: LatLng(minLat, minLng),
-              northeast: LatLng(maxLat, maxLng)),
-          100));
-      return;
-    }
-    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(
-      LatLngBounds(
-        southwest: LatLng(
-          math.min(_currentPosition!.latitude,  _pickupLocation.latitude),
-          math.min(_currentPosition!.longitude, _pickupLocation.longitude),
-        ),
-        northeast: LatLng(
-          math.max(_currentPosition!.latitude,  _pickupLocation.latitude),
-          math.max(_currentPosition!.longitude, _pickupLocation.longitude),
-        ),
-      ),
-      100,
-    ));
+    if (_currentPosition == null) return;
+    try {
+      final points = _routePoints.length >= 2
+          ? _routePoints
+          : [
+              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+              _pickupLocation,
+            ];
+      _mapCtrl.fitCamera(CameraFit.bounds(
+        bounds:  LatLngBounds.fromPoints(points),
+        padding: const EdgeInsets.all(100),
+      ));
+    } catch (_) {}
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -762,7 +627,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
         ]),
         content: const Text(
             'You\'re within 50 meters of the pickup location. '
-                'Have you arrived?'),
+            'Have you arrived?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -788,7 +653,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     if (_hasNavigated) return;
     _hasNavigated = true;
 
-    int retryCount = 0;
+    int retryCount   = 0;
     const maxRetries = 2;
 
     while (retryCount <= maxRetries) {
@@ -798,26 +663,21 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
 
         final response = await http
             .post(
-          Uri.parse(
-              '$_apiBaseUrl/driver/trips/${widget.tripId}/arrived'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type':  'application/json',
-          },
-        )
+              Uri.parse(
+                  '$_apiBaseUrl/driver/trips/${widget.tripId}/arrived'),
+              headers: {
+                'Authorization': 'Bearer $token',
+                'Content-Type':  'application/json',
+              },
+            )
             .timeout(
-          const Duration(seconds: 30),
-          onTimeout: () => throw TimeoutException('Timed out'),
-        );
+              const Duration(seconds: 30),
+              onTimeout: () => throw TimeoutException('Timed out'),
+            );
 
-        if (response.statusCode == 200 ||
-            response.statusCode == 409) {
-          SocketHelper.instance.socket?.emit('driver:arrived', {
-            'tripId':    widget.tripId,
-            'timestamp': DateTime.now().toIso8601String(),
-          });
-          await _speak(
-              'You have arrived at the pickup location.',
+        if (response.statusCode == 200 || response.statusCode == 409) {
+          // HTTP /arrived is authoritative; backend emits trip:driver_arrived.
+          await _speak('You have arrived at the pickup location.',
               interrupt: true);
           await Future.delayed(const Duration(milliseconds: 300));
           if (!mounted) return;
@@ -845,9 +705,8 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
               builder: (ctx) => AlertDialog(
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
-                title: const Text('Connection Timeout'),
-                content:
-                const Text('Request timed out. Try again?'),
+                title:   const Text('Connection Timeout'),
+                content: const Text('Request timed out. Try again?'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
@@ -862,10 +721,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
                 ],
               ),
             );
-            if (retry == true) {
-              retryCount = 0;
-              continue;
-            }
+            if (retry == true) { retryCount = 0; continue; }
           }
           return;
         }
@@ -883,8 +739,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
 
   Future<void> _callPassenger() async {
     final phone = widget.passenger['phone']?.toString()
-        ?? widget.passenger['phone_e164']?.toString()
-        ?? '';
+        ?? widget.passenger['phone_e164']?.toString() ?? '';
     if (phone.isEmpty) {
       _showSnackBar('Phone number not available', isError: true);
       return;
@@ -922,23 +777,18 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     try {
       final response = await http
           .post(
-        Uri.parse(
-            '$_apiBaseUrl/driver/trips/${widget.tripId}/cancel'),
-        headers: {
-          'Authorization': 'Bearer ${await _getAccessToken()}',
-          'Content-Type':  'application/json',
-        },
-        body: json.encode({'reason': reason}),
-      )
+            Uri.parse(
+                '$_apiBaseUrl/driver/trips/${widget.tripId}/cancel'),
+            headers: {
+              'Authorization': 'Bearer ${await _getAccessToken()}',
+              'Content-Type':  'application/json',
+            },
+            body: json.encode({'reason': reason}),
+          )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        SocketHelper.instance.socket?.emit('trip:canceled', {
-          'tripId':     widget.tripId,
-          'canceledBy': 'DRIVER',
-          'reason':     reason,
-          'timestamp':  DateTime.now().toIso8601String(),
-        });
+        // HTTP /cancel is authoritative; backend emits trip:canceled to passenger.
         await _speak('Trip canceled.', interrupt: true);
         _showSnackBar('Trip canceled', isError: false);
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
@@ -963,9 +813,9 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     final d = widget.passenger['name']?.toString() ?? '';
     if (d.isNotEmpty) return d;
     final f = widget.passenger['firstName']?.toString()
-        ?? widget.passenger['first_name']?.toString() ?? '';
+        ?? widget.passenger['first_name']?.toString()  ?? '';
     final l = widget.passenger['lastName']?.toString()
-        ?? widget.passenger['last_name']?.toString()  ?? '';
+        ?? widget.passenger['last_name']?.toString()   ?? '';
     final full = '$f $l'.trim();
     return full.isNotEmpty ? full : 'Passenger';
   }
@@ -1003,9 +853,8 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     return (i != null && i > 0) ? '$i trips' : null;
   }
 
-  String _fmtDist(double m) => m < 1000
-      ? '${m.toInt()} m'
-      : '${(m / 1000).toStringAsFixed(1)} km';
+  String _fmtDist(double m) =>
+      m < 1000 ? '${m.toInt()} m' : '${(m / 1000).toStringAsFixed(1)} km';
 
   String _fmtETA(int min) {
     if (min < 1)  return '< 1 min';
@@ -1021,8 +870,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
               color: Colors.white, fontWeight: FontWeight.w600)),
       backgroundColor: isError ? AppColors.error : AppColors.success,
       behavior:        SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.all(16),
     ));
   }
@@ -1033,9 +881,8 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenH      = MediaQuery.of(context).size.height;
-    // minChildSize keeps just the drag-handle + buttons visible
-    final minFraction  = (130.0 / screenH).clamp(0.14, 0.20);
+    final screenH     = MediaQuery.of(context).size.height;
+    final minFraction = (130.0 / screenH).clamp(0.14, 0.20);
     const initFraction = 0.48;
     const maxFraction  = 0.72;
 
@@ -1043,34 +890,45 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
       body: Stack(
         children: [
 
-          // ── 1. MAP — full-screen ─────────────────────────
+          // ── 1. MAP ──────────────────────────────────────────
           Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition:
-              CameraPosition(target: _pickupLocation, zoom: 15),
-              markers:                 _markers,
-              polylines:               _polylines,
-              myLocationEnabled:       false,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled:     false,
-              mapToolbarEnabled:       false,
-              compassEnabled:          true,
-              onMapCreated: (c) {
-                _mapController = c;
-                if (_currentPosition != null) _fitMapToRoute();
-              },
+            child: FlutterMap(
+              mapController: _mapCtrl,
+              options: MapOptions(
+                initialCenter: _pickupLocation,
+                initialZoom:   15.0,
+                onPositionChanged: (_, hasGesture) {
+                  if (hasGesture && _isFollowingDriver) {
+                    setState(() => _isFollowingDriver = false);
+                  }
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                  userAgentPackageName: 'com.wego.app',
+                  tileProvider: NetworkTileProvider(),
+                ),
+                PolylineLayer(polylines: _polylines),
+                MarkerLayer(markers: _buildMarkers()),
+              ],
             ),
           ),
 
-          // ── 2. TOP SCRIM ─────────────────────────────────
+          MapStyleButton(
+            current: _mapStyle,
+            onChanged: (s) { setState(() => _mapStyle = s); saveMapStylePref(s); },
+          ),
+
+          // ── 2. TOP SCRIM ────────────────────────────────────
           Positioned(
             top: 0, left: 0, right: 0, height: 200,
             child: IgnorePointer(
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end:   Alignment.bottomCenter,
+                    begin:  Alignment.topCenter,
+                    end:    Alignment.bottomCenter,
                     colors: [
                       Colors.white.withOpacity(0.88),
                       Colors.transparent,
@@ -1081,7 +939,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
             ),
           ),
 
-          // ── 3. TOP BAR ───────────────────────────────────
+          // ── 3. TOP BAR ──────────────────────────────────────
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(
@@ -1091,35 +949,32 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
                     icon: Icons.support_agent_rounded,
                     onTap: () {}),
                 const SizedBox(width: 10),
-                // ✅ Mute / unmute button
                 _CircleBtn(
-                  icon: _isMuted
+                  icon:  _isMuted
                       ? Icons.volume_off_rounded
                       : Icons.volume_up_rounded,
-                  onTap:  _toggleMute,
-                  color:  _isMuted ? AppColors.error : null,
+                  onTap: _toggleMute,
+                  color: _isMuted ? AppColors.error : null,
                 ),
                 const Spacer(),
-                // Status pill — switches to rerouting indicator
                 _isRerouting
                     ? _ReroutingPill()
                     : AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (_, __) => Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: _StatusPill(
-                      icon:  Icons.navigation_rounded,
-                      label: 'En Route to Pickup',
-                      color: AppColors.info,
-                    ),
-                  ),
-                ),
+                        animation: _pulseAnimation,
+                        builder: (_, __) => Transform.scale(
+                          scale: _pulseAnimation.value,
+                          child: _StatusPill(
+                            icon:  Icons.navigation_rounded,
+                            label: 'En Route to Pickup',
+                            color: AppColors.info,
+                          ),
+                        ),
+                      ),
               ]),
             ),
           ),
 
-          // ── 4. RE-CENTER FAB ─────────────────────────────
-          // Floats just above the default sheet position
+          // ── 4. RE-CENTER FAB ────────────────────────────────
           Positioned(
             right:  16,
             bottom: screenH * initFraction + 16,
@@ -1128,23 +983,23 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
               backgroundColor: Colors.white,
               elevation:       4,
               onPressed: () {
-                if (_currentPosition == null) return;
-                _mapController?.animateCamera(
-                  CameraUpdate.newCameraPosition(CameraPosition(
-                    target: LatLng(_currentPosition!.latitude,
-                        _currentPosition!.longitude),
-                    zoom:    16,
-                    bearing: _currentPosition!.heading,
-                    tilt:    30,
-                  )),
-                );
+                setState(() => _isFollowingDriver = true);
+                if (_currentPosition != null) {
+                  try {
+                    _mapCtrl.move(
+                      LatLng(_currentPosition!.latitude,
+                          _currentPosition!.longitude),
+                      16,
+                    );
+                  } catch (_) {}
+                }
               },
               child: const Icon(Icons.my_location_rounded,
                   color: Colors.black87),
             ),
           ),
 
-          // ── 5. DRAGGABLE BOTTOM SHEET ────────────────────
+          // ── 5. DRAGGABLE BOTTOM SHEET ───────────────────────
           DraggableScrollableSheet(
             controller:       _sheetCtrl,
             initialChildSize: initFraction,
@@ -1173,7 +1028,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
             ),
           ),
 
-          // ── 6. ROUTE-LOADING OVERLAY ─────────────────────
+          // ── 6. LOADING OVERLAY ──────────────────────────────
           if (_isLoadingRoute)
             Positioned.fill(
               child: Container(
@@ -1201,10 +1056,10 @@ class _StatusPill extends StatelessWidget {
   final Color    color;
   const _StatusPill(
       {required this.icon, required this.label, required this.color});
+
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(
-        horizontal: 16, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
     decoration: BoxDecoration(
       color:        color,
       borderRadius: BorderRadius.circular(50),
@@ -1230,18 +1085,15 @@ class _StatusPill extends StatelessWidget {
 class _ReroutingPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(
-        horizontal: 14, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
     decoration: BoxDecoration(
-        color:        AppColors.warning,
-        borderRadius: BorderRadius.circular(50)),
+        color: AppColors.warning, borderRadius: BorderRadius.circular(50)),
     child: const Row(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
         width: 14, height: 14,
         child: CircularProgressIndicator(
             strokeWidth: 2,
-            valueColor:
-            AlwaysStoppedAnimation(Colors.white)),
+            valueColor:  AlwaysStoppedAnimation(Colors.white)),
       ),
       SizedBox(width: 8),
       Text('Rerouting…',
@@ -1257,8 +1109,8 @@ class _CircleBtn extends StatelessWidget {
   final IconData     icon;
   final VoidCallback onTap;
   final Color?       color;
-  const _CircleBtn(
-      {required this.icon, required this.onTap, this.color});
+  const _CircleBtn({required this.icon, required this.onTap, this.color});
+
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
@@ -1274,14 +1126,13 @@ class _CircleBtn extends StatelessWidget {
               offset:     const Offset(0, 4))
         ],
       ),
-      child: Icon(icon,
-          size: 22, color: color ?? Colors.black87),
+      child: Icon(icon, size: 22, color: color ?? Colors.black87),
     ),
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// BOTTOM SHEET CONTENT  (stateless — all state lives in parent)
+// BOTTOM SHEET CONTENT
 // ═══════════════════════════════════════════════════════════════
 
 class _BottomSheetContent extends StatelessWidget {
@@ -1341,8 +1192,6 @@ class _BottomSheetContent extends StatelessWidget {
         padding:    EdgeInsets.zero,
         physics:    const ClampingScrollPhysics(),
         children: [
-
-          // ── DRAG HANDLE ─────────────────────────────────
           Center(
             child: Container(
               margin:    const EdgeInsets.only(top: 12, bottom: 4),
@@ -1361,7 +1210,7 @@ class _BottomSheetContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
 
-                // ── 3 INFO TILES ─────────────────────────
+                // 3 info tiles
                 Row(children: [
                   Expanded(child: _InfoTile(
                     icon:   Icons.access_time_rounded,
@@ -1377,7 +1226,6 @@ class _BottomSheetContent extends StatelessWidget {
                     accent: AppColors.warning,
                   )),
                   const SizedBox(width: 10),
-                  // ✅ Speed tile — new
                   Expanded(child: _InfoTile(
                     icon:   Icons.speed_rounded,
                     label:  'Speed',
@@ -1386,7 +1234,6 @@ class _BottomSheetContent extends StatelessWidget {
                   )),
                 ]),
 
-                // ── REROUTE BADGE (visible when > 0) ─────
                 if (rerouteCount > 0) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -1404,7 +1251,7 @@ class _BottomSheetContent extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         'Rerouted $rerouteCount '
-                            '${rerouteCount == 1 ? 'time' : 'times'}',
+                        '${rerouteCount == 1 ? 'time' : 'times'}',
                         style: AppTypography.bodySmall.copyWith(
                             color:      AppColors.warning,
                             fontWeight: FontWeight.w600),
@@ -1415,20 +1262,18 @@ class _BottomSheetContent extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // ── PASSENGER CARD ────────────────────────
                 _PassengerCard(
-                  name:   passengerName,
+                  name:    passengerName,
                   initial: passengerInitial,
-                  avatar: passengerAvatar,
-                  rating: passengerRating,
-                  trips:  passengerTrips,
-                  onCall: onCall,
-                  onChat: onChat,
+                  avatar:  passengerAvatar,
+                  rating:  passengerRating,
+                  trips:   passengerTrips,
+                  onCall:  onCall,
+                  onChat:  onChat,
                 ),
 
                 const SizedBox(height: 14),
 
-                // ── PICKUP ADDRESS ROW ────────────────────
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 14),
@@ -1452,8 +1297,7 @@ class _BottomSheetContent extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Pickup Location',
-                              style: AppTypography.labelSmall
-                                  .copyWith(
+                              style: AppTypography.labelSmall.copyWith(
                                   color: AppColors.textSecondary)),
                           const SizedBox(height: 3),
                           Text(
@@ -1471,19 +1315,16 @@ class _BottomSheetContent extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // ── CANCEL / ARRIVED BUTTONS ──────────────
                 Row(children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: onCancel,
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 16),
-                        side: const BorderSide(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side:    const BorderSide(
                             color: AppColors.error, width: 2),
                         shape: RoundedRectangleBorder(
-                            borderRadius:
-                            BorderRadius.circular(14)),
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                       child: const Text('Cancel',
                           style: TextStyle(
@@ -1497,19 +1338,18 @@ class _BottomSheetContent extends StatelessWidget {
                     child: Container(
                       height: 54,
                       decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
+                        gradient:     AppColors.primaryGradient,
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                              color: AppColors.primaryGold
-                                  .withOpacity(0.3),
+                              color: AppColors.primaryGold.withOpacity(0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 4))
                         ],
                       ),
                       child: ElevatedButton.icon(
                         onPressed: onArrived,
-                        icon: const Icon(Icons.check_circle_rounded,
+                        icon:  const Icon(Icons.check_circle_rounded,
                             color: Colors.black, size: 20),
                         label: const Text("I've Arrived",
                             style: TextStyle(
@@ -1520,8 +1360,7 @@ class _BottomSheetContent extends StatelessWidget {
                           backgroundColor: Colors.transparent,
                           shadowColor:     Colors.transparent,
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14)),
                         ),
                       ),
                     ),
@@ -1618,10 +1457,6 @@ class _PassengerCard extends StatelessWidget {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// PASSENGER AVATAR
-// ═══════════════════════════════════════════════════════════════
-
 class _PassengerAvatar extends StatelessWidget {
   final String  initial;
   final String? avatarUrl;
@@ -1643,22 +1478,22 @@ class _PassengerAvatar extends StatelessWidget {
     width:  size,
     height: size,
     decoration: BoxDecoration(
-      shape: BoxShape.circle,
+      shape:  BoxShape.circle,
       border: Border.all(
           color: AppColors.primaryGold.withOpacity(0.5), width: 2),
     ),
     child: ClipOval(
       child: _valid
           ? CachedNetworkImage(
-        imageUrl:    avatarUrl!,
-        width:       size,
-        height:      size,
-        fit:         BoxFit.cover,
-        placeholder: (_, __) =>
-            _AvatarFallback(initial: initial, size: size),
-        errorWidget: (_, __, ___) =>
-            _AvatarFallback(initial: initial, size: size),
-      )
+              imageUrl:    avatarUrl!,
+              width:       size,
+              height:      size,
+              fit:         BoxFit.cover,
+              placeholder: (_, __) =>
+                  _AvatarFallback(initial: initial, size: size),
+              errorWidget: (_, __, ___) =>
+                  _AvatarFallback(initial: initial, size: size),
+            )
           : _AvatarFallback(initial: initial, size: size),
     ),
   );
@@ -1667,12 +1502,12 @@ class _PassengerAvatar extends StatelessWidget {
 class _AvatarFallback extends StatelessWidget {
   final String initial;
   final double size;
-  const _AvatarFallback(
-      {required this.initial, required this.size});
+  const _AvatarFallback({required this.initial, required this.size});
+
   @override
   Widget build(BuildContext context) => Container(
     width: size, height: size,
-    color: AppColors.primaryGold,
+    color:     AppColors.primaryGold,
     alignment: Alignment.center,
     child: Text(initial,
         style: TextStyle(
@@ -1701,13 +1536,11 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(
-        vertical: 12, horizontal: 6),
+    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
     decoration: BoxDecoration(
       color:        accent.withOpacity(0.08),
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(
-          color: accent.withOpacity(0.25), width: 1.5),
+      border: Border.all(color: accent.withOpacity(0.25), width: 1.5),
     ),
     child: Column(children: [
       Icon(icon, color: accent, size: 20),
@@ -1741,15 +1574,14 @@ class _ActionBtn extends StatelessWidget {
     required this.bgColor,
     required this.onTap,
   });
+
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      width:  42,
-      height: 42,
+      width: 42, height: 42,
       decoration: BoxDecoration(
-          color:        bgColor,
-          borderRadius: BorderRadius.circular(12)),
+          color: bgColor, borderRadius: BorderRadius.circular(12)),
       child: Icon(icon, color: iconColor, size: 20),
     ),
   );
@@ -1780,24 +1612,21 @@ class _CancelDialogState extends State<_CancelDialog> {
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20)),
       title: const Text('Cancel Trip?',
-          style: TextStyle(
-              fontSize: 18, fontWeight: FontWeight.w700)),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Please select a reason:',
-              style: TextStyle(
-                  fontSize: 14, color: Colors.black54)),
+              style: TextStyle(fontSize: 14, color: Colors.black54)),
           const SizedBox(height: 12),
           ..._reasons.map((r) => RadioListTile<String>(
-            title: Text(r,
-                style: const TextStyle(fontSize: 14)),
-            value:       r,
-            groupValue:  _selected,
-            dense:       true,
+            title:      Text(r, style: const TextStyle(fontSize: 14)),
+            value:      r,
+            groupValue: _selected,
+            dense:      true,
             activeColor: AppColors.primaryGold,
-            onChanged:   (v) => setState(() => _selected = v),
+            onChanged:  (v) => setState(() => _selected = v),
           )),
         ],
       ),

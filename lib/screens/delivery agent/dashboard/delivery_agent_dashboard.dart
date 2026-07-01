@@ -3,11 +3,15 @@
 // Delivery Agent Dashboard — Production Ready
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// CHANGES IN THIS VERSION:
-//   ✅ Mode switch pill added to SliverAppBar actions
-//      — taps showModeSwitchSheet() from widgets/mode_switch_sheet.dart
-//      — DELIVERY_AGENT sees: Switch to Regular User
-//      — DRIVER in delivery mode sees: Switch to Driver Mode / Regular User
+// CHANGELOG:
+//   ✅ FIX: _fetchWallet() now reads body['data'] instead of body['wallet']
+//      to match the controller response shape:
+//        { success: true, data: { wallet_id, balance, available_balance, ... } }
+//   ✅ Mode switch pill in SliverAppBar actions
+//   ✅ Socket: delivery:new_request, delivery:request_expired, delivery:cancelled
+//   ✅ Active delivery resume banner with slide animation
+//   ✅ Offer overlay with countdown timer + accept/decline
+//   ✅ GPS updates every 15s while online
 
 import 'dart:async';
 import 'dart:convert';
@@ -20,7 +24,9 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../../../core/config.dart';
 import '../../../utils/app_colors.dart';
-import '../../../widgets/mode_switch_sheet.dart';           // ← NEW
+import '../../../widgets/mode_switch_sheet.dart';
+import '../../notification/notification_badge.dart';
+import '../../notification/notification_screen.dart';
 import '../agent_profile/agent_profile_screen.dart';
 import '../delivery wallet/delivery_wallet_screen.dart';
 import '../delivery_active/delivery_active_screen.dart';
@@ -39,7 +45,7 @@ class _Wallet {
   final double totalCommissionPaid;
   final double outstandingCommission;
   final String status;
-  final bool canAcceptJobs;
+  final bool   canAcceptJobs;
   final String? frozenReason;
 
   const _Wallet({
@@ -55,26 +61,30 @@ class _Wallet {
   });
 
   factory _Wallet.empty() => const _Wallet(
-    balance: 0,
-    availableBalance: 0,
-    reservedBalance: 0,
-    totalEarned: 0,
-    totalCommissionPaid: 0,
+    balance:               0,
+    availableBalance:      0,
+    reservedBalance:       0,
+    totalEarned:           0,
+    totalCommissionPaid:   0,
     outstandingCommission: 0,
-    status: 'active',
+    status:        'active',
     canAcceptJobs: false,
   );
 
+  /// Controller returns body['data'] with snake_case keys:
+  ///   balance, available_balance, reserved_balance, total_earned,
+  ///   total_commission_paid, outstanding_commission, status,
+  ///   can_accept_jobs, frozen_reason
   factory _Wallet.fromJson(Map<String, dynamic> j) => _Wallet(
-    balance:              _n(j['balance']),
-    availableBalance:     _n(j['availableBalance']     ?? j['available_balance']),
-    reservedBalance:      _n(j['reservedBalance']      ?? j['reserved_balance']),
-    totalEarned:          _n(j['totalEarned']          ?? j['total_earned']),
-    totalCommissionPaid:  _n(j['totalCommissionPaid']  ?? j['total_commission_paid']),
-    outstandingCommission:_n(j['outstandingCommission']?? j['outstanding_commission']),
-    status:        j['status']       as String? ?? 'active',
-    canAcceptJobs: j['canAcceptJobs'] as bool?  ?? j['can_accept_jobs'] as bool? ?? false,
-    frozenReason:  j['frozenReason']  as String? ?? j['frozen_reason']  as String?,
+    balance:               _n(j['balance']),
+    availableBalance:      _n(j['available_balance']      ?? j['availableBalance']),
+    reservedBalance:       _n(j['reserved_balance']       ?? j['reservedBalance']),
+    totalEarned:           _n(j['total_earned']           ?? j['totalEarned']),
+    totalCommissionPaid:   _n(j['total_commission_paid']  ?? j['totalCommissionPaid']),
+    outstandingCommission: _n(j['outstanding_commission'] ?? j['outstandingCommission']),
+    status:        j['status']          as String? ?? 'active',
+    canAcceptJobs: j['can_accept_jobs'] as bool?   ?? j['canAcceptJobs'] as bool? ?? false,
+    frozenReason:  j['frozen_reason']   as String? ?? j['frozenReason']  as String?,
   );
 
   static double _n(dynamic v) => (v as num? ?? 0).toDouble();
@@ -274,7 +284,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ACTIVE DELIVERY
+  // ACTIVE DELIVERY CHECK
   // ─────────────────────────────────────────────────────────────────────────
 
   Future<void> _checkActiveDelivery() async {
@@ -381,7 +391,11 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
 
     _socket!.on('connect', (_) {
       debugPrint('🔌 [AGENT] Socket connected: ${_socket!.id}');
-      if (mounted) setState(() => _socketConnected = true);
+      if (mounted) {
+        setState(() => _socketConnected = true);
+        // Refresh active delivery state on reconnect so stale banner never persists
+        _checkActiveDelivery();
+      }
     });
 
     _socket!.on('disconnect', (_) {
@@ -410,8 +424,15 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // WALLET
+  // WALLET  ← KEY FIX: body['data'] not body['wallet']
   // ─────────────────────────────────────────────────────────────────────────
+  //
+  // Controller response shape:
+  //   GET /api/deliveries/driver/wallet
+  //   → { success: true, data: { wallet_id, balance, available_balance, ... } }
+  //
+  // The old code read body['wallet'] which was always null, causing the wallet
+  // to display zeros on the dashboard even when the API call succeeded.
 
   Future<void> _fetchWallet() async {
     if (_accessToken.isEmpty) {
@@ -427,8 +448,11 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
-        final body       = jsonDecode(res.body) as Map<String, dynamic>;
-        final walletData = body['wallet'] as Map<String, dynamic>?;
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+
+        // ✅ FIXED: controller returns body['data'], not body['wallet']
+        final walletData = body['data'] as Map<String, dynamic>?;
+
         if (walletData != null && mounted) {
           setState(() {
             _wallet        = _Wallet.fromJson(walletData);
@@ -459,6 +483,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
 
     try {
       if (!_isOnline) {
+        // ── GPS check ──────────────────────────────────────────────────────
         final serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) {
           _showSnack('GPS is turned off. Enable location in device settings.',
@@ -492,32 +517,34 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
           return;
         }
 
+        // ── Go online ──────────────────────────────────────────────────────
         final onlineRes = await http.post(
           Uri.parse('${AppConfig.apiBaseUrl}/driver/online'),
           headers: {
             'Authorization': 'Bearer $_accessToken',
-            'Content-Type': 'application/json',
+            'Content-Type':  'application/json',
           },
           body: jsonEncode({
-            'lat': pos.latitude,
-            'lng': pos.longitude,
+            'lat':     pos.latitude,
+            'lng':     pos.longitude,
             'heading': pos.heading,
           }),
         ).timeout(const Duration(seconds: 12));
 
         if (onlineRes.statusCode != 200) {
-          final err = _parseMessage(onlineRes.body, 'Failed to go online');
-          _showSnack(err, isError: true);
+          _showSnack(_parseMessage(onlineRes.body, 'Failed to go online'),
+              isError: true);
           if (mounted) setState(() => _togglingStatus = false);
           return;
         }
 
+        // ── Set delivery mode (best-effort) ────────────────────────────────
         await http
             .post(
           Uri.parse('${AppConfig.apiBaseUrl}/deliveries/driver/mode'),
           headers: {
             'Authorization': 'Bearer $_accessToken',
-            'Content-Type': 'application/json',
+            'Content-Type':  'application/json',
           },
           body: jsonEncode({'mode': 'delivery'}),
         )
@@ -526,13 +553,17 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_online', true);
-        if (mounted) setState(() {
-          _isOnline       = true;
-          _togglingStatus = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isOnline       = true;
+            _togglingStatus = false;
+          });
+        }
         _startGpsUpdates();
         _showSnack("You're now online 🟢", isError: false);
+
       } else {
+        // ── Go offline ─────────────────────────────────────────────────────
         final offlineRes = await http.post(
           Uri.parse('${AppConfig.apiBaseUrl}/driver/offline'),
           headers: {'Authorization': 'Bearer $_accessToken'},
@@ -542,14 +573,16 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
           _gpsTimer?.cancel();
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_online', false);
-          if (mounted) setState(() {
-            _isOnline       = false;
-            _togglingStatus = false;
-          });
+          if (mounted) {
+            setState(() {
+              _isOnline       = false;
+              _togglingStatus = false;
+            });
+          }
           _showSnack("You're now offline", isError: false);
         } else {
-          final err = _parseMessage(offlineRes.body, 'Failed to go offline');
-          _showSnack(err, isError: true);
+          _showSnack(_parseMessage(offlineRes.body, 'Failed to go offline'),
+              isError: true);
           if (mounted) setState(() => _togglingStatus = false);
         }
       }
@@ -574,8 +607,8 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
 
     _sendLocation();
     _gpsTimer?.cancel();
-    _gpsTimer = Timer.periodic(
-        const Duration(seconds: 15), (_) => _sendLocation());
+    _gpsTimer =
+        Timer.periodic(const Duration(seconds: 15), (_) => _sendLocation());
   }
 
   Future<void> _sendLocation() async {
@@ -597,7 +630,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         Uri.parse('${AppConfig.apiBaseUrl}/driver/location'),
         headers: {
           'Authorization': 'Bearer $_accessToken',
-          'Content-Type': 'application/json',
+          'Content-Type':  'application/json',
         },
         body: jsonEncode({
           'lat':     pos.latitude,
@@ -658,7 +691,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         Uri.parse('${AppConfig.apiBaseUrl}/deliveries/$deliveryId/accept'),
         headers: {
           'Authorization': 'Bearer $_accessToken',
-          'Content-Type': 'application/json',
+          'Content-Type':  'application/json',
         },
       ).timeout(const Duration(seconds: 12));
 
@@ -720,12 +753,10 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   void _showSnack(String msg, {required bool isError}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg,
-          style: const TextStyle(fontFamily: 'Roboto')),
+      content: Text(msg, style: const TextStyle(fontFamily: 'Roboto')),
       backgroundColor: isError ? AppColors.error : AppColors.success,
       behavior: SnackBarBehavior.floating,
-      shape:
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       duration: Duration(seconds: isError ? 4 : 2),
     ));
   }
@@ -768,8 +799,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: 20),
 
-                      if (!_loadingActiveDelivery &&
-                          _activeDelivery != null) ...[
+                      if (!_loadingActiveDelivery && _activeDelivery != null) ...[
                         SlideTransition(
                           position: _bannerSlide,
                           child: _buildActiveDeliveryBanner(),
@@ -802,7 +832,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // APP BAR  ← MODE SWITCH PILL ADDED HERE
+  // APP BAR
   // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildAppBar() {
@@ -812,14 +842,13 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       backgroundColor: AppColors.primaryDark,
       automaticallyImplyLeading: false,
       actions: [
-        // ── Mode switch pill ─────────────────────────────────────────────
+        // ── Mode switch pill ──────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
           child: GestureDetector(
             onTap: () => showModeSwitchSheet(context),
             child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color:        Colors.white.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
@@ -832,55 +861,56 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   Icon(Icons.swap_horiz_rounded,
                       color: AppColors.primaryGold, size: 14),
                   SizedBox(width: 4),
-                  Text(
-                    'Switch',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize:   11,
-                      fontWeight: FontWeight.w700,
-                      color:      AppColors.primaryGold,
-                    ),
-                  ),
+                  Text('Switch',
+                      style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize:   11,
+                          fontWeight: FontWeight.w700,
+                          color:      AppColors.primaryGold)),
                 ],
               ),
             ),
           ),
         ),
 
-        // ── Socket status indicator ───────────────────────────────────────
+        // ── Socket status ─────────────────────────────────────────────────
+        // ── Notification bell ─────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: AnimatedBuilder(
-            animation: _pulse,
-            builder: (_, __) => Transform.scale(
-              scale: _socketConnected ? _pulse.value : 1.0,
-              child: IconButton(
-                icon: Icon(
-                  _socketConnected
-                      ? Icons.wifi_rounded
-                      : Icons.wifi_off_rounded,
-                  color: _socketConnected
-                      ? AppColors.success
-                      : AppColors.textSecondary,
-                  size: 20,
+          child: NotificationBadge(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const NotificationScreen(),
                 ),
-                onPressed: null,
-                tooltip:
-                _socketConnected ? 'Connected' : 'Disconnected',
+              ).then((_) => NotificationBadge.refresh());
+            },
+            child: IconButton(
+              icon: const Icon(
+                Icons.notifications_outlined,
+                color: Colors.white,
+                size: 22,
               ),
+              onPressed: null,
+              tooltip: 'Notifications',
             ),
           ),
         ),
 
         IconButton(
-          icon: const Icon(Icons.refresh_rounded,
-              color: Colors.white, size: 22),
+          icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 22),
+          onPressed: _refreshAll,
+          tooltip: 'Refresh',
+        ),
+
+        IconButton(
+          icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 22),
           onPressed: _refreshAll,
           tooltip: 'Refresh',
         ),
         IconButton(
-          icon: const Icon(Icons.logout_rounded,
-              color: Colors.white, size: 22),
+          icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 22),
           onPressed: _logout,
           tooltip: 'Log out',
         ),
@@ -947,9 +977,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      _isOnline
-                          ? 'Online — Delivery Mode'
-                          : 'Offline',
+                      _isOnline ? 'Online — Delivery Mode' : 'Offline',
                       style: TextStyle(
                           fontFamily: 'Roboto',
                           fontSize:   10,
@@ -986,8 +1014,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   }
 
   Widget _avatarInitial() {
-    final initial =
-    _firstName.isNotEmpty ? _firstName[0].toUpperCase() : 'A';
+    final initial = _firstName.isNotEmpty ? _firstName[0].toUpperCase() : 'A';
     return Center(
       child: Text(initial,
           style: const TextStyle(
@@ -1012,14 +1039,10 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
           gradient: LinearGradient(
             begin:  Alignment.topLeft,
             end:    Alignment.bottomRight,
-            colors: [
-              AppColors.primaryDark,
-              AppColors.primaryDark.withBlue(50),
-            ],
+            colors: [AppColors.primaryDark, AppColors.primaryDark.withBlue(50)],
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: d.statusColor.withOpacity(0.5), width: 1.5),
+          border: Border.all(color: d.statusColor.withOpacity(0.5), width: 1.5),
           boxShadow: [
             BoxShadow(
                 color:      d.statusColor.withOpacity(0.2),
@@ -1060,9 +1083,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        d.deliveryType == 'express'
-                            ? '⚡ EXPRESS'
-                            : '📦 REGULAR',
+                        d.deliveryType == 'express' ? '⚡ EXPRESS' : '📦 REGULAR',
                         style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize:   9,
@@ -1103,11 +1124,9 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
             const SizedBox(width: 12),
             _resumingActiveDelivery
                 ? const SizedBox(
-                width:  28,
-                height: 28,
+                width:  28, height: 28,
                 child:  CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color:       AppColors.primaryGold))
+                    strokeWidth: 2.5, color: AppColors.primaryGold))
                 : Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 8),
@@ -1163,9 +1182,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               width:  56,
               height: 56,
               decoration: BoxDecoration(
-                color: _isOnline
-                    ? AppColors.success
-                    : AppColors.borderLight,
+                color: _isOnline ? AppColors.success : AppColors.borderLight,
                 shape: BoxShape.circle,
               ),
               child: _togglingStatus
@@ -1174,9 +1191,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   child: CircularProgressIndicator(
                       strokeWidth: 2.5, color: Colors.white))
                   : Icon(
-                  _isOnline
-                      ? Icons.wifi_rounded
-                      : Icons.wifi_off_rounded,
+                  _isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
                   color: Colors.white,
                   size:  28),
             ),
@@ -1191,7 +1206,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         fontFamily: 'Poppins',
                         fontSize:   17,
                         fontWeight: FontWeight.w800,
-                        color:      _isOnline
+                        color: _isOnline
                             ? AppColors.success
                             : AppColors.textPrimary),
                   ),
@@ -1203,7 +1218,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     style: TextStyle(
                         fontFamily: 'Roboto',
                         fontSize:   12,
-                        color:      _isOnline
+                        color: _isOnline
                             ? AppColors.success.withOpacity(0.7)
                             : AppColors.textSecondary),
                   ),
@@ -1215,9 +1230,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               width:  52,
               height: 30,
               decoration: BoxDecoration(
-                color: _isOnline
-                    ? AppColors.success
-                    : AppColors.borderMedium,
+                color: _isOnline ? AppColors.success : AppColors.borderMedium,
                 borderRadius: BorderRadius.circular(15),
               ),
               child: AnimatedAlign(
@@ -1254,7 +1267,8 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   Widget _buildWalletCard() {
     return GestureDetector(
       onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const DeliveryWalletScreen())),
+          MaterialPageRoute(
+              builder: (_) => DeliveryWalletScreen(socket: _socket))),
       child: Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
@@ -1272,8 +1286,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
             child: Padding(
                 padding: EdgeInsets.all(16),
                 child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.primaryGold)))
+                    strokeWidth: 2, color: AppColors.primaryGold)))
             : Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1293,8 +1306,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     context,
                     MaterialPageRoute(
                         builder: (_) =>
-                        const DeliveryWalletScreen(
-                            initialTab: 1))),
+                        const DeliveryWalletScreen(initialTab: 1))),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 5),
@@ -1302,8 +1314,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     color: AppColors.primaryGold.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: AppColors.primaryGold
-                            .withOpacity(0.3)),
+                        color: AppColors.primaryGold.withOpacity(0.3)),
                   ),
                   child: const Row(children: [
                     Icon(Icons.add_rounded,
@@ -1325,10 +1336,10 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
             Text(
               _fmt(_wallet.availableBalance),
               style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize:   32,
-                  fontWeight: FontWeight.w800,
-                  color:      AppColors.primaryGold,
+                  fontFamily:    'Poppins',
+                  fontSize:      32,
+                  fontWeight:    FontWeight.w800,
+                  color:         AppColors.primaryGold,
                   letterSpacing: -1),
             ),
             Text('Available balance',
@@ -1338,32 +1349,21 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     color: Colors.white.withOpacity(0.4))),
 
             const SizedBox(height: 18),
-            Container(
-                height: 1,
-                color: Colors.white.withOpacity(0.07)),
+            Container(height: 1, color: Colors.white.withOpacity(0.07)),
             const SizedBox(height: 16),
 
             Row(children: [
-              Expanded(
-                  child: _walletStat('Reserved',
-                      _fmt(_wallet.reservedBalance),
-                      AppColors.warning)),
-              Container(
-                  width:  1,
-                  height: 36,
+              Expanded(child: _walletStat(
+                  'Reserved', _fmt(_wallet.reservedBalance), AppColors.warning)),
+              Container(width: 1, height: 36,
                   color: Colors.white.withOpacity(0.08)),
-              Expanded(
-                  child: _walletStat('Total Earned',
-                      _fmt(_wallet.totalEarned),
-                      AppColors.success)),
-              Container(
-                  width:  1,
-                  height: 36,
+              Expanded(child: _walletStat(
+                  'Total Earned', _fmt(_wallet.totalEarned), AppColors.success)),
+              Container(width: 1, height: 36,
                   color: Colors.white.withOpacity(0.08)),
-              Expanded(
-                  child: _walletStat('Commission Due',
-                      _fmt(_wallet.outstandingCommission),
-                      AppColors.textSecondary)),
+              Expanded(child: _walletStat(
+                  'Commission Due', _fmt(_wallet.outstandingCommission),
+                  AppColors.textSecondary)),
             ]),
 
             if (_wallet.status != 'active') ...[
@@ -1424,22 +1424,19 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   Widget _buildStatsRow() {
     final activeCount = _activeDelivery != null ? '1' : '0';
     return Row(children: [
-      Expanded(
-          child: _statCard('💰', 'Total\nEarned',
-              _fmt(_wallet.totalEarned), AppColors.success)),
+      Expanded(child: _statCard(
+          '💰', 'Total\nEarned', _fmt(_wallet.totalEarned), AppColors.success)),
       const SizedBox(width: 12),
-      Expanded(
-          child: _statCard('🔒', 'Commission\nReserved',
-              _fmt(_wallet.reservedBalance), AppColors.warning)),
+      Expanded(child: _statCard(
+          '🔒', 'Commission\nReserved', _fmt(_wallet.reservedBalance),
+          AppColors.warning)),
       const SizedBox(width: 12),
-      Expanded(
-          child: _statCard(
-              '📦', 'Active\nDeliveries', activeCount, AppColors.info)),
+      Expanded(child: _statCard(
+          '📦', 'Active\nDeliveries', activeCount, AppColors.info)),
     ]);
   }
 
-  Widget _statCard(
-      String emoji, String label, String value, Color color) {
+  Widget _statCard(String emoji, String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
       decoration: BoxDecoration(
@@ -1458,10 +1455,8 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         const SizedBox(height: 6),
         _loadingWallet
             ? SizedBox(
-            width:  16,
-            height: 16,
-            child:  CircularProgressIndicator(
-                strokeWidth: 2, color: color))
+            width:  16, height: 16,
+            child:  CircularProgressIndicator(strokeWidth: 2, color: color))
             : Text(value,
             style: TextStyle(
                 fontFamily: 'Poppins',
@@ -1498,44 +1493,34 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                 color:      AppColors.textPrimary)),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(
-              child: _actionButton(
-                  icon:  Icons.account_balance_wallet_outlined,
-                  label: 'My Wallet',
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                          const DeliveryWalletScreen(
-                              initialTab: 1))))),
+          Expanded(child: _actionButton(
+              icon:  Icons.account_balance_wallet_outlined,
+              label: 'My Wallet',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                      const DeliveryWalletScreen(initialTab: 1))))),
           const SizedBox(width: 10),
-          Expanded(
-              child: _actionButton(
-                  icon:  Icons.history_rounded,
-                  label: 'History',
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                          const DeliveryHistoryScreen())))),
+          Expanded(child: _actionButton(
+              icon:  Icons.history_rounded,
+              label: 'History',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const DeliveryHistoryScreen())))),
           const SizedBox(width: 10),
-          Expanded(
-              child: _actionButton(
-                  icon:  Icons.person_outline_rounded,
-                  label: 'Profile',
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                          const AgentProfileScreen())))),
+          Expanded(child: _actionButton(
+              icon:  Icons.person_outline_rounded,
+              label: 'Profile',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const AgentProfileScreen())))),
           const SizedBox(width: 10),
-          Expanded(
-              child: _actionButton(
-                  icon:  Icons.headset_mic_outlined,
-                  label: 'Support',
-                  onTap: () {
-                    // TODO: launch support screen
-                  })),
+          Expanded(child: _actionButton(
+              icon:  Icons.headset_mic_outlined,
+              label: 'Support',
+              onTap: () {
+                // TODO: launch support screen
+              })),
         ]),
       ],
     );
@@ -1580,23 +1565,20 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildWalletWarning() {
-    if (_wallet.canAcceptJobs || _loadingWallet)
-      return const SizedBox.shrink();
+    if (_wallet.canAcceptJobs || _loadingWallet) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color:        AppColors.warningLight,
         borderRadius: BorderRadius.circular(16),
-        border:
-        Border.all(color: AppColors.warning.withOpacity(0.4)),
+        border:       Border.all(color: AppColors.warning.withOpacity(0.4)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
               padding: EdgeInsets.only(top: 2),
-              child:   Text('⚠️',
-                  style: TextStyle(fontSize: 20))),
+              child:   Text('⚠️', style: TextStyle(fontSize: 20))),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1619,12 +1601,10 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         height:     1.5)),
                 const SizedBox(height: 12),
                 GestureDetector(
-                  onTap: () => Navigator.push(
-                      context,
+                  onTap: () => Navigator.push(context,
                       MaterialPageRoute(
                           builder: (_) =>
-                          const DeliveryWalletScreen(
-                              initialTab: 1))),
+                          const DeliveryWalletScreen(initialTab: 1))),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
@@ -1663,8 +1643,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded,
-              color: AppColors.info, size: 18),
+          Icon(Icons.info_outline_rounded, color: AppColors.info, size: 18),
           SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1743,9 +1722,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                 Container(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                   decoration: BoxDecoration(
-                    color: isExpress
-                        ? AppColors.primaryDark
-                        : AppColors.primaryGold,
+                    color: isExpress ? AppColors.primaryDark : AppColors.primaryGold,
                     borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(24)),
                   ),
@@ -1776,8 +1753,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                                 fontSize:   11,
                                 color: isExpress
                                     ? Colors.white.withOpacity(0.5)
-                                    : AppColors.primaryDark
-                                    .withOpacity(0.55)),
+                                    : AppColors.primaryDark.withOpacity(0.55)),
                           ),
                         ],
                       ),
@@ -1819,10 +1795,10 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                           children: [
                             Text(_fmt(payout),
                                 style: const TextStyle(
-                                    fontFamily:  'Poppins',
-                                    fontSize:    28,
-                                    fontWeight:  FontWeight.w800,
-                                    color:       AppColors.success,
+                                    fontFamily:    'Poppins',
+                                    fontSize:      28,
+                                    fontWeight:    FontWeight.w800,
+                                    color:         AppColors.success,
                                     letterSpacing: -0.5)),
                             const Text('Your payout',
                                 style: TextStyle(
@@ -1855,8 +1831,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     const SizedBox(height: 12),
 
                     Row(children: [
-                      Text(emoji,
-                          style: const TextStyle(fontSize: 22)),
+                      Text(emoji, style: const TextStyle(fontSize: 22)),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -1898,24 +1873,20 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   ]),
                 ),
 
-                // Buttons
+                // Accept / Decline buttons
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                   child: Row(children: [
                     Expanded(
                       flex: 2,
                       child: OutlinedButton(
-                        onPressed:
-                        _acceptingOffer ? null : _declineOffer,
+                        onPressed: _acceptingOffer ? null : _declineOffer,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textSecondary,
-                          side: const BorderSide(
-                              color: AppColors.borderMedium),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14),
+                          side: const BorderSide(color: AppColors.borderMedium),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14)),
                         ),
                         child: const Text('Decline',
                             style: TextStyle(
@@ -1928,40 +1899,31 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     Expanded(
                       flex: 3,
                       child: ElevatedButton(
-                        onPressed:
-                        _acceptingOffer ? null : _acceptOffer,
+                        onPressed: _acceptingOffer ? null : _acceptOffer,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor:
-                          AppColors.success.withOpacity(0.5),
+                          backgroundColor:         AppColors.success,
+                          foregroundColor:         Colors.white,
+                          disabledBackgroundColor: AppColors.success.withOpacity(0.5),
                           elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14)),
                         ),
                         child: _acceptingOffer
                             ? const SizedBox(
-                            width:  20,
-                            height: 20,
+                            width:  20, height: 20,
                             child:  CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color:       Colors.white))
+                                strokeWidth: 2.5, color: Colors.white))
                             : const Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.check_rounded,
-                                size: 18),
+                            Icon(Icons.check_rounded, size: 18),
                             SizedBox(width: 6),
                             Text('Accept',
                                 style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontSize:   14,
-                                    fontWeight:
-                                    FontWeight.w700)),
+                                    fontWeight: FontWeight.w700)),
                           ],
                         ),
                       ),
@@ -1982,19 +1944,15 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       children: [
         Column(children: [
           Container(
-              width:  8,
-              height: 8,
+              width:  8, height: 8,
               decoration: const BoxDecoration(
-                  color: AppColors.primaryDark,
-                  shape: BoxShape.circle)),
+                  color: AppColors.primaryDark, shape: BoxShape.circle)),
           Container(
-              width:  1.5,
-              height: 22,
+              width:  1.5, height: 22,
               color:  AppColors.borderMedium,
               margin: const EdgeInsets.symmetric(vertical: 3)),
           Container(
-              width:  8,
-              height: 8,
+              width:  8, height: 8,
               decoration: const BoxDecoration(
                   color: AppColors.success, shape: BoxShape.circle)),
         ]),

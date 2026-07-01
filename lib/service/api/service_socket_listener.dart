@@ -1,286 +1,271 @@
+// lib/service/api/service_socket_listener.dart
+// ─────────────────────────────────────────────────────────────────────────────
+// Services Marketplace — Socket.IO listener
+// ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
-import '../../service/socket_service.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ServiceSocketListener {
-  static ServiceSocketListener? _instance;
-  static ServiceSocketListener get instance {
-    _instance ??= ServiceSocketListener._();
-    return _instance!;
-  }
+  static final ServiceSocketListener instance = ServiceSocketListener._internal();
+  ServiceSocketListener._internal();
 
-  ServiceSocketListener._();
+  IO.Socket? _socket;
+  bool _connected = false;
+  String? _lastUrl;
 
-  bool _isListening = false;
+  // ── Callbacks ─────────────────────────────────────────────────────────────
+  void Function(Map<String, dynamic> data)? onNewRequest;
+  void Function(Map<String, dynamic> data)? onRequestAccepted;
+  void Function(Map<String, dynamic> data)? onRequestRejected;
+  void Function(Map<String, dynamic> data)? onServiceStarted;
+  void Function(Map<String, dynamic> data)? onPaymentRequested;
+  void Function(Map<String, dynamic> data)? onPaymentProofUploaded;
+  void Function(Map<String, dynamic> data)? onPaymentConfirmed;
+  void Function(Map<String, dynamic> data)? onRequestCancelled;
+  void Function(Map<String, dynamic> data)? onDisputeFiled;
+  void Function(Map<String, dynamic> data)? onDisputeResolved;
 
-  // Callbacks — screens register these to react to events
-  Function(Map<String, dynamic>)? onNewRequest;
-  Function(Map<String, dynamic>)? onRequestAccepted;
-  Function(Map<String, dynamic>)? onRequestRejected;
-  Function(Map<String, dynamic>)? onServiceStarted;
-  Function(Map<String, dynamic>)? onPaymentRequested;
-  Function(Map<String, dynamic>)? onPaymentProofUploaded;
-  Function(Map<String, dynamic>)? onPaymentConfirmed;
-  Function(Map<String, dynamic>)? onRequestCancelled;
-  Function(Map<String, dynamic>)? onDisputeFiled;
-  Function(Map<String, dynamic>)? onDisputeResolved;
+  // ── Connect ───────────────────────────────────────────────────────────────
+  Future<void> connect() async {
+    if (_connected && _socket != null) return;
 
-  // ═══════════════════════════════════════════════════════════════════
-  // START LISTENING
-  // Call this once after user logs in
-  // ═══════════════════════════════════════════════════════════════════
-
-  void startListening() {
-    if (_isListening) return;
-
-    final socket = SocketService.instance.socket;
-    if (socket == null) {
-      debugPrint('⚠️ [SERVICE_SOCKET_LISTENER] Socket not available');
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    if (token == null) {
+      debugPrint('⚠️ [SVC_SOCKET] No access token — skipping connect');
       return;
     }
 
-    debugPrint('🔌 [SERVICE_SOCKET_LISTENER] Starting service socket listeners...');
+    _lastUrl = dotenv.env['SOCKET_URL'] ??
+        dotenv.env['API_BASE_URL']?.replaceAll('/api', '') ??
+        'http://10.0.2.2:4000';
 
-    // ─────────────────────────────────────────────────────────────────
-    // NEW SERVICE REQUEST (Provider receives this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:new_request', (data) {
-      debugPrint('📥 [SERVICE_SOCKET] New request received');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onNewRequest?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing new_request: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // REQUEST ACCEPTED (Customer receives this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:request_accepted', (data) {
-      debugPrint('✅ [SERVICE_SOCKET] Request accepted');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onRequestAccepted?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing request_accepted: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // REQUEST REJECTED (Customer receives this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:request_rejected', (data) {
-      debugPrint('❌ [SERVICE_SOCKET] Request rejected');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onRequestRejected?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing request_rejected: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // SERVICE STARTED (Customer receives this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:started', (data) {
-      debugPrint('🚀 [SERVICE_SOCKET] Service started');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onServiceStarted?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing service_started: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // PAYMENT REQUESTED (Customer receives this when service completed)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:payment_requested', (data) {
-      debugPrint('💰 [SERVICE_SOCKET] Payment requested');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onPaymentRequested?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing payment_requested: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // PAYMENT PROOF UPLOADED (Provider receives this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:payment_proof_uploaded', (data) {
-      debugPrint('📸 [SERVICE_SOCKET] Payment proof uploaded');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onPaymentProofUploaded?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing payment_proof_uploaded: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // PAYMENT CONFIRMED (Customer receives this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:payment_confirmed', (data) {
-      debugPrint('✅ [SERVICE_SOCKET] Payment confirmed');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onPaymentConfirmed?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing payment_confirmed: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // REQUEST CANCELLED (Other party receives this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:cancelled', (data) {
-      debugPrint('🚫 [SERVICE_SOCKET] Request cancelled');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onRequestCancelled?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing cancelled: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // DISPUTE FILED (Other party receives this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:dispute_filed', (data) {
-      debugPrint('⚠️ [SERVICE_SOCKET] Dispute filed');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onDisputeFiled?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing dispute_filed: $e');
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────────
-    // DISPUTE RESOLVED (Both parties receive this)
-    // ─────────────────────────────────────────────────────────────────
-    socket.on('service:dispute_resolved', (data) {
-      debugPrint('✅ [SERVICE_SOCKET] Dispute resolved');
-      try {
-        final payload = Map<String, dynamic>.from(data as Map);
-        onDisputeResolved?.call(payload);
-      } catch (e) {
-        debugPrint('❌ [SERVICE_SOCKET] Error parsing dispute_resolved: $e');
-      }
-    });
-
-    _isListening = true;
-    debugPrint('✅ [SERVICE_SOCKET_LISTENER] All service listeners registered');
+    _buildAndConnect(_lastUrl!, token);
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // STOP LISTENING
-  // Call this when user logs out
-  // ═══════════════════════════════════════════════════════════════════
+  void _buildAndConnect(String url, String token) {
+    _socket = IO.io(
+      url,
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .enableReconnection()
+          .setReconnectionAttempts(10)
+          .setReconnectionDelay(2000)
+          .setAuth({'token': token})
+          .build(),
+    );
 
-  void stopListening() {
-    if (!_isListening) return;
+    _socket!.onConnect((_) {
+      _connected = true;
+      debugPrint('✅ [SVC_SOCKET] Connected: ${_socket!.id}');
+    });
 
-    final socket = SocketService.instance.socket;
-    if (socket == null) return;
+    _socket!.onDisconnect((_) {
+      _connected = false;
+      debugPrint('🔌 [SVC_SOCKET] Disconnected');
+    });
 
-    socket.off('service:new_request');
-    socket.off('service:request_accepted');
-    socket.off('service:request_rejected');
-    socket.off('service:started');
-    socket.off('service:payment_requested');
-    socket.off('service:payment_proof_uploaded');
-    socket.off('service:payment_confirmed');
-    socket.off('service:cancelled');
-    socket.off('service:dispute_filed');
-    socket.off('service:dispute_resolved');
+    _socket!.onConnectError((err) => debugPrint('❌ [SVC_SOCKET] Connect error: $err'));
+    _socket!.onError((err)        => debugPrint('❌ [SVC_SOCKET] Error: $err'));
 
-    _isListening = false;
-    debugPrint('🔌 [SERVICE_SOCKET_LISTENER] All service listeners removed');
+    _registerEvents();
+    _socket!.connect();
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // CLEAR ALL CALLBACKS
-  // Call this when leaving the services section
-  // ═══════════════════════════════════════════════════════════════════
+  // ── Token refresh ─────────────────────────────────────────────────────────
+  /// Called by AuthService after a successful token refresh.
+  /// Updates the auth object and reconnects if the socket was disconnected.
+  void updateAuthToken(String newToken) {
+    debugPrint('🔑 [SVC_SOCKET] Updating auth token');
 
-  void clearCallbacks() {
-    onNewRequest = null;
-    onRequestAccepted = null;
-    onRequestRejected = null;
-    onServiceStarted = null;
-    onPaymentRequested = null;
-    onPaymentProofUploaded = null;
-    onPaymentConfirmed = null;
-    onRequestCancelled = null;
-    onDisputeFiled = null;
-    onDisputeResolved = null;
+    if (_socket == null || _lastUrl == null) return;
+
+    _socket!.auth = {'token': newToken};
+
+    if (!_socket!.connected) {
+      debugPrint('🔄 [SVC_SOCKET] Was disconnected — reconnecting with new token');
+      _socket!.dispose();
+      _socket = null;
+      _connected = false;
+      _buildAndConnect(_lastUrl!, newToken);
+    }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // SHOW IN-APP NOTIFICATION BANNER
-  // Call this from any callback to show a banner to the user
-  // ═══════════════════════════════════════════════════════════════════
+  // ── Disconnect ────────────────────────────────────────────────────────────
+  void disconnect() {
+    _socket?.disconnect();
+    _socket?.dispose();
+    _socket     = null;
+    _connected  = false;
+    _clearAllCallbacks();
+    debugPrint('🔌 [SVC_SOCKET] Manually disconnected');
+  }
 
+  bool get isConnected => _connected;
+
+  // ── Register events ───────────────────────────────────────────────────────
+  void _registerEvents() {
+    _socket!.on('service:new_request',           (r) { onNewRequest?.call(_toMap(r));           });
+    _socket!.on('service:request_accepted',      (r) { onRequestAccepted?.call(_toMap(r));      });
+    _socket!.on('service:request_rejected',      (r) { onRequestRejected?.call(_toMap(r));      });
+    _socket!.on('service:started',               (r) { onServiceStarted?.call(_toMap(r));       });
+    _socket!.on('service:payment_requested',     (r) { onPaymentRequested?.call(_toMap(r));     });
+    _socket!.on('service:payment_proof_uploaded',(r) { onPaymentProofUploaded?.call(_toMap(r)); });
+    _socket!.on('service:payment_confirmed',     (r) { onPaymentConfirmed?.call(_toMap(r));     });
+    _socket!.on('service:cancelled',             (r) { onRequestCancelled?.call(_toMap(r));     });
+    _socket!.on('service:dispute_filed',         (r) { onDisputeFiled?.call(_toMap(r));         });
+    _socket!.on('service:dispute_resolved',      (r) { onDisputeResolved?.call(_toMap(r));      });
+  }
+
+  // ── Banner helper ─────────────────────────────────────────────────────────
   void showBanner({
     required BuildContext context,
     required String message,
-    required Color backgroundColor,
-    IconData icon = Icons.notifications,
+    Color backgroundColor = const Color(0xFF53C28B),
+    IconData icon = Icons.notifications_rounded,
     VoidCallback? onTap,
+    Duration duration = const Duration(seconds: 4),
   }) {
-    ScaffoldMessenger.of(context).showMaterialBanner(
-      MaterialBanner(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (_) => _ServiceBanner(
+        message:         message,
         backgroundColor: backgroundColor,
-        actions: [
-          TextButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-              onTap?.call();
-            },
-            child: const Text(
-              'VIEW',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-            },
-            child: const Text(
-              'DISMISS',
-              style: TextStyle(color: Colors.white70),
-            ),
-          ),
-        ],
+        icon:            icon,
+        onTap:   () { entry.remove(); onTap?.call(); },
+        onDismiss: ()  { entry.remove(); },
       ),
     );
 
-    // Auto-dismiss after 5 seconds
-    Future.delayed(const Duration(seconds: 5), () {
-      try {
-        ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-      } catch (_) {}
-    });
+    overlay.insert(entry);
+    Future.delayed(duration, () { if (entry.mounted) entry.remove(); });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  Map<String, dynamic> _toMap(dynamic raw) {
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v));
+    return {};
+  }
+
+  void _clearAllCallbacks() {
+    onNewRequest           = null;
+    onRequestAccepted      = null;
+    onRequestRejected      = null;
+    onServiceStarted       = null;
+    onPaymentRequested     = null;
+    onPaymentProofUploaded = null;
+    onPaymentConfirmed     = null;
+    onRequestCancelled     = null;
+    onDisputeFiled         = null;
+    onDisputeResolved      = null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOATING BANNER WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
+class _ServiceBanner extends StatefulWidget {
+  final String message;
+  final Color backgroundColor;
+  final IconData icon;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  const _ServiceBanner({
+    required this.message,
+    required this.backgroundColor,
+    required this.icon,
+    required this.onTap,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_ServiceBanner> createState() => _ServiceBannerState();
+}
+
+class _ServiceBannerState extends State<_ServiceBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<Offset> _slide;
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl  = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
+    _slide = Tween<Offset>(begin: const Offset(0, -1.5), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack));
+    _fade  = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  Future<void> _dismiss() async { await _ctrl.reverse(); widget.onDismiss(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    return Positioned(
+      top: topPadding + 12,
+      left: 16,
+      right: 16,
+      child: SlideTransition(
+        position: _slide,
+        child: FadeTransition(
+          opacity: _fade,
+          child: GestureDetector(
+            onTap: widget.onTap,
+            onVerticalDragUpdate: (d) { if ((d.primaryDelta ?? 0) < -4) _dismiss(); },
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(14),
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: widget.backgroundColor,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: widget.backgroundColor.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                      child: Icon(widget.icon, color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(widget.message,
+                          style: const TextStyle(fontFamily: 'Roboto', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white, height: 1.4),
+                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: _dismiss,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,21 +1,22 @@
-// lib/presentation/screens/passenger/delivery/delivery_tracking_express.dart
+// lib/screens/passenger/delivery/delivery express/express_delivery.dart
 //
-// EXPRESS DELIVERY TRACKING
-// Shows a live Google Map with the driver's position updating in real time.
-// Listens to:
-//   delivery:driver_location  → update driver marker on map
-//   delivery:status_update    → advance stage + update bottom sheet
-//   delivery:completed        → show complete state
-//   delivery:cancelled        → show cancellation
+// EXPRESS DELIVERY TRACKING (passenger-side)
+// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// Live driver position updates via socket. All logic preserved.
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../utils/app_colors.dart';
 import '../../../../utils/app_typography.dart';
+import '../../../../utils/map_style.dart';
+import '../../../../widgets/map_style_button.dart';
 import '../../../../core/config.dart';
 
 class DeliveryTrackingExpress extends StatefulWidget {
@@ -36,18 +37,23 @@ class DeliveryTrackingExpress extends StatefulWidget {
 class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
     with SingleTickerProviderStateMixin {
 
-  GoogleMapController? _mapController;
-  io.Socket?           _socket;
+  final MapController _mapCtrl = MapController();
+  io.Socket?          _socket;
 
   // ── Map state ──────────────────────────────────────────────────────────────
-  LatLng? _driverPosition;
-  Set<Marker>  _markers  = {};
-  Set<Polyline> _polylines = {};
+  LatLng?        _driverPosition;
+  List<Marker>   _markers       = [];
+  List<Polyline> _polylines     = [];
+  bool           _fetchingRoute = false;
+  LatLng?        _lastRouteOrigin;
+
+  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  MapStyle _mapStyle = MapStyle.streets;
 
   // ── Delivery state ─────────────────────────────────────────────────────────
-  String _currentStatus = 'accepted';
-  bool   _delivered     = false;
-  bool   _cancelled     = false;
+  String  _currentStatus = 'accepted';
+  bool    _delivered     = false;
+  bool    _cancelled     = false;
   String? _cancelReason;
   Map<String, dynamic>? _driver;
 
@@ -56,67 +62,92 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
   late Animation<double>   _sheetAnim;
 
   static const _stageLabels = {
-    'accepted':        ('✅', 'Driver accepted your delivery'),
-    'en_route_pickup': ('🚗', 'Driver is heading to pickup'),
-    'arrived_pickup':  ('📍', 'Driver arrived at pickup'),
-    'picked_up':       ('📦', 'Package picked up'),
-    'en_route_dropoff':('🚀', 'Driver heading to recipient'),
-    'arrived_dropoff': ('🏁', 'Driver at destination'),
-    'delivered':       ('🎉', 'Package delivered!'),
+    'accepted':         ('✅', 'Driver accepted your delivery'),
+    'en_route_pickup':  ('🚗', 'Driver is heading to pickup'),
+    'arrived_pickup':   ('📍', 'Driver arrived at pickup'),
+    'picked_up':        ('📦', 'Package picked up'),
+    'en_route_dropoff': ('🚀', 'Driver heading to recipient'),
+    'arrived_dropoff':  ('🏁', 'Driver at destination'),
+    'delivered':        ('🎉', 'Package delivered!'),
   };
+
+  // ── Map coords ─────────────────────────────────────────────────────────────
+  late LatLng _pickupLatLng;
+  late LatLng _dropoffLatLng;
 
   @override
   void initState() {
     super.initState();
     _sheetCtrl = AnimationController(
         duration: const Duration(milliseconds: 350), vsync: this);
-    _sheetAnim = CurvedAnimation(parent: _sheetCtrl, curve: Curves.easeOut);
+    _sheetAnim =
+        CurvedAnimation(parent: _sheetCtrl, curve: Curves.easeOut);
     _sheetCtrl.forward();
+    loadMapStylePref().then((s) { if (mounted) setState(() => _mapStyle = s); });
 
     _currentStatus = widget.delivery['status'] as String? ?? 'accepted';
     _driver        = widget.delivery['driver'] as Map<String, dynamic>?;
 
-    _initMarkers();
+    _pickupLatLng = LatLng(
+      (widget.delivery['pickupLat']  as num?)?.toDouble() ?? 4.0511,
+      (widget.delivery['pickupLng']  as num?)?.toDouble() ?? 9.7679,
+    );
+    _dropoffLatLng = LatLng(
+      (widget.delivery['dropoffLat'] as num?)?.toDouble() ?? 4.0611,
+      (widget.delivery['dropoffLng'] as num?)?.toDouble() ?? 9.7779,
+    );
+
+    _buildMarkers();
     _connectSocket();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(
+          const Duration(milliseconds: 400), _fitMapToBoth);
+    });
   }
 
   @override
   void dispose() {
     _sheetCtrl.dispose();
-    _mapController?.dispose();
     _socket?.disconnect();
     _socket?.dispose();
     super.dispose();
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // MAP SETUP
+  // MAP
   // ─────────────────────────────────────────────────────────────────────────
 
-  void _initMarkers() {
-    final markers = <Marker>{};
+  void _buildMarkers() {
+    final markers = <Marker>[
+      Marker(
+        point:  _pickupLatLng,
+        width:  40,
+        height: 50,
+        child: const Icon(Icons.location_on, color: Colors.green, size: 40),
+      ),
+      Marker(
+        point:  _dropoffLatLng,
+        width:  40,
+        height: 50,
+        child: const Icon(Icons.flag_rounded, color: Colors.red, size: 40),
+      ),
+    ];
 
-    // Pickup marker
-    final pickupLat = (widget.delivery['pickupLat'] as num?)?.toDouble();
-    final pickupLng = (widget.delivery['pickupLng'] as num?)?.toDouble();
-    if (pickupLat != null && pickupLng != null) {
+    if (_driverPosition != null) {
       markers.add(Marker(
-        markerId: const MarkerId('pickup'),
-        position: LatLng(pickupLat, pickupLng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: const InfoWindow(title: '📍 Pickup'),
-      ));
-    }
-
-    // Dropoff marker
-    final dropoffLat = (widget.delivery['dropoffLat'] as num?)?.toDouble();
-    final dropoffLng = (widget.delivery['dropoffLng'] as num?)?.toDouble();
-    if (dropoffLat != null && dropoffLng != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('dropoff'),
-        position: LatLng(dropoffLat, dropoffLng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: const InfoWindow(title: '🏁 Dropoff'),
+        point:  _driverPosition!,
+        width:  36,
+        height: 36,
+        child: Container(
+          decoration: BoxDecoration(
+            color:  AppColors.primaryDark,
+            shape:  BoxShape.circle,
+            border: Border.all(color: AppColors.primaryGold, width: 2),
+          ),
+          child: const Icon(Icons.delivery_dining_rounded,
+              color: AppColors.primaryGold, size: 20),
+        ),
       ));
     }
 
@@ -125,23 +156,100 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
 
   void _updateDriverMarker(double lat, double lng) {
     final pos = LatLng(lat, lng);
-    final updated = Set<Marker>.from(_markers)
-      ..removeWhere((m) => m.markerId == const MarkerId('driver'))
-      ..add(Marker(
-        markerId: const MarkerId('driver'),
-        position: pos,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
-        infoWindow: InfoWindow(
-            title: '🚗 ${_driver?['name'] ?? 'Driver'}'),
+    setState(() => _driverPosition = pos);
+    _buildMarkers();
+    _maybeRefreshRoute(pos);
+    try { _mapCtrl.move(pos, 14); } catch (_) {}
+  }
+
+  void _maybeRefreshRoute(LatLng driverPos) {
+    if (_lastRouteOrigin != null) {
+      final dLat = (_lastRouteOrigin!.latitude  - driverPos.latitude).abs();
+      final dLng = (_lastRouteOrigin!.longitude - driverPos.longitude).abs();
+      if (dLat < 0.0005 && dLng < 0.0005) return; // ~50 m threshold
+    }
+    _lastRouteOrigin = driverPos;
+    _fetchRoute(driverPos);
+  }
+
+  Future<void> _fetchRoute(LatLng from) async {
+    if (_fetchingRoute) return;
+    _fetchingRoute = true;
+    final dest = _dropoffLatLng;
+    try {
+      final uri = Uri.parse(
+        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        '${from.longitude},${from.latitude};'
+        '${dest.longitude},${dest.latitude}'
+        '?access_token=$_mapboxToken&geometries=polyline&overview=full',
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final data   = jsonDecode(res.body);
+        final routes = data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final points = _decodePolyline(routes[0]['geometry'] as String);
+          if (mounted) {
+            setState(() {
+              _polylines = [
+                Polyline(
+                  points:      points,
+                  color:       AppColors.primaryGold,
+                  strokeWidth: 4,
+                  strokeCap:   StrokeCap.round,
+                  strokeJoin:  StrokeJoin.round,
+                ),
+              ];
+            });
+          }
+        }
+      }
+    } catch (_) {}
+    _fetchingRoute = false;
+  }
+
+  List<LatLng> _decodePolyline(String encoded) {
+    final points = <LatLng>[];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+    while (index < len) {
+      int shift = 0, result = 0, b;
+      do {
+        b       = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift  += 5;
+      } while (b >= 0x20);
+      lat += ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      shift = 0; result = 0;
+      do {
+        b       = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift  += 5;
+      } while (b >= 0x20);
+      lng += ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      points.add(LatLng(lat / 1e5, lng / 1e5));
+    }
+    return points;
+  }
+
+  Future<void> _callDriver() async {
+    final phone = _driver?['phone'] as String?;
+    if (phone == null || phone.isEmpty) return;
+    final uri = Uri.parse('tel:$phone');
+    try {
+      if (await canLaunchUrl(uri)) await launchUrl(uri);
+    } catch (_) {}
+  }
+
+  void _fitMapToBoth() {
+    try {
+      final points = [_pickupLatLng, _dropoffLatLng];
+      if (_driverPosition != null) points.add(_driverPosition!);
+      _mapCtrl.fitCamera(CameraFit.bounds(
+        bounds:  LatLngBounds.fromPoints(points),
+        padding: const EdgeInsets.all(80),
       ));
-
-    setState(() {
-      _markers        = updated;
-      _driverPosition = pos;
-    });
-
-    // Smoothly pan map to driver
-    _mapController?.animateCamera(CameraUpdate.newLatLng(pos));
+    } catch (_) {}
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -161,7 +269,6 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
 
     _socket!.connect();
 
-    // Live GPS ping from driver
     _socket!.on('delivery:driver_location', (data) {
       if (!mounted) return;
       final d   = data as Map<String, dynamic>;
@@ -193,7 +300,9 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
     _socket!.on('delivery:driver_assigned', (data) {
       if (!mounted) return;
       final d = data as Map<String, dynamic>;
-      if (d['driver'] != null) setState(() => _driver = d['driver'] as Map<String, dynamic>);
+      if (d['driver'] != null) {
+        setState(() => _driver = d['driver'] as Map<String, dynamic>);
+      }
     });
   }
 
@@ -205,9 +314,11 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
         title: const Text('Cancel delivery?',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+            style: TextStyle(fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700)),
         content: const Text('Are you sure?',
             style: TextStyle(fontFamily: 'Roboto', fontSize: 14)),
         actions: [
@@ -217,7 +328,8 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
           ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.error, foregroundColor: Colors.white,
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10))),
               child: const Text('Yes, cancel')),
@@ -249,25 +361,32 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
   Widget build(BuildContext context) {
     if (_cancelled) return _buildCancelledScreen();
 
-    final pickupLat  = (widget.delivery['pickupLat']  as num?)?.toDouble() ?? 4.0511;
-    final pickupLng  = (widget.delivery['pickupLng']  as num?)?.toDouble() ?? 9.7679;
-
     return Scaffold(
       body: Stack(
         children: [
           // ── Full-screen map ──────────────────────────────────────────────
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(pickupLat, pickupLng),
-              zoom: 14,
+          Positioned.fill(
+            child: FlutterMap(
+              mapController: _mapCtrl,
+              options: MapOptions(
+                initialCenter: _pickupLatLng,
+                initialZoom:   14.0,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                  userAgentPackageName: 'com.wego.app',
+                  tileProvider: NetworkTileProvider(),
+                ),
+                PolylineLayer(polylines: _polylines),
+                MarkerLayer(markers:   _markers),
+              ],
             ),
-            markers:  _markers,
-            polylines: _polylines,
-            myLocationEnabled: false,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            mapToolbarEnabled: false,
-            onMapCreated: (ctrl) => _mapController = ctrl,
+          ),
+
+          MapStyleButton(
+            current: _mapStyle,
+            onChanged: (s) { setState(() => _mapStyle = s); saveMapStylePref(s); },
           ),
 
           // ── Top bar ──────────────────────────────────────────────────────
@@ -276,47 +395,46 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    // Back button
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 8)]),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            size: 18, color: AppColors.textPrimary),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Express badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
+                child: Row(children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40, height: 40,
                       decoration: BoxDecoration(
-                          color: AppColors.primaryDark,
-                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.white,
+                          shape: BoxShape.circle,
                           boxShadow: [BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
+                              color: Colors.black.withOpacity(0.1),
                               blurRadius: 8)]),
-                      child: Row(children: [
-                        const Icon(Icons.bolt_rounded,
-                            color: AppColors.primaryGold, size: 16),
-                        const SizedBox(width: 5),
-                        Text(
-                            widget.delivery['deliveryCode'] as String? ?? 'Express',
-                            style: const TextStyle(fontFamily: 'Poppins',
-                                fontSize: 13, fontWeight: FontWeight.w700,
-                                color: Colors.white)),
-                      ]),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 18, color: AppColors.textPrimary),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                        color: AppColors.primaryDark,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 8)]),
+                    child: Row(children: [
+                      const Icon(Icons.bolt_rounded,
+                          color: AppColors.primaryGold, size: 16),
+                      const SizedBox(width: 5),
+                      Text(
+                          widget.delivery['deliveryCode'] as String?
+                              ?? 'Express',
+                          style: const TextStyle(
+                              fontFamily:  'Poppins',
+                              fontSize:    13,
+                              fontWeight:  FontWeight.w700,
+                              color:       Colors.white)),
+                    ]),
+                  ),
+                ]),
               ),
             ),
           ),
@@ -327,7 +445,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
             child: SlideTransition(
               position: Tween<Offset>(
                 begin: const Offset(0, 1),
-                end: Offset.zero,
+                end:   Offset.zero,
               ).animate(_sheetAnim),
               child: _buildBottomSheet(),
             ),
@@ -343,14 +461,13 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
 
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color:        Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20)],
+        boxShadow:    [BoxShadow(color: Colors.black12, blurRadius: 20)],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
           Container(
             width: 40, height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 16),
@@ -358,64 +475,64 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                 color: AppColors.borderMedium,
                 borderRadius: BorderRadius.circular(2)),
           ),
-
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Current stage
-                Row(
-                  children: [
-                    Text(stageInfo.$1, style: const TextStyle(fontSize: 26)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(stageInfo.$2,
-                          style: const TextStyle(fontFamily: 'Poppins',
-                              fontSize: 16, fontWeight: FontWeight.w800)),
+                Row(children: [
+                  Text(stageInfo.$1,
+                      style: const TextStyle(fontSize: 26)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(stageInfo.$2,
+                        style: const TextStyle(
+                            fontFamily:  'Poppins',
+                            fontSize:    16,
+                            fontWeight:  FontWeight.w800)),
+                  ),
+                  if (_delivered)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 5),
+                      decoration: BoxDecoration(
+                          color: AppColors.successLight,
+                          borderRadius: BorderRadius.circular(20)),
+                      child: const Text('Delivered',
+                          style: TextStyle(
+                              fontFamily:  'Poppins',
+                              fontSize:    12,
+                              fontWeight:  FontWeight.w700,
+                              color:       AppColors.success)),
                     ),
-                    if (_delivered)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                            color: AppColors.successLight,
-                            borderRadius: BorderRadius.circular(20)),
-                        child: const Text('Delivered',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.success)),
-                      ),
-                  ],
-                ),
+                ]),
                 const SizedBox(height: 16),
-
-                // Driver info
                 if (_driver != null) _buildDriverRow(),
                 if (_driver != null) const SizedBox(height: 14),
-
-                // Address row
                 _buildAddressRow(),
                 const SizedBox(height: 16),
-
-                // Price + cancel
-                Row(
-                  children: [
-                    Text('${widget.delivery['totalPrice']} XAF',
-                        style: const TextStyle(fontFamily: 'Poppins',
-                            fontSize: 18, fontWeight: FontWeight.w800,
-                            color: AppColors.primaryGold)),
-                    const Spacer(),
-                    if (!_delivered &&
-                        ['accepted', 'en_route_pickup'].contains(_currentStatus))
-                      TextButton(
-                          onPressed: _cancelDelivery,
-                          child: const Text('Cancel',
-                              style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
-                                  color: AppColors.error))),
-                  ],
-                ),
-                SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+                Row(children: [
+                  Text('${widget.delivery['totalPrice']} XAF',
+                      style: const TextStyle(
+                          fontFamily:  'Poppins',
+                          fontSize:    18,
+                          fontWeight:  FontWeight.w800,
+                          color:       AppColors.primaryGold)),
+                  const Spacer(),
+                  if (!_delivered &&
+                      ['accepted', 'en_route_pickup']
+                          .contains(_currentStatus))
+                    TextButton(
+                        onPressed: _cancelDelivery,
+                        child: const Text('Cancel',
+                            style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize:   13,
+                                color:      AppColors.error))),
+                ]),
+                SizedBox(
+                    height:
+                        MediaQuery.of(context).padding.bottom + 8),
               ],
             ),
           ),
@@ -425,58 +542,65 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
   }
 
   Widget _buildDriverRow() {
-    return Row(
-      children: [
-        Container(
-          width: 36, height: 36,
-          decoration: const BoxDecoration(
-              color: AppColors.primaryDark, shape: BoxShape.circle),
-          child: const Icon(Icons.person_rounded,
-              color: AppColors.primaryGold, size: 20),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-              _driver!['name'] as String? ?? 'Driver',
-              style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
-                  fontWeight: FontWeight.w600)),
-        ),
-        if (_driver!['rating'] != null) ...[
-          const Icon(Icons.star_rounded, color: AppColors.primaryGold, size: 14),
-          const SizedBox(width: 3),
-          Text(_driver!['rating'].toString(),
-              style: const TextStyle(fontFamily: 'Roboto', fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-        ],
+    return Row(children: [
+      Container(
+        width: 36, height: 36,
+        decoration: const BoxDecoration(
+            color: AppColors.primaryDark, shape: BoxShape.circle),
+        child: const Icon(Icons.person_rounded,
+            color: AppColors.primaryGold, size: 20),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(_driver!['name'] as String? ?? 'Driver',
+            style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
+                fontWeight: FontWeight.w600)),
+      ),
+      if (_driver!['rating'] != null) ...[
+        const Icon(Icons.star_rounded,
+            color: AppColors.primaryGold, size: 14),
+        const SizedBox(width: 3),
+        Text(_driver!['rating'].toString(),
+            style: const TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                fontWeight: FontWeight.w600)),
       ],
-    );
+      const SizedBox(width: 10),
+      GestureDetector(
+        onTap: _callDriver,
+        child: Container(
+          width: 34, height: 34,
+          decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.1),
+              shape: BoxShape.circle),
+          child: const Icon(Icons.phone_rounded,
+              color: AppColors.success, size: 17),
+        ),
+      ),
+    ]);
   }
 
   Widget _buildAddressRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('TO',
-                  style: TextStyle(fontFamily: 'Roboto', fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary)),
-              const SizedBox(height: 2),
-              Text(
-                  widget.delivery['dropoffAddress'] as String? ?? '—',
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
-                      fontWeight: FontWeight.w500)),
-            ],
-          ),
+    return Row(children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('TO',
+                style: TextStyle(fontFamily: 'Roboto', fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color:      AppColors.textSecondary)),
+            const SizedBox(height: 2),
+            Text(
+                widget.delivery['dropoffAddress'] as String? ?? '—',
+                maxLines:  1,
+                overflow:  TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
+                    fontWeight: FontWeight.w500)),
+          ],
         ),
-      ],
-    );
+      ),
+    ]);
   }
-
-  // ── Cancelled ──────────────────────────────────────────────────────────────
 
   Widget _buildCancelledScreen() {
     return Scaffold(
@@ -511,7 +635,8 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                       Navigator.of(context).popUntil((r) => r.isFirst),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryDark,
-                      foregroundColor: Colors.white, elevation: 0,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14))),
                   child: const Text('Back to home',

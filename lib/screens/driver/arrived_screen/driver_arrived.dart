@@ -1,19 +1,26 @@
 // lib/screens/driver/arrived_screen/driver_arrived.dart
+//
+// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// BitmapDescriptor / dart:ui removed — car shown via CarMarkerWidget.
+// All other logic preserved: waiting timer, no-show, start trip,
+// DraggableScrollableSheet, PopScope back-guard.
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui' as ui;
-import 'package:flutter/services.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wego_v1/main.dart';
 import 'package:wego_v1/utils/app_colors.dart';
 import 'package:wego_v1/utils/car_marker_painter.dart';
+import 'package:wego_v1/utils/map_style.dart';
+import 'package:wego_v1/widgets/map_style_button.dart';
 
 import '../Trip in progress/driver_trip_in_progress_screen.dart';
 
@@ -36,8 +43,8 @@ const Color _kTextSecondary = Color(0xFF6B7280);
 
 const LinearGradient _kGoldGradient = LinearGradient(
   colors: [AppColors.primaryGold, Color(0xFFFFD000)],
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
+  begin:  Alignment.topLeft,
+  end:    Alignment.bottomRight,
 );
 
 // ═══════════════════════════════════════════════════════════════
@@ -64,13 +71,11 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     with TickerProviderStateMixin {
 
   // ── Map ──────────────────────────────────────────────────────
-  GoogleMapController?  _mapController;
-  final Set<Marker>     _markers = {};
-  BitmapDescriptor?     _carIcon;
+  final MapController _mapCtrl = MapController();
 
   // ── Draggable sheet ──────────────────────────────────────────
   final DraggableScrollableController _sheetController =
-  DraggableScrollableController();
+      DraggableScrollableController();
 
   // ── Animations ───────────────────────────────────────────────
   late AnimationController _pulseController;
@@ -93,6 +98,10 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
   late String _pickupAddress;
   late String _dropoffAddress;
 
+  // ── Token ────────────────────────────────────────────────────
+  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  MapStyle _mapStyle = MapStyle.navigationDay;
+
   // ════════════════════════════════════════════════════════════
   // INIT
   // ════════════════════════════════════════════════════════════
@@ -108,14 +117,16 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
 
     _parseLocations();
     _setupAnimations();
-    _buildCarIconThenMarkers();
     _startWaitingTimer();
     _notifyPassenger();
+    loadMapStylePref().then((s) { if (mounted) setState(() => _mapStyle = s); });
   }
 
   void _parseLocations() {
-    final pickup  = widget.trip['pickup']  ?? widget.trip['pickup_location']  ?? {};
-    final dropoff = widget.trip['dropoff'] ?? widget.trip['dropoff_location'] ?? {};
+    final pickup  =
+        widget.trip['pickup']  ?? widget.trip['pickup_location']  ?? {};
+    final dropoff =
+        widget.trip['dropoff'] ?? widget.trip['dropoff_location'] ?? {};
 
     _pickupLocation = LatLng(
       double.tryParse(pickup['lat']?.toString()
@@ -138,93 +149,17 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
         ?? 'Destination';
   }
 
-  Future<void> _buildCarIconThenMarkers() async {
-    try {
-      final byteData = await rootBundle.load('assets/car.png');
-      final codec = await ui.instantiateImageCodec(
-        byteData.buffer.asUint8List(),
-        targetWidth:  80,
-        targetHeight: 80,
-      );
-      final frame    = await codec.getNextFrame();
-      final pngBytes = await frame.image
-          .toByteData(format: ui.ImageByteFormat.png);
-
-      if (pngBytes != null) {
-        _carIcon = BitmapDescriptor.fromBytes(pngBytes.buffer.asUint8List());
-        debugPrint('✅ [DRIVER-ARRIVED] Car icon loaded from assets/car.png');
-      }
-    } catch (e) {
-      debugPrint('⚠️ [DRIVER-ARRIVED] Car icon load failed, using fallback: $e');
-      _carIcon = BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueYellow);
-    }
-    _setupMarkers();
-  }
-
   void _setupAnimations() {
     _pulseController = AnimationController(
         duration: const Duration(milliseconds: 1500), vsync: this);
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
-        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+        CurvedAnimation(
+            parent: _pulseController, curve: Curves.easeInOut));
     _pulseController.repeat(reverse: true);
 
     _timerPulseController = AnimationController(
         duration: const Duration(milliseconds: 1000), vsync: this);
     _timerPulseController.repeat(reverse: true);
-  }
-
-  void _setupMarkers() {
-    _markers.clear();
-
-    // ── Uber-style car at pickup ──────────────────────────────
-    _markers.add(Marker(
-      markerId:  const MarkerId('driver_car'),
-      position:  _pickupLocation,
-      icon:      _carIcon ?? BitmapDescriptor.defaultMarker,
-      anchor:    const Offset(0.5, 0.5),
-      flat:      true,
-      rotation:  0,
-      zIndex:    2,
-      infoWindow: const InfoWindow(title: 'You are here'),
-    ));
-
-    // ── Green pickup pin ──────────────────────────────────────
-    _markers.add(Marker(
-      markerId:  const MarkerId('pickup'),
-      position:  _pickupLocation,
-      icon:      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      zIndex:    1,
-      infoWindow: InfoWindow(title: 'Pickup Location', snippet: _pickupAddress),
-    ));
-
-    // ── Red dropoff pin ───────────────────────────────────────
-    _markers.add(Marker(
-      markerId:  const MarkerId('dropoff'),
-      position:  _dropoffLocation,
-      icon:      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      zIndex:    1,
-      infoWindow: InfoWindow(title: 'Destination', snippet: _dropoffAddress),
-    ));
-
-    if (mounted) setState(() {});
-  }
-
-  void _updateCarMarker(LatLng position, {double bearing = 0}) {
-    if (!mounted) return;
-    setState(() {
-      _markers.removeWhere((m) => m.markerId.value == 'driver_car');
-      _markers.add(Marker(
-        markerId:  const MarkerId('driver_car'),
-        position:  position,
-        icon:      _carIcon ?? BitmapDescriptor.defaultMarker,
-        anchor:    const Offset(0.5, 0.5),
-        flat:      true,
-        rotation:  bearing,
-        zIndex:    2,
-        infoWindow: const InfoWindow(title: 'You are here'),
-      ));
-    });
   }
 
   void _startWaitingTimer() {
@@ -234,21 +169,42 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       if (_waitingSeconds == 300 && !_canShowNoShow) {
         setState(() => _canShowNoShow = true);
         _showNoShowAvailableSnackBar();
-        _timerPulseController.duration = const Duration(milliseconds: 500);
+        _timerPulseController.duration =
+            const Duration(milliseconds: 500);
         _timerPulseController.repeat(reverse: true);
       }
     });
   }
 
   void _notifyPassenger() {
-    try {
-      SocketHelper.instance.socket?.emit('driver:arrived', {
-        'tripId':    widget.tripId,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('⚠️ [DRIVER-ARRIVED] Socket emit failed: $e');
-    }
+    // No-op: the HTTP /arrived call is authoritative and the backend emits
+    // trip:driver_arrived to the passenger. Kept so existing call sites compile.
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // MARKERS
+  // ════════════════════════════════════════════════════════════
+
+  List<Marker> _buildMarkers() {
+    return [
+      // Car at pickup (driver has arrived)
+      Marker(
+        point:  _pickupLocation,
+        width:  60,
+        height: 60,
+        child: const CarMarkerWidget(
+          heading: 0,
+          color:   Color(0xFF1A1A1A),
+        ),
+      ),
+      // Red dropoff pin
+      Marker(
+        point:  _dropoffLocation,
+        width:  40,
+        height: 50,
+        child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+      ),
+    ];
   }
 
   // ════════════════════════════════════════════════════════════
@@ -307,25 +263,23 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
         final token      = await _getAccessToken();
         if (token.isEmpty) throw Exception('No access token available');
 
-        final response = await http.post(
-          Uri.parse('$apiBaseUrl/driver/trips/${widget.tripId}/start'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type':  'application/json',
-          },
-        ).timeout(
-          const Duration(seconds: 30),
-          onTimeout: () => throw TimeoutException('Request timed out after 30s'),
-        );
+        final response = await http
+            .post(
+              Uri.parse('$apiBaseUrl/driver/trips/${widget.tripId}/start'),
+              headers: {
+                'Authorization': 'Bearer $token',
+                'Content-Type':  'application/json',
+              },
+            )
+            .timeout(
+              const Duration(seconds: 30),
+              onTimeout: () =>
+                  throw TimeoutException('Request timed out after 30s'),
+            );
 
         if (response.statusCode == 200) {
           final responseData = json.decode(response.body);
-          try {
-            SocketHelper.instance.socket?.emit('trip:started', {
-              'tripId':    widget.tripId,
-              'timestamp': DateTime.now().toIso8601String(),
-            });
-          } catch (_) {}
+          // HTTP /start is authoritative; backend emits trip:started to passenger.
 
           _hasNavigated = true;
           _showSuccessSnackBar('Trip started! Navigate to destination.');
@@ -370,8 +324,8 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                 title: const Text('Connection Timeout'),
                 content: const Text(
                   'The request is taking longer than expected. '
-                      'The trip may have started on the server. '
-                      'Do you want to try again?',
+                  'The trip may have started on the server. '
+                  'Do you want to try again?',
                 ),
                 actions: [
                   TextButton(
@@ -412,18 +366,22 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
         title: Row(children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: _kWarningLight, borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.person_off, color: _kWarning, size: 24),
+                color: _kWarningLight,
+                borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.person_off,
+                color: _kWarning, size: 24),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text('Report No-Show?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w700)),
           ),
         ]),
         content: Column(
@@ -436,7 +394,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                  color: _kWarningLight,
+                  color:        _kWarningLight,
                   borderRadius: BorderRadius.circular(8)),
               child: Row(children: [
                 const Icon(Icons.info_outline, color: _kWarning, size: 20),
@@ -476,26 +434,22 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       final apiBaseUrl = dotenv.env['API_BASE_URL'] ?? '';
       final token      = await _getAccessToken();
 
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/driver/trips/${widget.tripId}/no-show'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type':  'application/json',
-        },
-        body: json.encode({
-          'waitingTime': _waitingSeconds,
-          'reason':      'Passenger did not show up',
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('$apiBaseUrl/driver/trips/${widget.tripId}/no-show'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type':  'application/json',
+            },
+            body: json.encode({
+              'waitingTime': _waitingSeconds,
+              'reason':      'Passenger did not show up',
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        try {
-          SocketHelper.instance.socket?.emit('trip:no_show', {
-            'tripId':      widget.tripId,
-            'waitingTime': _waitingSeconds,
-            'timestamp':   DateTime.now().toIso8601String(),
-          });
-        } catch (_) {}
+        // HTTP /no-show is authoritative; backend emits trip:no_show to passenger.
         _showSuccessSnackBar('No-show reported. Trip canceled.');
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
@@ -530,7 +484,8 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       _showErrorSnackBar('Passenger phone number not available');
       return;
     }
-    final uri = Uri.parse('sms:$phone?body=I have arrived at the pickup location.');
+    final uri = Uri.parse(
+        'sms:$phone?body=I have arrived at the pickup location.');
     try {
       if (await canLaunchUrl(uri)) await launchUrl(uri);
       else _showErrorSnackBar('Cannot open SMS app');
@@ -550,27 +505,23 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
       final apiBaseUrl = dotenv.env['API_BASE_URL'] ?? '';
       final token      = await _getAccessToken();
 
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/driver/trips/${widget.tripId}/cancel'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type':  'application/json',
-        },
-        body: json.encode({
-          'reason':      reason,
-          'waitingTime': _waitingSeconds,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse(
+                '$apiBaseUrl/driver/trips/${widget.tripId}/cancel'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type':  'application/json',
+            },
+            body: json.encode({
+              'reason':      reason,
+              'waitingTime': _waitingSeconds,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        try {
-          SocketHelper.instance.socket?.emit('trip:canceled', {
-            'tripId':     widget.tripId,
-            'canceledBy': 'DRIVER',
-            'reason':     reason,
-            'timestamp':  DateTime.now().toIso8601String(),
-          });
-        } catch (_) {}
+        // HTTP /cancel is authoritative; backend emits trip:canceled to passenger.
         _showSuccessSnackBar('Trip canceled');
         await Future.delayed(const Duration(milliseconds: 800));
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
@@ -620,7 +571,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
         ),
       ]),
       backgroundColor: _kWarning,
-      behavior: SnackBarBehavior.floating,
+      behavior:        SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       duration: const Duration(seconds: 5),
     ));
@@ -629,9 +580,9 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
+      content:         Text(message),
       backgroundColor: _kError,
-      behavior: SnackBarBehavior.floating,
+      behavior:        SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
@@ -639,9 +590,9 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
   void _showSuccessSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
+      content:         Text(message),
       backgroundColor: _kSuccess,
-      behavior: SnackBarBehavior.floating,
+      behavior:        SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
@@ -655,7 +606,6 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     _pulseController.dispose();
     _timerPulseController.dispose();
     _sheetController.dispose();
-    _mapController?.dispose();
     _waitingTimer?.cancel();
     super.dispose();
   }
@@ -667,7 +617,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
   @override
   Widget build(BuildContext context) {
     final double minFraction  =
-    (120 / MediaQuery.of(context).size.height).clamp(0.14, 0.20);
+        (120 / MediaQuery.of(context).size.height).clamp(0.14, 0.20);
     final double initFraction = 0.52;
     final double maxFraction  = _canShowNoShow ? 0.80 : 0.72;
 
@@ -681,7 +631,8 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)),
             title:   const Text('Leave Screen?'),
-            content: const Text('You are waiting for the passenger. Go back?'),
+            content: const Text(
+                'You are waiting for the passenger. Go back?'),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
@@ -692,52 +643,65 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
             ],
           ),
         );
-        if (shouldPop == true && context.mounted) Navigator.of(context).pop();
+        if (shouldPop == true && context.mounted) {
+          Navigator.of(context).pop();
+        }
       },
       child: Scaffold(
         body: Stack(
           children: [
 
-            // ── FULL-SCREEN MAP ────────────────────────────────
+            // ── FULL-SCREEN MAP ──────────────────────────────
             Positioned.fill(
-              child: GoogleMap(
-                initialCameraPosition:
-                CameraPosition(target: _pickupLocation, zoom: 15.5),
-                markers:                 _markers,
-                myLocationEnabled:       false,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled:     false,
-                mapToolbarEnabled:       false,
-                compassEnabled:          false,
-                buildingsEnabled:        true,
-                onMapCreated:            (c) => _mapController = c,
+              child: FlutterMap(
+                mapController: _mapCtrl,
+                options: MapOptions(
+                  initialCenter: _pickupLocation,
+                  initialZoom:   15.5,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                    userAgentPackageName: 'com.wego.app',
+                    tileProvider: NetworkTileProvider(),
+                  ),
+                  MarkerLayer(markers: _buildMarkers()),
+                ],
               ),
             ),
 
-            // ── TOP GRADIENT SCRIM ─────────────────────────────
+            MapStyleButton(
+              current: _mapStyle,
+              onChanged: (s) { setState(() => _mapStyle = s); saveMapStylePref(s); },
+            ),
+
+            // ── TOP GRADIENT SCRIM ───────────────────────────
             Positioned(
               top: 0, left: 0, right: 0, height: 180,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin:  Alignment.topCenter,
-                    end:    Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withOpacity(0.88),
-                      Colors.transparent,
-                    ],
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin:  Alignment.topCenter,
+                      end:    Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withOpacity(0.88),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
 
-            // ── TOP BAR ───────────────────────────────────────
+            // ── TOP BAR ─────────────────────────────────────
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 12),
                 child: Row(children: [
-                  _TopBarBtn(icon: Icons.support_agent_rounded, onTap: () {}),
+                  _TopBarBtn(
+                      icon: Icons.support_agent_rounded, onTap: () {}),
                   const Spacer(),
                   AnimatedBuilder(
                     animation: _pulseAnimation,
@@ -747,7 +711,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 9),
                         decoration: BoxDecoration(
-                          color: _getTimerColor(),
+                          color:        _getTimerColor(),
                           borderRadius: BorderRadius.circular(50),
                           boxShadow: [
                             BoxShadow(
@@ -765,8 +729,8 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                             const SizedBox(width: 7),
                             Text(
                               'Waiting  '
-                                  '${_waitingSeconds ~/ 60}:'
-                                  '${(_waitingSeconds % 60).toString().padLeft(2, '0')}',
+                              '${_waitingSeconds ~/ 60}:'
+                              '${(_waitingSeconds % 60).toString().padLeft(2, '0')}',
                               style: const TextStyle(
                                   color:      Colors.white,
                                   fontSize:   13,
@@ -781,7 +745,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
               ),
             ),
 
-            // ── RE-CENTER FAB ──────────────────────────────────
+            // ── RE-CENTER FAB ────────────────────────────────
             Positioned(
               right:  16,
               bottom: MediaQuery.of(context).size.height * initFraction + 16,
@@ -790,18 +754,16 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                 backgroundColor: Colors.white,
                 elevation:       4,
                 onPressed: () {
-                  _mapController?.animateCamera(
-                    CameraUpdate.newCameraPosition(
-                      CameraPosition(target: _pickupLocation, zoom: 15.5),
-                    ),
-                  );
+                  try {
+                    _mapCtrl.move(_pickupLocation, 15.5);
+                  } catch (_) {}
                 },
                 child: const Icon(Icons.my_location_rounded,
                     color: Colors.black87),
               ),
             ),
 
-            // ── DRAGGABLE BOTTOM SHEET ─────────────────────────
+            // ── DRAGGABLE BOTTOM SHEET ───────────────────────
             DraggableScrollableSheet(
               controller:       _sheetController,
               initialChildSize: initFraction,
@@ -856,7 +818,10 @@ class _TopBarBtn extends StatelessWidget {
           color: _kBgWhite,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(color: _kShadow, blurRadius: 12, offset: const Offset(0, 4))
+            BoxShadow(
+                color:      _kShadow,
+                blurRadius: 12,
+                offset:     const Offset(0, 4))
           ],
         ),
         child: Icon(icon, size: 22, color: Colors.black87),
@@ -921,7 +886,6 @@ class _SheetContent extends StatelessWidget {
         padding:    EdgeInsets.zero,
         physics:    const ClampingScrollPhysics(),
         children: [
-          // drag handle
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12, bottom: 4),
@@ -939,11 +903,11 @@ class _SheetContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
 
-                // ── STATUS BANNER ──────────────────────────────
+                // STATUS BANNER
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: _kGoldGradient,
+                    gradient:     _kGoldGradient,
                     borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
@@ -970,11 +934,14 @@ class _SheetContent extends StatelessWidget {
                         children: [
                           Text('Waiting for Passenger',
                               style: TextStyle(
-                                  fontSize: 17, fontWeight: FontWeight.w800,
-                                  color: Colors.black)),
+                                  fontSize:   17,
+                                  fontWeight: FontWeight.w800,
+                                  color:      Colors.black)),
                           SizedBox(height: 3),
                           Text('Stay at the pickup point',
-                              style: TextStyle(fontSize: 13, color: Colors.black54)),
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color:    Colors.black54)),
                         ],
                       ),
                     ),
@@ -983,14 +950,16 @@ class _SheetContent extends StatelessWidget {
 
                 const SizedBox(height: 18),
 
-                // ── PASSENGER ROW ──────────────────────────────
+                // PASSENGER ROW
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                      color: _kBgLight, borderRadius: BorderRadius.circular(16)),
+                      color: _kBgLight,
+                      borderRadius: BorderRadius.circular(16)),
                   child: Row(children: [
                     _PassengerAvatar(
-                        initial: passengerInitial, avatarUrl: passengerAvatar),
+                        initial: passengerInitial,
+                        avatarUrl: passengerAvatar),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -998,42 +967,50 @@ class _SheetContent extends StatelessWidget {
                         children: [
                           Text(passengerName,
                               style: const TextStyle(
-                                  fontSize: 17, fontWeight: FontWeight.w700)),
+                                  fontSize:   17,
+                                  fontWeight: FontWeight.w700)),
                           Text('Your passenger',
                               style: TextStyle(
-                                  fontSize: 13, color: _kTextSecondary)),
+                                  fontSize: 13,
+                                  color:    _kTextSecondary)),
                         ],
                       ),
                     ),
                     _SmallBtn(
-                        icon: Icons.call_rounded, iconColor: _kSuccess,
-                        bgColor: _kSuccessLight, onTap: onCall),
+                        icon:      Icons.call_rounded,
+                        iconColor: _kSuccess,
+                        bgColor:   _kSuccessLight,
+                        onTap:     onCall),
                     const SizedBox(width: 8),
                     _SmallBtn(
-                        icon: Icons.sms_rounded, iconColor: _kInfo,
-                        bgColor: const Color(0xFFEFF6FF), onTap: onSMS),
+                        icon:      Icons.sms_rounded,
+                        iconColor: _kInfo,
+                        bgColor:   const Color(0xFFEFF6FF),
+                        onTap:     onSMS),
                   ]),
                 ),
 
                 const SizedBox(height: 14),
 
-                // ── ROUTE SUMMARY ──────────────────────────────
-                _RouteSummary(pickup: pickupAddress, dropoff: dropoffAddress),
+                _RouteSummary(
+                    pickup: pickupAddress, dropoff: dropoffAddress),
 
                 const SizedBox(height: 20),
 
-                // ── NO-SHOW BUTTON (after 5 min) ───────────────
+                // NO-SHOW (after 5 min)
                 if (canShowNoShow) ...[
                   SizedBox(
-                    width: double.infinity,
+                    width:  double.infinity,
                     height: 52,
                     child: OutlinedButton.icon(
                       onPressed: onNoShow,
-                      icon: const Icon(Icons.person_off_rounded, color: _kWarning),
+                      icon: const Icon(Icons.person_off_rounded,
+                          color: _kWarning),
                       label: const Text('Report Passenger No-Show',
                           style: TextStyle(
-                              color: _kWarning, fontWeight: FontWeight.w700,
-                              fontSize: 15)),
+                              color:      _kWarning,
+                              fontWeight: FontWeight.w700,
+                              fontSize:   15)),
                       style: OutlinedButton.styleFrom(
                         side:  const BorderSide(color: _kWarning, width: 2),
                         shape: RoundedRectangleBorder(
@@ -1044,7 +1021,7 @@ class _SheetContent extends StatelessWidget {
                   const SizedBox(height: 14),
                 ],
 
-                // ── CANCEL / START ─────────────────────────────
+                // CANCEL / START
                 Row(children: [
                   Expanded(
                     child: OutlinedButton(
@@ -1057,14 +1034,15 @@ class _SheetContent extends StatelessWidget {
                       ),
                       child: isCanceling
                           ? const SizedBox(
-                          width: 20, height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                              AlwaysStoppedAnimation(_kError)))
+                              width: 20, height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                      AlwaysStoppedAnimation(_kError)))
                           : const Text('Cancel',
-                          style: TextStyle(
-                              color: _kError, fontWeight: FontWeight.w700)),
+                              style: TextStyle(
+                                  color:      _kError,
+                                  fontWeight: FontWeight.w700)),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -1087,18 +1065,19 @@ class _SheetContent extends StatelessWidget {
                         onPressed: isStarting ? null : onStartTrip,
                         icon: isStarting
                             ? const SizedBox(
-                            width: 18, height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(
-                                    Colors.black)))
+                                width: 18, height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(
+                                        Colors.black)))
                             : const Icon(Icons.play_arrow_rounded,
-                            color: Colors.black, size: 24),
+                                color: Colors.black, size: 24),
                         label: Text(
                           isStarting ? 'Starting…' : 'Start Trip',
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w800,
-                              color: Colors.black),
+                              fontSize:   16,
+                              fontWeight: FontWeight.w800,
+                              color:      Colors.black),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
@@ -1152,15 +1131,15 @@ class _PassengerAvatar extends StatelessWidget {
       child: ClipOval(
         child: _hasValidPhoto
             ? CachedNetworkImage(
-          imageUrl:    avatarUrl!,
-          width:       size,
-          height:      size,
-          fit:         BoxFit.cover,
-          placeholder: (_, __) =>
-              _Fallback(initial: initial, size: size),
-          errorWidget: (_, __, ___) =>
-              _Fallback(initial: initial, size: size),
-        )
+                imageUrl:    avatarUrl!,
+                width:       size,
+                height:      size,
+                fit:         BoxFit.cover,
+                placeholder: (_, __) =>
+                    _Fallback(initial: initial, size: size),
+                errorWidget: (_, __, ___) =>
+                    _Fallback(initial: initial, size: size),
+              )
             : _Fallback(initial: initial, size: size),
       ),
     );
@@ -1254,11 +1233,14 @@ class _AddrLine extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 11, color: _kTextSecondary)),
+            style: const TextStyle(
+                fontSize: 11, color: _kTextSecondary)),
         Text(
           address.length > 40 ? '${address.substring(0, 40)}…' : address,
           style: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+              fontSize:   13,
+              fontWeight: FontWeight.w600,
+              color:      Colors.black87),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -1319,7 +1301,8 @@ class _CancelDialogState extends State<_CancelDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20)),
       title: Row(children: [
         Container(
           padding: const EdgeInsets.all(8),
@@ -1339,12 +1322,12 @@ class _CancelDialogState extends State<_CancelDialog> {
               style: TextStyle(fontSize: 14)),
           const SizedBox(height: 12),
           ..._reasons.map((r) => RadioListTile<String>(
-            title:      Text(r, style: const TextStyle(fontSize: 14)),
-            value:      r,
-            groupValue: _selected,
-            dense:      true,
+            title:       Text(r, style: const TextStyle(fontSize: 14)),
+            value:       r,
+            groupValue:  _selected,
+            dense:       true,
             activeColor: AppColors.primaryGold,
-            onChanged:  (v) => setState(() => _selected = v),
+            onChanged:   (v) => setState(() => _selected = v),
           )),
         ],
       ),

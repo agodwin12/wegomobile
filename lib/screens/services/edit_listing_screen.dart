@@ -1,23 +1,56 @@
 // lib/screens/services/edit_listing_screen.dart
-// WEGO Services Marketplace - Edit Listing Screen
-// ✅ FIXED: Matches exact provider.updateListing signature
+// ─────────────────────────────────────────────────────────────────────────────
+// Edit Listing Screen  (Provider — update an existing listing)
+// Overflow-fixed + aligned to AppColors / AppTypography
+// ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import 'dart:io';
+
 import '../../models/services/service_listing_model.dart';
 import '../../providers/services.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 
+// ─── Local design tokens ──────────────────────────────────────────────────────
+const _kPrimary      = AppColors.primaryGold;
+const _kPrimaryDark  = AppColors.primaryGoldDark;
+const _kPrimaryLight = Color(0xFFFFFDE7);
+const _kPrimaryMid   = Color(0xFFFFECB3);
+const _kSurface      = AppColors.backgroundWhite;
+const _kPageBg       = AppColors.backgroundLight;
+const _kInputBg      = AppColors.inputBackground;
+const _kBorder       = AppColors.borderLight;
+const _kTextPrimary  = AppColors.textPrimary;
+const _kTextSecond   = AppColors.textSecondary;
+const _kTextLight    = AppColors.textLight;
+const _kError        = AppColors.error;
+const _kErrorLight   = AppColors.errorLight;
+const _kSuccess      = AppColors.success;
+const _kSuccessLight = AppColors.successLight;
+const _kWarning      = AppColors.warning;
+const _kWarningLight = AppColors.warningLight;
+
+const double _rSm   = 4.0;
+const double _rMd   = 12.0;
+const double _rLg   = 16.0;
+const double _rXl   = 24.0;
+const double _rPill = 999.0;
+
+const List<BoxShadow> _kBottomShadow = [
+  BoxShadow(color: Color(0x14000000), blurRadius: 12, offset: Offset(0, -3)),
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
 class EditListingScreen extends StatefulWidget {
   final ServiceListing listing;
-
-  const EditListingScreen({
-    Key? key,
-    required this.listing,
-  }) : super(key: key);
+  const EditListingScreen({Key? key, required this.listing}) : super(key: key);
 
   @override
   State<EditListingScreen> createState() => _EditListingScreenState();
@@ -25,294 +58,314 @@ class EditListingScreen extends StatefulWidget {
 
 class _EditListingScreenState extends State<EditListingScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ImagePicker _picker = ImagePicker();
-
-  // Controllers
-  late TextEditingController _titleController;
-  late TextEditingController _descriptionController;
-  late TextEditingController _priceController;
-  late TextEditingController _minChargeController;
-
-  // State
-  late String _selectedPricingType;
-  late String _selectedCity;
-  late bool _emergencyService;
-  final List<File> _newPhotos = [];
-  late List<String> _existingPhotos;
+  final _picker  = ImagePicker();
   bool _isSubmitting = false;
 
-  final List<String> _cities = [
-    'Douala',
-    'Yaoundé',
-    'Bafoussam',
-    'Bamenda',
-    'Garoua',
-    'Maroua',
-    'Ngaoundéré',
-    'Kribi',
-    'Limbe',
-  ];
+  // ── Controllers ───────────────────────────────────────────────────────────
+  late TextEditingController _titleCtrl;
+  late TextEditingController _descCtrl;
+  late TextEditingController _priceCtrl;
+  late TextEditingController _minChargeCtrl;
+  late TextEditingController _hoursCtrl;
+  late TextEditingController _experienceCtrl;
+  late TextEditingController _certsCtrl;
 
-  final List<String> _availableDays = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
-
+  // ── State ─────────────────────────────────────────────────────────────────
+  late String       _pricingType;
+  late String       _selectedCity;
+  late bool         _emergency;
   late List<String> _selectedDays;
+  late List<String> _selectedNeighborhoods;
 
-  // ─── Convert PricingType enum to string ──────────────────────────
-  String _pricingTypeToString(PricingType type) {
-    switch (type) {
-      case PricingType.hourly:
-        return 'hourly';
-      case PricingType.fixed:
-        return 'fixed';
-      case PricingType.negotiable:
-        return 'negotiable';
-    }
-  }
+  late List<String> _existingPhotos;
+  final List<File>  _newPhotos = [];
 
-  // ─── Get the current price value from listing ────────────────────
-  String _getCurrentPrice() {
-    switch (widget.listing.pricingType) {
-      case PricingType.hourly:
-        return widget.listing.hourlyRate?.toStringAsFixed(0) ?? '';
-      case PricingType.fixed:
-        return widget.listing.fixedPrice?.toStringAsFixed(0) ?? '';
-      case PricingType.negotiable:
-        return '';
-    }
-  }
+  String?                _existingVideoUrl;
+  File?                  _newVideo;
+  VideoPlayerController? _videoController;
 
-  String _getCurrentMinCharge() {
-    return widget.listing.minimumCharge?.toStringAsFixed(0) ?? '';
-  }
+  static const _cities = [
+    'Douala', 'Yaoundé', 'Bafoussam', 'Bamenda',
+    'Garoua', 'Maroua', 'Ngaoundéré', 'Kribi', 'Limbé',
+  ];
+
+  static const _neighborhoods = {
+    'Douala':    ['Akwa', 'Bonanjo', 'Bassa', 'Bonabéri', 'Deido', 'Makepe', 'PK8', 'Logbaba'],
+    'Yaoundé':   ['Centre-Ville', 'Bastos', 'Mimboman', 'Nsam', 'Emana', 'Essos', 'Nlongkak'],
+    'Bafoussam': ['Centre', 'Famla', 'Tamdja', 'Tougang'],
+    'Bamenda':   ['Commercial Avenue', 'Mile 3', 'Nkwen', 'Up Station'],
+    'Garoua':    ['Centre', 'Doualaré', 'Roumde Adjia'],
+  };
+
+  static const _days = [
+    'Lundi', 'Mardi', 'Mercredi', 'Jeudi',
+    'Vendredi', 'Samedi', 'Dimanche',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _initControllers();
+    _initFromListing();
   }
 
-  void _initControllers() {
-    _titleController = TextEditingController(text: widget.listing.title);
-    _descriptionController =
-        TextEditingController(text: widget.listing.description);
-    _priceController = TextEditingController(text: _getCurrentPrice());
-    _minChargeController =
-        TextEditingController(text: _getCurrentMinCharge());
+  void _initFromListing() {
+    final l = widget.listing;
 
-    _selectedPricingType =
-        _pricingTypeToString(widget.listing.pricingType);
-    _selectedCity = widget.listing.city;
-    _emergencyService = widget.listing.emergencyService;
-    _existingPhotos = List<String>.from(widget.listing.photos);
+    _titleCtrl      = TextEditingController(text: l.title);
+    _descCtrl       = TextEditingController(text: l.description);
+    _hoursCtrl      = TextEditingController(text: l.availableHours ?? '');
+    _experienceCtrl = TextEditingController(
+        text: l.yearsExperience?.toString() ?? '');
+    _certsCtrl      = TextEditingController(text: l.certifications ?? '');
 
-    // ✅ FIX: availableDays is String? not List<String>
-    // Parse it from JSON string "[\"Monday\",\"Tuesday\"]" or plain "Monday,Tuesday"
-    _selectedDays = _parseDaysFromString(widget.listing.availableDays);
-  }
+    _pricingType  = _pricingTypeString(l.pricingType);
+    _selectedCity = _cities.contains(l.city) ? l.city : 'Douala';
+    _emergency    = l.emergencyService;
 
-  /// Parse available days from the String? field in the model
-  List<String> _parseDaysFromString(String? value) {
-    if (value == null || value.isEmpty) return [];
-
-    // Try JSON array format: ["Monday","Tuesday"]
-    if (value.startsWith('[')) {
-      try {
-        final cleaned = value
-            .replaceAll('[', '')
-            .replaceAll(']', '')
-            .replaceAll('"', '')
-            .split(',')
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
-        return cleaned;
-      } catch (_) {
-        return [];
-      }
+    switch (l.pricingType) {
+      case PricingType.hourly:
+        _priceCtrl     = TextEditingController(
+            text: l.hourlyRate?.toStringAsFixed(0) ?? '');
+        _minChargeCtrl = TextEditingController(
+            text: l.minimumCharge?.toStringAsFixed(0) ?? '');
+        break;
+      case PricingType.fixed:
+        _priceCtrl     = TextEditingController(
+            text: l.fixedPrice?.toStringAsFixed(0) ?? '');
+        _minChargeCtrl = TextEditingController();
+        break;
+      default:
+        _priceCtrl     = TextEditingController();
+        _minChargeCtrl = TextEditingController();
     }
 
-    // Try comma-separated format: "Monday,Tuesday"
-    if (value.contains(',')) {
+    _selectedDays          = _parseDays(l.availableDays);
+    _selectedNeighborhoods = List<String>.from(l.neighborhoods);
+    _existingPhotos        = List<String>.from(l.photos);
+
+    _existingVideoUrl = _extractVideoUrl(_existingPhotos);
+    if (_existingVideoUrl != null) {
+      _existingPhotos.remove(_existingVideoUrl);
+    }
+  }
+
+  String _pricingTypeString(PricingType t) {
+    switch (t) {
+      case PricingType.hourly:     return 'hourly';
+      case PricingType.fixed:      return 'fixed';
+      case PricingType.negotiable: return 'negotiable';
+    }
+  }
+
+  List<String> _parseDays(String? value) {
+    if (value == null || value.isEmpty) return [];
+    if (value.startsWith('[')) {
       return value
+          .replaceAll(RegExp(r'[\[\]"]'), '')
           .split(',')
           .map((e) => e.trim())
           .where((e) => e.isNotEmpty)
           .toList();
     }
-
-    // Single day
+    if (value.contains(',')) {
+      return value.split(',').map((e) => e.trim()).toList();
+    }
     return [value.trim()];
+  }
+
+  String? _extractVideoUrl(List<String> urls) {
+    final ext = RegExp(r'\.(mp4|mov|avi|mkv|webm)$',
+        caseSensitive: false);
+    for (final url in urls) {
+      if (ext.hasMatch(url)) return url;
+    }
+    return null;
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
-    _minChargeController.dispose();
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    _minChargeCtrl.dispose();
+    _hoursCtrl.dispose();
+    _experienceCtrl.dispose();
+    _certsCtrl.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
-  // ─── Pick new photo ───────────────────────────────────────────────
+  // ── Media helpers ─────────────────────────────────────────────────────────
   Future<void> _pickPhoto() async {
     final total = _existingPhotos.length + _newPhotos.length;
     if (total >= 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Maximum 5 photos allowed'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      _snack('Maximum 5 photos autorisées', isError: true);
       return;
     }
-
-    final XFile? image = await _picker.pickImage(
+    final img = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 80,
+      maxWidth: 1920,
+      maxHeight: 1080,
+      imageQuality: 85,
     );
-
-    if (image != null && mounted) {
-      setState(() => _newPhotos.add(File(image.path)));
+    if (img != null && mounted) {
+      setState(() => _newPhotos.add(File(img.path)));
     }
   }
 
-  void _removeExistingPhoto(int index) {
-    setState(() => _existingPhotos.removeAt(index));
+  Future<void> _pickVideo() async {
+    if (_existingVideoUrl != null || _newVideo != null) {
+      _snack('Supprimez la vidéo actuelle d\'abord', isError: true);
+      return;
+    }
+    final vid = await _picker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 3),
+    );
+    if (vid != null && mounted) {
+      final file  = File(vid.path);
+      final bytes = await file.length();
+      if (bytes > 100 * 1024 * 1024) {
+        _snack('La vidéo doit faire moins de 100 Mo', isError: true);
+        return;
+      }
+      final ctrl = VideoPlayerController.file(file);
+      await ctrl.initialize();
+      setState(() {
+        _newVideo = file;
+        _videoController?.dispose();
+        _videoController = ctrl;
+      });
+    }
   }
 
-  void _removeNewPhoto(int index) {
-    setState(() => _newPhotos.removeAt(index));
+  void _removeExistingPhoto(int i) =>
+      setState(() => _existingPhotos.removeAt(i));
+  void _removeNewPhoto(int i) =>
+      setState(() => _newPhotos.removeAt(i));
+  void _removeExistingVideo() =>
+      setState(() => _existingVideoUrl = null);
+  void _removeNewVideo() {
+    _videoController?.dispose();
+    setState(() { _newVideo = null; _videoController = null; });
   }
 
-  // ─── Submit update ────────────────────────────────────────────────
-  Future<void> _submitUpdate() async {
+  // ── Submit ────────────────────────────────────────────────────────────────
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (_selectedPricingType != 'negotiable' &&
-        _priceController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _selectedPricingType == 'hourly'
-                ? 'Please enter your hourly rate'
-                : 'Please enter your fixed price',
-          ),
-          backgroundColor: AppColors.error,
-        ),
-      );
+    if (_pricingType != 'negotiable' && _priceCtrl.text.trim().isEmpty) {
+      _snack('Veuillez saisir un prix', isError: true);
+      return;
+    }
+    if (_selectedNeighborhoods.isEmpty) {
+      _snack('Veuillez sélectionner au moins une zone', isError: true);
       return;
     }
 
     setState(() => _isSubmitting = true);
-
     try {
       final provider = context.read<ServicesProvider>();
-
-      // ✅ Match exact provider signature: price (int) and minCharge (int)
-      int? price = int.tryParse(_priceController.text.trim());
-      int? minCharge = int.tryParse(_minChargeController.text.trim());
-
-      final success = await provider.updateListing(
+      final ok = await provider.updateListing(
         id: widget.listing.id,
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        pricingType: _selectedPricingType,
-        price: _selectedPricingType != 'negotiable' ? price : null,
-        minCharge:
-        _selectedPricingType == 'hourly' ? minCharge : null,
+        title: _titleCtrl.text.trim(),
+        description: _descCtrl.text.trim(),
+        pricingType: _pricingType,
+        price: _pricingType != 'negotiable'
+            ? int.tryParse(_priceCtrl.text.trim())
+            : null,
+        minCharge: _pricingType == 'hourly'
+            ? int.tryParse(_minChargeCtrl.text.trim())
+            : null,
         city: _selectedCity,
-        emergencyService: _emergencyService,
+        emergencyService: _emergency,
         photos: _newPhotos.isNotEmpty ? _newPhotos : null,
       );
 
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Listing updated successfully!'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          Navigator.pop(context, true);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                provider.listingsError ?? 'Failed to update listing',
-              ),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
+      if (!mounted) return;
+      if (ok) {
+        _snack('Annonce mise à jour !');
+        Navigator.pop(context, true);
+      } else {
+        _snack(provider.listingsError ?? 'Échec de la mise à jour',
+            isError: true);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      if (mounted) _snack('Erreur : $e', isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
+  void _snack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? _kError : _kSuccess,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final isTablet = MediaQuery.of(context).size.width > 600;
-
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: _buildAppBar(),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(isTablet ? 24 : 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: _kPageBg,
+        appBar: _buildAppBar(),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              _buildStatusBanner(isTablet),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Service Title *'),
-              const SizedBox(height: 8),
-              _buildTitleField(),
+              _buildStatusBanner(),
               const SizedBox(height: 20),
-              _buildSectionTitle('Description *'),
-              const SizedBox(height: 8),
-              _buildDescriptionField(),
+              _buildSection('Titre du service *', _buildTitleField()),
               const SizedBox(height: 20),
-              _buildSectionTitle('Pricing *'),
-              const SizedBox(height: 8),
-              _buildPricingSection(isTablet),
+              _buildSection('Description *', _buildDescField()),
               const SizedBox(height: 20),
-              _buildSectionTitle('City *'),
-              const SizedBox(height: 8),
-              _buildCityDropdown(),
+              _buildSection('Tarification *', _buildPricingSection()),
               const SizedBox(height: 20),
-              _buildSectionTitle('Available Days'),
-              const SizedBox(height: 8),
-              _buildAvailabilitySection(),
+              _buildSection('Ville *', _buildCityDropdown()),
               const SizedBox(height: 20),
-              _buildEmergencyToggle(isTablet),
+              _buildSection('Zones desservies * (au moins une)',
+                  _buildNeighborhoodChips()),
               const SizedBox(height: 20),
-              _buildSectionTitle(
-                'Photos (${_existingPhotos.length + _newPhotos.length}/5)',
-              ),
-              const SizedBox(height: 8),
-              _buildPhotosSection(isTablet),
+              _buildSection('Jours disponibles', _buildDayChips()),
+              const SizedBox(height: 20),
+              _buildSection(
+                  'Horaires (optionnel)',
+                  _buildTextField(
+                    controller: _hoursCtrl,
+                    hint: 'ex. 08:00 – 18:00',
+                  )),
+              const SizedBox(height: 20),
+              _buildEmergencyToggle(),
+              const SizedBox(height: 20),
+              _buildSection(
+                  'Photos (${_existingPhotos.length + _newPhotos.length}/5)',
+                  _buildPhotoManager()),
+              const SizedBox(height: 20),
+              _buildSection('Vidéo (1 max)', _buildVideoManager()),
+              const SizedBox(height: 20),
+              _buildSection(
+                  'Années d\'expérience',
+                  _buildTextField(
+                    controller: _experienceCtrl,
+                    hint: 'ex. 5',
+                    keyboardType: TextInputType.number,
+                    suffix: 'ans',
+                  )),
+              const SizedBox(height: 20),
+              _buildSection(
+                  'Certifications',
+                  _buildTextField(
+                    controller: _certsCtrl,
+                    hint: 'ex. CAP Plombier',
+                    maxLines: 3,
+                  )),
               const SizedBox(height: 32),
-              _buildSubmitButton(isTablet),
-              const SizedBox(height: 32),
+              _buildSaveButton(),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -320,31 +373,24 @@ class _EditListingScreenState extends State<EditListingScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // APP BAR
-  // ═══════════════════════════════════════════════════════════════════
+  // ── App bar ───────────────────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: AppColors.backgroundWhite,
+      backgroundColor: _kSurface,
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon:
-        const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+        icon: const Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
       ),
-      title: Text(
-        'Edit Listing',
-        style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w700),
-      ),
+      title: Text('Modifier l\'annonce', style: AppTypography.titleLarge),
+      centerTitle: true,
       actions: [
         TextButton(
-          onPressed: _isSubmitting ? null : _submitUpdate,
+          onPressed: _isSubmitting ? null : _submit,
           child: Text(
-            'Save',
-            style: AppTypography.labelLarge.copyWith(
-              color: _isSubmitting
-                  ? AppColors.textSecondary
-                  : AppColors.primaryGold,
+            'Sauver',
+            style: AppTypography.labelMedium.copyWith(
+              color: _isSubmitting ? _kTextLight : _kPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -353,69 +399,52 @@ class _EditListingScreenState extends State<EditListingScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // STATUS BANNER
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildStatusBanner(bool isTablet) {
-    Color bgColor;
-    Color textColor;
-    IconData icon;
-    String message;
+  // ── Status banner ─────────────────────────────────────────────────────────
+  Widget _buildStatusBanner() {
+    Color bg; Color fg; IconData icon; String msg;
 
     switch (widget.listing.status) {
-      case ListingStatus.pending:
-        bgColor = AppColors.warningLight;
-        textColor = AppColors.warning;
-        icon = Icons.pending_rounded;
-        message =
-        'This listing is pending approval. Changes will require re-approval.';
-        break;
       case ListingStatus.active:
-        bgColor = AppColors.successLight;
-        textColor = AppColors.success;
+        bg = _kSuccessLight; fg = _kSuccess;
         icon = Icons.check_circle_rounded;
-        message =
-        'This listing is active. Saving changes will keep it active.';
+        msg = 'Cette annonce est active. Les modifications sont sauvegardées immédiatement.';
+        break;
+      case ListingStatus.pending:
+        bg = _kWarningLight; fg = _kWarning;
+        icon = Icons.pending_rounded;
+        msg = 'En cours d\'examen. Les modifications nécessiteront une nouvelle approbation.';
         break;
       case ListingStatus.rejected:
-        bgColor = AppColors.errorLight;
-        textColor = AppColors.error;
+        bg = _kErrorLight; fg = _kError;
         icon = Icons.cancel_rounded;
-        message =
-        'This listing was rejected. Edit and resubmit for approval.';
-        break;
-      case ListingStatus.inactive:
-        bgColor = AppColors.backgroundLight;
-        textColor = AppColors.textSecondary;
-        icon = Icons.pause_circle_rounded;
-        message = 'This listing is inactive. Changes will be saved.';
+        msg = widget.listing.rejectionReason != null
+            ? 'Rejeté : ${widget.listing.rejectionReason}'
+            : 'Rejeté. Modifiez et resoumettez pour approbation.';
         break;
       default:
-        bgColor = AppColors.infoLight;
-        textColor = AppColors.info;
-        icon = Icons.info_rounded;
-        message = 'Edit your listing details below.';
+        bg = _kInputBg; fg = _kTextSecond;
+        icon = Icons.info_outline_rounded;
+        msg = 'Modifiez les détails de votre annonce ci-dessous.';
     }
 
     return Container(
-      padding: EdgeInsets.all(isTablet ? 16 : 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: textColor.withOpacity(0.3)),
+        color: bg,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(color: fg.withOpacity(0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: textColor, size: 20),
+          Icon(icon, size: 18, color: fg),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              message,
+              msg,
               style: AppTypography.bodySmall.copyWith(
-                color: textColor,
+                color: fg,
                 fontWeight: FontWeight.w600,
-                height: 1.4,
               ),
             ),
           ),
@@ -424,192 +453,165 @@ class _EditListingScreenState extends State<EditListingScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // HELPERS
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTypography.titleSmall.copyWith(
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
+  // ── Section wrapper ───────────────────────────────────────────────────────
+  Widget _buildSection(String title, Widget child) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // FIX: overflow ellipsis so long section titles (e.g. "Photos (5/5)")
+        // never overflow past the screen edge
+        Text(
+          title,
+          style: AppTypography.titleSmall,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 8),
+        child,
+      ],
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // TITLE FIELD
-  // ═══════════════════════════════════════════════════════════════════
+  // ── Title field ───────────────────────────────────────────────────────────
   Widget _buildTitleField() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: TextFormField(
-        controller: _titleController,
-        maxLength: 200,
-        style: AppTypography.bodyMedium,
-        decoration: InputDecoration(
-          hintText: 'e.g., Plombier professionnel - Urgences 24/7',
-          hintStyle: AppTypography.inputHint,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(16),
-          counterStyle: AppTypography.caption
-              .copyWith(color: AppColors.textSecondary),
-        ),
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'Please enter a title';
-          }
-          if (value.trim().length < 10) {
-            return 'Title must be at least 10 characters';
-          }
-          return null;
-        },
-      ),
+    return _buildTextField(
+      controller: _titleCtrl,
+      hint: 'ex. Plombier professionnel — Urgence 24h/24',
+      maxLength: 200,
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Titre requis';
+        if (v.trim().length < 5) return 'Min 5 caractères';
+        return null;
+      },
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // DESCRIPTION FIELD
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildDescriptionField() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: TextFormField(
-        controller: _descriptionController,
-        maxLines: 6,
-        maxLength: 2000,
-        style: AppTypography.bodyMedium,
-        decoration: InputDecoration(
-          hintText: 'Describe your service in detail...',
-          hintStyle: AppTypography.inputHint,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(16),
-          counterStyle: AppTypography.caption
-              .copyWith(color: AppColors.textSecondary),
-        ),
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'Please enter a description';
-          }
-          if (value.trim().length < 50) {
-            return 'Description must be at least 50 characters';
-          }
-          return null;
-        },
-      ),
+  // ── Description field ─────────────────────────────────────────────────────
+  Widget _buildDescField() {
+    return _buildTextField(
+      controller: _descCtrl,
+      hint: 'Décrivez votre service en détail…',
+      maxLines: 6,
+      maxLength: 2000,
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Description requise';
+        if (v.trim().length < 20) return 'Min 20 caractères';
+        return null;
+      },
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // PRICING SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildPricingSection(bool isTablet) {
+  // ── Pricing section ───────────────────────────────────────────────────────
+  Widget _buildPricingSection() {
     return Column(
       children: [
-        // Pricing type selector
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.backgroundWhite,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderLight),
-          ),
-          child: Row(
-            children:
-            ['hourly', 'fixed', 'negotiable'].map((type) {
-              final isSelected = _selectedPricingType == type;
-              final label = type == 'hourly'
-                  ? 'Hourly'
-                  : type == 'fixed'
-                  ? 'Fixed'
-                  : 'Negotiable';
+        // Type selector
+        // FIX: LayoutBuilder gives bounded width so each Expanded child has a
+        // concrete max-width — prevents unbounded-width RenderFlex crash
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final types  = ['fixed', 'hourly', 'negotiable'];
+            final labels = ['Fixe', 'Horaire', 'Négociable'];
+            final itemW  = (constraints.maxWidth) / 3;
 
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(
-                          () => _selectedPricingType = type),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding:
-                    const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primaryGold
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: AppTypography.labelMedium.copyWith(
-                        color: isSelected
-                            ? AppColors.primaryBlack
-                            : AppColors.textSecondary,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
+            return Container(
+              decoration: BoxDecoration(
+                color: _kSurface,
+                borderRadius: BorderRadius.circular(_rLg),
+                border: Border.all(color: _kBorder),
+              ),
+              child: Row(
+                children: List.generate(types.length, (i) {
+                  final sel = _pricingType == types[i];
+                  return GestureDetector(
+                    onTap: () => setState(() {
+                      _pricingType = types[i];
+                      if (types[i] == 'negotiable') {
+                        _priceCtrl.clear();
+                        _minChargeCtrl.clear();
+                      }
+                    }),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: itemW,
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: sel ? _kPrimary : Colors.transparent,
+                        borderRadius:
+                        BorderRadius.circular(_rLg - 1),
+                      ),
+                      child: Text(
+                        labels[i],
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          // FIX: dark text on gold (correct contrast)
+                          color: sel ? _kTextPrimary : _kTextSecond,
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+                  );
+                }),
+              ),
+            );
+          },
         ),
 
         const SizedBox(height: 12),
 
-        // Price inputs
-        if (_selectedPricingType == 'hourly') ...[
+        if (_pricingType == 'fixed') ...[
+          _buildTextField(
+            controller: _priceCtrl,
+            hint: 'ex. 15 000',
+            label: 'Prix fixe',
+            keyboardType: TextInputType.number,
+            suffix: 'XAF',
+          ),
+        ] else if (_pricingType == 'hourly') ...[
           Row(
             children: [
               Expanded(
-                child: _buildPriceField(
-                  controller: _priceController,
-                  label: 'Rate per hour *',
-                  hint: '5000',
+                child: _buildTextField(
+                  controller: _priceCtrl,
+                  hint: '5 000',
+                  label: 'Taux/heure',
+                  keyboardType: TextInputType.number,
+                  suffix: 'XAF',
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
-                child: _buildPriceField(
-                  controller: _minChargeController,
-                  label: 'Minimum charge',
-                  hint: '10000',
+                child: _buildTextField(
+                  controller: _minChargeCtrl,
+                  hint: '10 000',
+                  label: 'Minimum',
+                  keyboardType: TextInputType.number,
+                  suffix: 'XAF',
                 ),
               ),
             ],
-          ),
-        ] else if (_selectedPricingType == 'fixed') ...[
-          _buildPriceField(
-            controller: _priceController,
-            label: 'Fixed price *',
-            hint: '15000',
           ),
         ] else ...[
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.infoLight,
-              borderRadius: BorderRadius.circular(8),
+              color: _kPrimaryLight,
+              borderRadius: BorderRadius.circular(_rMd),
+              border: Border.all(color: _kPrimaryMid),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline,
-                    color: AppColors.info, size: 18),
+                const Icon(Icons.info_outline_rounded,
+                    size: 16, color: _kPrimaryDark),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Price will be discussed with the customer directly.',
-                    style: AppTypography.labelSmall
-                        .copyWith(color: AppColors.info),
+                    'Le prix sera discuté directement avec le client.',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: _kPrimaryDark),
                   ),
                 ),
               ],
@@ -620,134 +622,86 @@ class _EditListingScreenState extends State<EditListingScreen> {
     );
   }
 
-  Widget _buildPriceField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTypography.labelSmall.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.backgroundWhite,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderLight),
-          ),
-          child: TextFormField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            style: AppTypography.bodyMedium,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: AppTypography.inputHint,
-              suffixText: 'FCFA',
-              suffixStyle: AppTypography.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 12,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // CITY DROPDOWN
-  // ═══════════════════════════════════════════════════════════════════
+  // ── City dropdown ─────────────────────────────────────────────────────────
   Widget _buildCityDropdown() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(color: _kBorder),
       ),
       child: DropdownButtonFormField<String>(
-        value: _cities.contains(_selectedCity) ? _selectedCity : null,
-        decoration: const InputDecoration(
+        value: _selectedCity,
+        isExpanded: true, // FIX: prevents long city names overflowing
+        decoration: InputDecoration(
           border: InputBorder.none,
           contentPadding:
-          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          prefixIcon: Icon(
-            Icons.location_on_outlined,
-            color: AppColors.primaryGold,
-          ),
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          prefixIcon: const Icon(Icons.location_on_outlined,
+              color: _kPrimary, size: 20),
         ),
-        hint: Text('Select city', style: AppTypography.inputHint),
-        items: _cities.map((city) {
-          return DropdownMenuItem(
-            value: city,
-            child: Text(city, style: AppTypography.bodyMedium),
-          );
-        }).toList(),
-        onChanged: (value) {
-          if (value != null) setState(() => _selectedCity = value);
-        },
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please select a city';
+        items: _cities
+            .map((c) => DropdownMenuItem(
+          value: c,
+          child: Text(
+            c,
+            style: AppTypography.bodySmall
+                .copyWith(color: _kTextPrimary),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ))
+            .toList(),
+        onChanged: (v) {
+          if (v != null) {
+            setState(() {
+              _selectedCity = v;
+              _selectedNeighborhoods.clear();
+            });
           }
-          return null;
         },
+        dropdownColor: _kSurface,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: _kTextSecond),
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // AVAILABILITY SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildAvailabilitySection() {
+  // ── Neighborhoods ─────────────────────────────────────────────────────────
+  Widget _buildNeighborhoodChips() {
+    final hoods = _neighborhoods[_selectedCity] ?? [];
+    if (hoods.isEmpty) {
+      return Text(
+        'Pas de zones prédéfinies pour $_selectedCity.',
+        style: AppTypography.bodySmall.copyWith(color: _kTextSecond),
+      );
+    }
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: _availableDays.map((day) {
-        final isSelected = _selectedDays.contains(day);
+      children: hoods.map((h) {
+        final sel = _selectedNeighborhoods.contains(h);
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              if (isSelected) {
-                _selectedDays.remove(day);
-              } else {
-                _selectedDays.add(day);
-              }
-            });
-          },
+          onTap: () => setState(() {
+            sel
+                ? _selectedNeighborhoods.remove(h)
+                : _selectedNeighborhoods.add(h);
+          }),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primaryGold
-                  : AppColors.backgroundWhite,
-              borderRadius: BorderRadius.circular(20),
+              color: sel ? _kPrimary : _kSurface,
+              borderRadius: BorderRadius.circular(_rPill),
               border: Border.all(
-                color: isSelected
-                    ? AppColors.primaryGold
-                    : AppColors.borderLight,
-              ),
+                  color: sel ? _kPrimary : _kBorder),
             ),
             child: Text(
-              day.substring(0, 3),
+              h,
               style: AppTypography.labelMedium.copyWith(
-                color: isSelected
-                    ? AppColors.primaryBlack
-                    : AppColors.textSecondary,
-                fontWeight: isSelected
-                    ? FontWeight.w700
-                    : FontWeight.w500,
+                // FIX: dark text on gold (correct contrast)
+                color: sel ? _kTextPrimary : _kTextSecond,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -756,21 +710,50 @@ class _EditListingScreenState extends State<EditListingScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // EMERGENCY TOGGLE
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildEmergencyToggle(bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 16 : 14),
+  // ── Day chips ─────────────────────────────────────────────────────────────
+  Widget _buildDayChips() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _days.map((d) {
+        final sel = _selectedDays.contains(d);
+        return GestureDetector(
+          onTap: () => setState(() {
+            sel ? _selectedDays.remove(d) : _selectedDays.add(d);
+          }),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: sel ? _kPrimary : _kSurface,
+              borderRadius: BorderRadius.circular(_rPill),
+              border: Border.all(
+                  color: sel ? _kPrimary : _kBorder),
+            ),
+            child: Text(
+              d.length > 3 ? d.substring(0, 3) : d,
+              style: AppTypography.labelMedium.copyWith(
+                color: sel ? _kTextPrimary : _kTextSecond,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ── Emergency toggle ──────────────────────────────────────────────────────
+  Widget _buildEmergencyToggle() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _emergencyService
-            ? AppColors.errorLight
-            : AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(12),
+        color: _emergency ? _kErrorLight : _kSurface,
+        borderRadius: BorderRadius.circular(_rLg),
         border: Border.all(
-          color: _emergencyService
-              ? AppColors.error.withOpacity(0.4)
-              : AppColors.borderLight,
+          color: _emergency ? _kError.withOpacity(0.4) : _kBorder,
         ),
       ),
       child: Row(
@@ -778,231 +761,477 @@ class _EditListingScreenState extends State<EditListingScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _emergencyService
-                  ? AppColors.error.withOpacity(0.15)
-                  : AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(8),
+              color: _emergency
+                  ? _kError.withOpacity(0.12)
+                  : _kInputBg,
+              borderRadius: BorderRadius.circular(_rMd),
             ),
-            child: Icon(
-              Icons.emergency_rounded,
-              color: _emergencyService
-                  ? AppColors.error
-                  : AppColors.textSecondary,
-              size: 20,
-            ),
+            child: Icon(Icons.emergency_rounded,
+                color: _emergency ? _kError : _kTextSecond, size: 20),
           ),
           const SizedBox(width: 12),
+          // FIX: Expanded so text never pushes the Switch off-screen
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Emergency Service (24/7)',
+                  'Service d\'urgence 24h/24',
                   style: AppTypography.titleSmall.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: _emergencyService
-                        ? AppColors.error
-                        : AppColors.textPrimary,
+                    color: _emergency ? _kError : _kTextPrimary,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Customers can reach you any time for urgent needs',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  'Disponible pour les demandes urgentes à toute heure',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: _kTextSecond),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           Switch(
-            value: _emergencyService,
-            onChanged: (value) =>
-                setState(() => _emergencyService = value),
-            activeColor: AppColors.error,
-            activeTrackColor: AppColors.error.withOpacity(0.3),
+            value: _emergency,
+            onChanged: (v) => setState(() => _emergency = v),
+            activeColor: _kError,
+            activeTrackColor: _kError.withOpacity(0.3),
           ),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // PHOTOS SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildPhotosSection(bool isTablet) {
-    final totalPhotos = _existingPhotos.length + _newPhotos.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  // ── Photo manager ─────────────────────────────────────────────────────────
+  Widget _buildPhotoManager() {
+    final total = _existingPhotos.length + _newPhotos.length;
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
       children: [
-        SizedBox(
-          height: 110,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              ..._existingPhotos.asMap().entries.map((entry) =>
-                  _buildExistingPhotoTile(entry.key, entry.value)),
-              ..._newPhotos.asMap().entries.map((entry) =>
-                  _buildNewPhotoTile(entry.key, entry.value)),
-              if (totalPhotos < 5) _buildAddPhotoTile(),
-            ],
+        ..._existingPhotos.asMap().entries.map((e) => _NetworkPhotoTile(
+          url: e.value,
+          onRemove: () => _removeExistingPhoto(e.key),
+        )),
+        ..._newPhotos.asMap().entries.map((e) => _LocalPhotoTile(
+          file: e.value,
+          onRemove: () => _removeNewPhoto(e.key),
+          isNew: true,
+        )),
+        if (total < 5)
+          _AddMediaTile(
+            icon: Icons.add_photo_alternate_outlined,
+            label: 'Ajouter',
+            onTap: _pickPhoto,
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '$totalPhotos/5 photos · Existing: ${_existingPhotos.length} · New: ${_newPhotos.length}',
-          style: AppTypography.caption.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
       ],
     );
   }
 
-  Widget _buildExistingPhotoTile(int index, String url) {
+  // ── Video manager ─────────────────────────────────────────────────────────
+  Widget _buildVideoManager() {
+    if (_existingVideoUrl != null) {
+      return _ExistingVideoTile(
+        url: _existingVideoUrl!,
+        onRemove: _removeExistingVideo,
+      );
+    }
+    if (_newVideo != null && _videoController != null) {
+      return _NewVideoPreview(
+        controller: _videoController!,
+        onRemove: _removeNewVideo,
+      );
+    }
+    return _AddMediaTile(
+      icon: Icons.videocam_outlined,
+      label: 'Ajouter une vidéo\n(3 min max · 100 Mo)',
+      onTap: _pickVideo,
+      height: 100,
+    );
+  }
+
+  // ── Save button ───────────────────────────────────────────────────────────
+  Widget _buildSaveButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton.icon(
+        onPressed: _isSubmitting ? null : _submit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _kPrimary,
+          foregroundColor: _kTextPrimary,
+          disabledBackgroundColor: _kBorder,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_rLg)),
+        ),
+        icon: _isSubmitting
+            ? const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: _kTextPrimary),
+        )
+            : const Icon(Icons.save_rounded, size: 20),
+        label: Text(
+          'Sauvegarder les modifications',
+          style: AppTypography.buttonMedium,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  // ── Shared text field ─────────────────────────────────────────────────────
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    String? label,
+    String? suffix,
+    int maxLines = 1,
+    int? maxLength,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(color: _kBorder),
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        maxLength: maxLength,
+        keyboardType: keyboardType,
+        style: AppTypography.bodyMedium.copyWith(color: _kTextPrimary),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: AppTypography.labelMedium,
+          hintText: hint,
+          hintStyle: AppTypography.bodySmall.copyWith(color: _kTextLight),
+          suffixText: suffix,
+          suffixStyle: AppTypography.labelSmall,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(14),
+          counterStyle: AppTypography.labelSmall,
+        ),
+        validator: validator,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NETWORK PHOTO TILE
+// ─────────────────────────────────────────────────────────────────────────────
+class _NetworkPhotoTile extends StatelessWidget {
+  final String url;
+  final VoidCallback onRemove;
+  const _NetworkPhotoTile({required this.url, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
-        Container(
-          margin: const EdgeInsets.only(right: 10),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.network(
-              url,
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                width: 100,
-                height: 100,
-                color: AppColors.backgroundLight,
-                child: const Icon(Icons.image_not_supported,
-                    color: AppColors.textLight),
-              ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(_rLg),
+          child: Image.network(
+            url,
+            width: 96,
+            height: 96,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              width: 96,
+              height: 96,
+              color: _kInputBg,
+              child: const Icon(Icons.image_not_supported,
+                  color: _kTextLight),
             ),
           ),
         ),
         Positioned(
-          top: 4,
-          right: 14,
-          child: GestureDetector(
-            onTap: () => _removeExistingPhoto(index),
-            child: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: const BoxDecoration(
-                color: AppColors.error,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.close,
-                  color: Colors.white, size: 14),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 8,
+          bottom: 4,
           left: 4,
           child: Container(
             padding:
-            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.6),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: Text(
-              'Existing',
-              style: AppTypography.caption.copyWith(
-                color: Colors.white,
-                fontSize: 9,
-              ),
-            ),
+            child: const Text('sauvé',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w600)),
           ),
         ),
+        Positioned(top: 4, right: 4, child: _RemoveBtn(onTap: onRemove)),
       ],
     );
   }
+}
 
-  Widget _buildNewPhotoTile(int index, File file) {
+// ─────────────────────────────────────────────────────────────────────────────
+// LOCAL PHOTO TILE
+// ─────────────────────────────────────────────────────────────────────────────
+class _LocalPhotoTile extends StatelessWidget {
+  final File file;
+  final VoidCallback onRemove;
+  final bool isNew;
+  const _LocalPhotoTile(
+      {required this.file, required this.onRemove, this.isNew = false});
+
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
-        Container(
-          margin: const EdgeInsets.only(right: 10),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.file(
-              file,
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-            ),
-          ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(_rLg),
+          child: Image.file(file, width: 96, height: 96, fit: BoxFit.cover),
         ),
-        Positioned(
-          top: 4,
-          right: 14,
-          child: GestureDetector(
-            onTap: () => _removeNewPhoto(index),
+        if (isNew)
+          Positioned(
+            bottom: 4,
+            left: 4,
             child: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: const BoxDecoration(
-                color: AppColors.error,
-                shape: BoxShape.circle,
+              padding:
+              const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: _kSuccess.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(4),
               ),
-              child: const Icon(Icons.close,
-                  color: Colors.white, size: 14),
+              child: const Text('nouveau',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600)),
             ),
           ),
-        ),
-        Positioned(
-          bottom: 8,
-          left: 4,
-          child: Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.85),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              'New',
-              style: AppTypography.caption.copyWith(
-                color: Colors.white,
-                fontSize: 9,
-              ),
-            ),
-          ),
-        ),
+        Positioned(top: 4, right: 4, child: _RemoveBtn(onTap: onRemove)),
       ],
     );
   }
+}
 
-  Widget _buildAddPhotoTile() {
-    return GestureDetector(
-      onTap: _pickPhoto,
-      child: Container(
-        width: 100,
-        height: 100,
-        margin: const EdgeInsets.only(right: 10),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundWhite,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: AppColors.primaryGold.withOpacity(0.4),
+// ─────────────────────────────────────────────────────────────────────────────
+// EXISTING VIDEO TILE
+// ─────────────────────────────────────────────────────────────────────────────
+class _ExistingVideoTile extends StatelessWidget {
+  final String url;
+  final VoidCallback onRemove;
+  const _ExistingVideoTile({required this.url, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    // Truncate filename safely
+    final filename = url.split('/').last;
+    final display  = filename.length > 30
+        ? '…${filename.substring(filename.length - 20)}'
+        : filename;
+
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(color: _kPrimary, width: 2),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.videocam_rounded,
+                  color: Colors.white54, size: 32),
+              const SizedBox(height: 6),
+              Text('Vidéo sauvegardée',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: Colors.white54)),
+              const SizedBox(height: 2),
+              // FIX: constrained so the filename never causes a horizontal overflow
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: Text(
+                  display,
+                  style: AppTypography.labelSmall
+                      .copyWith(color: Colors.white38, fontSize: 9),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
+          Positioned(top: 8, right: 8, child: _RemoveBtn(onTap: onRemove)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEW VIDEO PREVIEW
+// ─────────────────────────────────────────────────────────────────────────────
+class _NewVideoPreview extends StatefulWidget {
+  final VideoPlayerController controller;
+  final VoidCallback onRemove;
+  const _NewVideoPreview(
+      {required this.controller, required this.onRemove});
+
+  @override
+  State<_NewVideoPreview> createState() => _NewVideoPreviewState();
+}
+
+class _NewVideoPreviewState extends State<_NewVideoPreview> {
+  bool _playing = false;
+
+  void _toggle() {
+    setState(() {
+      _playing = !_playing;
+      _playing ? widget.controller.play() : widget.controller.pause();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dur   = widget.controller.value.duration;
+    final label =
+        '${dur.inMinutes.remainder(60).toString().padLeft(2, '0')}:'
+        '${dur.inSeconds.remainder(60).toString().padLeft(2, '0')}';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(color: _kPrimary, width: 2),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(_rLg - 2),
+            child: AspectRatio(
+              aspectRatio: widget.controller.value.aspectRatio,
+              child: VideoPlayer(widget.controller),
+            ),
+          ),
+          GestureDetector(
+            onTap: _toggle,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 8,
+            left: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(_rSm),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.videocam_rounded,
+                      size: 10, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontFamily: 'Roboto',
+                      fontSize: 10,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: _kSuccess.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text('nouveau',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+              top: 8,
+              right: 8,
+              child: _RemoveBtn(onTap: widget.onRemove)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADD MEDIA TILE
+// ─────────────────────────────────────────────────────────────────────────────
+class _AddMediaTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final double height;
+
+  const _AddMediaTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.height = 96,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width:  height == 96 ? 96 : double.infinity,
+        height: height,
+        decoration: BoxDecoration(
+          color: _kInputBg,
+          borderRadius: BorderRadius.circular(_rLg),
+          border: Border.all(
+              color: _kPrimary.withOpacity(0.4), width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.add_photo_alternate_outlined,
-              color: AppColors.primaryGold,
-              size: 28,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Add Photo',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.primaryGold,
-                fontWeight: FontWeight.w600,
+            Icon(icon, color: _kPrimary, size: 28),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: AppTypography.labelSmall.copyWith(
+                  color: _kPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                // FIX: ellipsis so multi-line label doesn't overflow the tile
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ),
           ],
@@ -1010,42 +1239,24 @@ class _EditListingScreenState extends State<EditListingScreen> {
       ),
     );
   }
+}
 
-  // ═══════════════════════════════════════════════════════════════════
-  // SUBMIT BUTTON
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildSubmitButton(bool isTablet) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _isSubmitting ? null : _submitUpdate,
-        icon: _isSubmitting
-            ? const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: AppColors.primaryBlack,
-          ),
-        )
-            : const Icon(Icons.save_rounded),
-        label: Text(
-          _isSubmitting ? 'Saving...' : 'Save Changes',
-          style: AppTypography.buttonLarge.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryGold,
-          foregroundColor: AppColors.primaryBlack,
-          disabledBackgroundColor: AppColors.borderLight,
-          padding: EdgeInsets.symmetric(
-            vertical: isTablet ? 18 : 16,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+// ─────────────────────────────────────────────────────────────────────────────
+// REMOVE BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
+class _RemoveBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _RemoveBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: const BoxDecoration(
+            color: _kError, shape: BoxShape.circle),
+        child: const Icon(Icons.close, color: Colors.white, size: 14),
       ),
     );
   }

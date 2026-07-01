@@ -1,8 +1,13 @@
-// lib/screens/driver/trip/trip_request_screen.dart
+// lib/screens/driver/offer/trip_request_screen.dart
+//
+// Redesigned: dark theme, Uber-style countdown ring,
+// dramatic accept / decline buttons, smooth animations.
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:wego_v1/utils/app_colors.dart';
 
 class TripRequestScreen extends StatefulWidget {
@@ -24,116 +29,83 @@ class TripRequestScreen extends StatefulWidget {
 class _TripRequestScreenState extends State<TripRequestScreen>
     with TickerProviderStateMixin {
 
-  late AnimationController _timerController;
-  late AnimationController _pulseController;
-  late AnimationController _shakeController;
+  late AnimationController _timerCtrl;
+  late AnimationController _pulseCtrl;
+  late AnimationController _shakeCtrl;
+  late AnimationController _entryCtrl;
+  late AnimationController _ringGlowCtrl;
 
-  late Animation<double> _timerAnimation;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _shakeAnimation;
+  late Animation<double> _timerAnim;
+  late Animation<double> _pulseAnim;
+  late Animation<double> _shakeAnim;
+  late Animation<double> _entryFadeAnim;
+  late Animation<Offset>  _entrySlideAnim;
+  late Animation<double> _ringGlowAnim;
 
   late int remainingSeconds;
   late int totalSeconds;
 
-  // Single source of truth — countdown drives both UI counter and animation
   Timer? _countdownTimer;
   bool _isProcessing = false;
   bool _hasTimedOut  = false;
 
   // ═══════════════════════════════════════════════════════════════════
-  // INITIALIZATION
+  // INIT
   // ═══════════════════════════════════════════════════════════════════
 
   @override
   void initState() {
     super.initState();
-
     totalSeconds     = _getExpiresInSeconds();
     remainingSeconds = totalSeconds;
-
-    debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('🚨 [TRIP-REQUEST] Screen initialized');
-    debugPrint('⏰ [TRIP-REQUEST] Timeout: $totalSeconds seconds');
-    debugPrint('👤 [TRIP-REQUEST] Passenger: ${_getPassengerName()}');
-    debugPrint('🖼️  [TRIP-REQUEST] Avatar: ${_getPassengerAvatarUrl() ?? "none"}');
-    debugPrint('📦 Offer keys: ${widget.offer.keys.join(", ")}');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
     _setupAnimations();
     _startCountdown();
+    HapticFeedback.heavyImpact();
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // HELPERS — data extraction
+  // DATA HELPERS
   // ═══════════════════════════════════════════════════════════════════
 
   int _getExpiresInSeconds() {
-    try {
-      final raw = widget.offer['expiresIn'] ??
-          widget.offer['expires_in'] ??
-          widget.offer['timeout'];
-
-      if (raw is int)    return raw;
-      if (raw is double) return raw.toInt();
-      if (raw is String) return int.tryParse(raw) ?? 25;
-
-      debugPrint('⚠️ [TRIP-REQUEST] expiresIn not found, defaulting to 25 s');
-      return 25;
-    } catch (e) {
-      debugPrint('❌ [TRIP-REQUEST] Error reading expiresIn: $e');
-      return 25;
-    }
+    final raw = widget.offer['expiresIn'] ?? widget.offer['expires_in'] ?? widget.offer['timeout'];
+    if (raw is int)    return raw.clamp(5, 120);
+    if (raw is double) return raw.toInt().clamp(5, 120);
+    if (raw is String) return (int.tryParse(raw) ?? 25).clamp(5, 120);
+    return 25;
   }
 
-  String _getPassengerName() {
-    return widget.offer['passenger']?['name']?.toString() ??
-        widget.offer['passengerName']?.toString() ??
-        'Passenger';
-  }
+  String _getPassengerName() =>
+      widget.offer['passenger']?['name']?.toString() ??
+          widget.offer['passengerName']?.toString() ?? 'Passenger';
 
-  // ✅ NEW: reads both 'avatar_url' and 'avatar' (backend sends both)
   String? _getPassengerAvatarUrl() {
-    final passenger = widget.offer['passenger'];
-    if (passenger == null) return null;
-
-    final url = passenger['avatar_url']?.toString() ??
-        passenger['avatar']?.toString();
-
-    // Treat empty string as null
+    final p = widget.offer['passenger'];
+    if (p == null) return null;
+    final url = p['avatar_url']?.toString() ?? p['avatar']?.toString();
     return (url != null && url.isNotEmpty) ? url : null;
   }
 
   double _getPassengerRating() {
-    final rating = widget.offer['passenger']?['rating'] ??
-        widget.offer['passengerRating'];
-
-    if (rating == null) return 0.0; // 0 means "no rating yet"
-    if (rating is num)  return rating.toDouble();
-    return double.tryParse(rating.toString()) ?? 0.0;
+    final r = widget.offer['passenger']?['rating'] ?? widget.offer['passengerRating'];
+    if (r == null) return 0;
+    if (r is num) return r.toDouble();
+    return double.tryParse(r.toString()) ?? 0;
   }
 
-  String _getPickupAddress() {
-    return widget.offer['pickup']?['address']?.toString() ??
-        widget.offer['pickupAddress']?.toString() ??
-        'Pickup location';
-  }
+  String _getPickupAddress() =>
+      widget.offer['pickup']?['address']?.toString() ??
+          widget.offer['pickupAddress']?.toString() ?? 'Pickup location';
 
-  String _getDropoffAddress() {
-    return widget.offer['dropoff']?['address']?.toString() ??
-        widget.offer['destination']?['address']?.toString() ??
-        widget.offer['dropoffAddress']?.toString() ??
-        'Destination';
-  }
+  String _getDropoffAddress() =>
+      widget.offer['dropoff']?['address']?.toString() ??
+          widget.offer['destination']?['address']?.toString() ??
+          widget.offer['dropoffAddress']?.toString() ?? 'Destination';
 
   String _getDistance() {
-    final raw = widget.offer['distanceM'] ??
-        widget.offer['distance'] ??
-        widget.offer['distance_km'] ??
-        widget.offer['distanceKm'] ??
-        0;
-
+    final raw = widget.offer['distanceM'] ?? widget.offer['distance'] ??
+        widget.offer['distance_km'] ?? widget.offer['distanceKm'] ?? 0;
     if (raw is num) {
-      // If value looks like metres (> 100), convert to km
       final km = raw > 100 ? raw / 1000.0 : raw.toDouble();
       return '${km.toStringAsFixed(1)} km';
     }
@@ -141,19 +113,16 @@ class _TripRequestScreenState extends State<TripRequestScreen>
   }
 
   String _getFare() {
-    final raw = widget.offer['fareEstimate'] ??
-        widget.offer['fare_estimate'] ??
-        widget.offer['fare'] ??
-        0;
-
+    final raw = widget.offer['fareEstimate'] ?? widget.offer['fare_estimate'] ??
+        widget.offer['fare'] ?? 0;
     if (raw is num) return '${raw.toInt()} XAF';
     return '$raw XAF';
   }
 
-  Color _getUrgencyColor() {
+  Color get _urgencyColor {
     if (remainingSeconds <= 5)  return AppColors.error;
-    if (remainingSeconds <= 10) return AppColors.warning;
-    return AppColors.info;
+    if (remainingSeconds <= 10) return const Color(0xFFFF8C00);
+    return AppColors.primaryGold;
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -161,46 +130,49 @@ class _TripRequestScreenState extends State<TripRequestScreen>
   // ═══════════════════════════════════════════════════════════════════
 
   void _setupAnimations() {
-    // ── Timer ring — driven by countdown, not by AnimationController ──
-    // We keep the controller for the circular indicator but sync it manually
-    _timerController = AnimationController(
-      duration: Duration(seconds: totalSeconds),
-      vsync: this,
-    );
-    _timerAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _timerController, curve: Curves.linear),
-    );
-    _timerController.forward();
+    // Entry animation
+    _entryCtrl = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+    _entryFadeAnim = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
+    _entrySlideAnim = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+    _entryCtrl.forward();
 
-    // ── Pulse (scales timer circle when urgent) ────────────────────
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-    _pulseController.repeat(reverse: true);
+    // Timer countdown ring
+    _timerCtrl = AnimationController(duration: Duration(seconds: totalSeconds), vsync: this);
+    _timerAnim = Tween<double>(begin: 1.0, end: 0.0)
+        .animate(CurvedAnimation(parent: _timerCtrl, curve: Curves.linear));
+    _timerCtrl.forward();
 
-    // ── Shake (horizontal jolt for urgency) ────────────────────────
-    _shakeController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _shakeAnimation = Tween<double>(begin: 0.0, end: 10.0).animate(
-      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
-    );
+    // Pulse for urgency
+    _pulseCtrl = AnimationController(duration: const Duration(milliseconds: 700), vsync: this);
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.18)
+        .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _pulseCtrl.repeat(reverse: true);
+
+    // Shake
+    _shakeCtrl = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
+    _shakeAnim = Tween<double>(begin: 0.0, end: 10.0)
+        .animate(CurvedAnimation(parent: _shakeCtrl, curve: Curves.elasticIn));
+
+    // Ring glow
+    _ringGlowCtrl = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this)
+      ..repeat(reverse: true);
+    _ringGlowAnim = Tween<double>(begin: 0.4, end: 1.0)
+        .animate(CurvedAnimation(parent: _ringGlowCtrl, curve: Curves.easeInOut));
   }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // COUNTDOWN
+  // ═══════════════════════════════════════════════════════════════════
 
   void _startCountdown() {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) { timer.cancel(); return; }
-
       if (remainingSeconds > 0) {
         setState(() => remainingSeconds--);
-
         if (remainingSeconds == 10 || remainingSeconds == 5) {
-          _shakeController.forward().then((_) => _shakeController.reverse());
+          HapticFeedback.mediumImpact();
+          _shakeCtrl.forward().then((_) => _shakeCtrl.reverse());
         }
       } else {
         timer.cancel();
@@ -215,60 +187,41 @@ class _TripRequestScreenState extends State<TripRequestScreen>
 
   Future<void> _handleAccept() async {
     if (_isProcessing || _hasTimedOut) return;
+    HapticFeedback.heavyImpact();
     setState(() => _isProcessing = true);
-
     try {
       _countdownTimer?.cancel();
-      debugPrint('✅ [TRIP-REQUEST] Accepting...');
-
       final success = await widget.onAccept(widget.offer);
       if (!mounted) return;
-
       if (success) {
         Navigator.pop(context);
       } else {
         setState(() => _isProcessing = false);
-        _showErrorDialog(
-          title: 'Trip Already Taken',
-          message: 'Another driver has already accepted this trip.',
-        );
+        _showErrorDialog(title: 'Trip Taken', message: 'Another driver accepted this trip.');
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
-      _showErrorDialog(
-        title: 'Connection Error',
-        message: 'Failed to accept trip. Please try again.',
-        onRetry: _handleAccept,
-      );
+      _showErrorDialog(title: 'Error', message: 'Could not accept trip. Please try again.', onRetry: _handleAccept);
     }
   }
 
   Future<void> _handleDecline() async {
     if (_isProcessing || _hasTimedOut) return;
     setState(() => _isProcessing = true);
-
     try {
       _countdownTimer?.cancel();
       await widget.onDecline(widget.offer);
-      if (!mounted) return;
-      Navigator.pop(context);
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (mounted) Navigator.pop(context);
     }
   }
 
   Future<void> _handleTimeout() async {
     if (_isProcessing || _hasTimedOut) return;
     _hasTimedOut = true;
-
-    debugPrint('⏰ [TRIP-REQUEST] Timed out');
-
-    try {
-      await widget.onDecline(widget.offer);
-    } catch (_) {}
-
+    try { await widget.onDecline(widget.offer); } catch (_) {}
     if (!mounted) return;
     _showTimeoutDialog();
   }
@@ -279,9 +232,11 @@ class _TripRequestScreenState extends State<TripRequestScreen>
 
   @override
   void dispose() {
-    _timerController.dispose();
-    _pulseController.dispose();
-    _shakeController.dispose();
+    _entryCtrl.dispose();
+    _timerCtrl.dispose();
+    _pulseCtrl.dispose();
+    _shakeCtrl.dispose();
+    _ringGlowCtrl.dispose();
     _countdownTimer?.cancel();
     super.dispose();
   }
@@ -292,125 +247,31 @@ class _TripRequestScreenState extends State<TripRequestScreen>
 
   void _showTimeoutDialog() {
     showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.warningLight,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.access_time, color: AppColors.warning, size: 24),
-          ),
-          const SizedBox(width: 12),
-          const Text('Request Expired',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        ]),
-        content: const Text(
-          'You didn\'t respond in time. The trip request has been declined automatically.',
-          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGold,
-                foregroundColor: AppColors.primaryBlack,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Okay',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            ),
-          ),
-        ],
+      context: context, barrierDismissible: false,
+      builder: (_) => _DarkDialog(
+        icon: Icons.access_time_rounded, iconColor: AppColors.warning,
+        title: 'Request Expired',
+        message: 'You didn\'t respond in time. The trip was declined automatically.',
+        actions: [_GoldButton(label: 'OK', onTap: () {
+          Navigator.pop(context); Navigator.pop(context);
+        })],
       ),
     );
   }
 
-  void _showErrorDialog({
-    required String title,
-    required String message,
-    VoidCallback? onRetry,
-  }) {
+  void _showErrorDialog({required String title, required String message, VoidCallback? onRetry}) {
     showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.errorLight,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.error_outline, color: AppColors.error, size: 24),
-          ),
+      context: context, barrierDismissible: false,
+      builder: (_) => _DarkDialog(
+        icon: Icons.error_outline_rounded, iconColor: AppColors.error,
+        title: title, message: message,
+        actions: onRetry != null
+            ? [
+          _OutlinedDarkButton(label: 'Cancel', onTap: () { Navigator.pop(context); Navigator.pop(context); }),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          ),
-        ]),
-        content: Text(message,
-            style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-        actions: [
-          if (onRetry != null) ...[
-            Row(children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () { Navigator.pop(context); Navigator.pop(context); },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.borderLight),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Cancel',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () { Navigator.pop(context); onRetry(); },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryGold,
-                    foregroundColor: AppColors.primaryBlack,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Retry',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ]),
-          ] else ...[
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () { Navigator.pop(context); Navigator.pop(context); },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGold,
-                  foregroundColor: AppColors.primaryBlack,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Okay',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              ),
-            ),
-          ],
-        ],
+          _GoldButton(label: 'Retry', onTap: () { Navigator.pop(context); onRetry(); }),
+        ]
+            : [_GoldButton(label: 'OK', onTap: () { Navigator.pop(context); Navigator.pop(context); })],
       ),
     );
   }
@@ -424,18 +285,24 @@ class _TripRequestScreenState extends State<TripRequestScreen>
     return WillPopScope(
       onWillPop: () async => false,
       child: Scaffold(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: AppColors.darkBg,
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                _buildTimerSection(),
-                const SizedBox(height: 32),
-                Expanded(child: _buildTripDetails()),
-                const SizedBox(height: 24),
-                _buildActionButtons(),
-              ],
+          child: FadeTransition(
+            opacity: _entryFadeAnim,
+            child: SlideTransition(
+              position: _entrySlideAnim,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: Column(
+                  children: [
+                    _buildTimerSection(),
+                    const SizedBox(height: 24),
+                    Expanded(child: _buildTripCard()),
+                    const SizedBox(height: 24),
+                    _buildActionButtons(),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -443,74 +310,86 @@ class _TripRequestScreenState extends State<TripRequestScreen>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // TIMER SECTION
-  // ═══════════════════════════════════════════════════════════════════
+  // ─── Timer / header ───────────────────────────────────────────────
 
   Widget _buildTimerSection() {
     return AnimatedBuilder(
-      animation: _shakeAnimation,
+      animation: _shakeAnim,
       builder: (_, __) => Transform.translate(
-        offset: Offset(_shakeAnimation.value, 0),
+        offset: Offset(_shakeAnim.value * math.sin(remainingSeconds.toDouble()), 0),
         child: Column(
           children: [
+            // Ring timer
             AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (_, __) => Transform.scale(
-                scale: remainingSeconds <= 10 ? _pulseAnimation.value : 1.0,
-                child: SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
+              animation: _pulseAnim,
+              builder: (_, child) => Transform.scale(
+                scale: remainingSeconds <= 10 ? _pulseAnim.value : 1.0,
+                child: child,
+              ),
+              child: SizedBox(
+                width: 90, height: 90,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Glow circle
+                    AnimatedBuilder(
+                      animation: _ringGlowAnim,
+                      builder: (_, __) => Container(
+                        width: 90, height: 90,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _getUrgencyColor().withOpacity(0.1),
+                          boxShadow: [BoxShadow(
+                            color: _urgencyColor.withOpacity(0.35 * _ringGlowAnim.value),
+                            blurRadius: 24, spreadRadius: 4,
+                          )],
                         ),
                       ),
-                      AnimatedBuilder(
-                        animation: _timerAnimation,
-                        builder: (_, __) => CircularProgressIndicator(
-                          value: _timerAnimation.value,
-                          strokeWidth: 5,
-                          valueColor: AlwaysStoppedAnimation(_getUrgencyColor()),
-                          backgroundColor: AppColors.borderLight,
+                    ),
+                    // Background ring
+                    SizedBox(width: 90, height: 90,
+                      child: CircularProgressIndicator(
+                        value: 1.0, strokeWidth: 6,
+                        valueColor: AlwaysStoppedAnimation(AppColors.darkSurfaceAlt),
+                      ),
+                    ),
+                    // Progress ring
+                    AnimatedBuilder(
+                      animation: _timerAnim,
+                      builder: (_, __) => SizedBox(width: 90, height: 90,
+                        child: CircularProgressIndicator(
+                          value: _timerAnim.value,
+                          strokeWidth: 6,
+                          valueColor: AlwaysStoppedAnimation(_urgencyColor),
+                          strokeCap: StrokeCap.round,
                         ),
                       ),
-                      Text(
-                        '$remainingSeconds',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: _getUrgencyColor(),
-                        ),
+                    ),
+                    // Countdown number
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: TextStyle(
+                        fontSize: 32, fontWeight: FontWeight.w900,
+                        color: _urgencyColor,
                       ),
-                    ],
-                  ),
+                      child: Text('$remainingSeconds'),
+                    ),
+                  ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'New Trip Request',
+            const Text('New Trip Request',
+                style: TextStyle(
+                    fontSize: 24, fontWeight: FontWeight.w900,
+                    color: AppColors.darkTextPrimary, letterSpacing: -0.3)),
+            const SizedBox(height: 6),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 300),
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+                fontSize: 14, fontWeight: remainingSeconds <= 5 ? FontWeight.w700 : FontWeight.w400,
+                color: remainingSeconds <= 5 ? AppColors.error : AppColors.darkTextSecondary,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              remainingSeconds <= 5
-                  ? 'Hurry! Request expires soon!'
-                  : '$remainingSeconds seconds to respond',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: remainingSeconds <= 5 ? FontWeight.w700 : FontWeight.w400,
-                color: remainingSeconds <= 5 ? AppColors.error : AppColors.textSecondary,
-              ),
+              child: Text(remainingSeconds <= 5 ? 'Expiring soon!' : '$remainingSeconds seconds to respond'),
             ),
           ],
         ),
@@ -518,370 +397,325 @@ class _TripRequestScreenState extends State<TripRequestScreen>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // TRIP DETAILS CARD
-  // ═══════════════════════════════════════════════════════════════════
+  // ─── Trip details card ────────────────────────────────────────────
 
-  Widget _buildTripDetails() {
+  Widget _buildTripCard() {
+    final name      = _getPassengerName();
+    final initial   = name.isNotEmpty ? name[0].toUpperCase() : 'P';
+    final avatarUrl = _getPassengerAvatarUrl();
+    final rating    = _getPassengerRating();
+
+    Widget avatar = Container(
+      width: 52, height: 52,
+      decoration: const BoxDecoration(color: AppColors.primaryGold, shape: BoxShape.circle),
+      child: Center(child: Text(initial,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black))),
+    );
+    if (avatarUrl != null) {
+      avatar = ClipOval(child: CachedNetworkImage(
+        imageUrl: avatarUrl, width: 52, height: 52, fit: BoxFit.cover,
+        placeholder: (_, __) => avatar, errorWidget: (_, __, ___) => avatar,
+      ));
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowMedium,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.darkBorder),
+        boxShadow: [BoxShadow(
+            color: Colors.black.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 6))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildPassengerInfo(),
+          // Passenger header
+          Row(children: [
+            avatar,
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name, style: const TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.darkTextPrimary)),
+              const SizedBox(height: 4),
+              Row(children: [
+                Icon(Icons.star_rounded, size: 15, color: rating > 0 ? AppColors.primaryGold : AppColors.darkTextTertiary),
+                const SizedBox(width: 4),
+                Text(
+                  rating > 0 ? rating.toStringAsFixed(1) : 'New rider',
+                  style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600,
+                    color: rating > 0 ? AppColors.darkTextSecondary : AppColors.darkTextTertiary,
+                  ),
+                ),
+              ]),
+            ])),
+            // Verified badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.primaryGold.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.primaryGold.withOpacity(0.3)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                Icon(Icons.verified_rounded, size: 14, color: AppColors.primaryGold),
+                SizedBox(width: 4),
+                Text('Verified', style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryGold)),
+              ]),
+            ),
+          ]),
+
           const SizedBox(height: 20),
-          Divider(color: AppColors.borderLight, height: 1),
+          Divider(height: 1, color: AppColors.darkBorder),
           const SizedBox(height: 20),
-          _buildLocationRow(
-            icon: Icons.location_on,
+
+          // Pickup
+          _LocationRow(
+            icon: Icons.my_location_rounded,
             label: 'Pickup',
             address: _getPickupAddress(),
             color: AppColors.success,
-            backgroundColor: AppColors.successLight,
           ),
           const SizedBox(height: 16),
-          _buildLocationRow(
-            icon: Icons.flag,
-            label: 'Destination',
+          // Dropoff
+          _LocationRow(
+            icon: Icons.location_on_rounded,
+            label: 'Drop-off',
             address: _getDropoffAddress(),
             color: AppColors.error,
-            backgroundColor: AppColors.errorLight,
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.straighten,
-                  label: 'Distance',
-                  value: _getDistance(),
-                  color: AppColors.info,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.account_balance_wallet,
-                  label: 'Fare',
-                  value: _getFare(),
-                  color: AppColors.primaryGold,
-                ),
-              ),
-            ],
-          ),
+
+          const SizedBox(height: 20),
+
+          // Stats row
+          Row(children: [
+            Expanded(child: _StatChip(
+              icon: Icons.straighten_rounded,
+              label: 'Distance',
+              value: _getDistance(),
+              color: const Color(0xFF4C8DFF),
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: _StatChip(
+              icon: Icons.payments_rounded,
+              label: 'Earnings',
+              value: _getFare(),
+              color: AppColors.primaryGold,
+            )),
+          ]),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // PASSENGER INFO — with real avatar photo
-  // ═══════════════════════════════════════════════════════════════════
+  // ─── Accept / Decline buttons ─────────────────────────────────────
 
-  Widget _buildPassengerInfo() {
-    final name       = _getPassengerName();
-    final initial    = name.isNotEmpty ? name[0].toUpperCase() : 'P';
-    final avatarUrl  = _getPassengerAvatarUrl();
-    final rating     = _getPassengerRating();
-    final hasRating  = rating > 0;
-
-    return Row(
-      children: [
-        // ── Avatar: real photo with graceful fallback ──────────────
-        _buildPassengerAvatar(avatarUrl, initial),
-
-        const SizedBox(width: 12),
-
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.star,
-                    size: 16,
-                    color: hasRating
-                        ? AppColors.primaryYellow
-                        : AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    hasRating ? rating.toStringAsFixed(1) : 'New user',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: hasRating
-                          ? AppColors.textSecondary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+  Widget _buildActionButtons() {
+    return Row(children: [
+      // Decline
+      Expanded(
+        flex: 1,
+        child: SizedBox(
+          height: 58,
+          child: OutlinedButton(
+            onPressed: _isProcessing || _hasTimedOut ? null : _handleDecline,
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: AppColors.error.withOpacity(0.7), width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: _isProcessing
+                ? const SizedBox(width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(AppColors.error)))
+                : const Text('Decline',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.error)),
           ),
         ),
+      ),
 
-        // ── Verified badge ─────────────────────────────────────────
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.infoLight,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.verified, size: 14, color: AppColors.info),
-              SizedBox(width: 4),
-              Text(
-                'Verified',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.info,
-                ),
+      const SizedBox(width: 14),
+
+      // Accept
+      Expanded(
+        flex: 2,
+        child: SizedBox(
+          height: 58,
+          child: AnimatedBuilder(
+            animation: _ringGlowAnim,
+            builder: (_, child) => DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(
+                  color: AppColors.primaryGold.withOpacity(0.35 * _ringGlowAnim.value),
+                  blurRadius: 16, offset: const Offset(0, 4),
+                )],
               ),
-            ],
+              child: child,
+            ),
+            child: ElevatedButton(
+              onPressed: _isProcessing || _hasTimedOut ? null : _handleAccept,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGold,
+                disabledBackgroundColor: AppColors.darkSurfaceHigh,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: _isProcessing
+                  ? const SizedBox(width: 22, height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation(Colors.black)))
+                  : Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
+                      Icon(Icons.check_circle_rounded, size: 22),
+                      SizedBox(width: 8),
+                      Text('Accept Trip',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                    ]),
+            ),
           ),
         ),
-      ],
+      ),
+    ]);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SHARED SUB-WIDGETS
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _LocationRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String address;
+  final Color color;
+  const _LocationRow({required this.icon, required this.label, required this.address, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.14),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: color, size: 18),
+      ),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.darkTextTertiary)),
+        const SizedBox(height: 3),
+        Text(address,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary),
+            maxLines: 2, overflow: TextOverflow.ellipsis),
+      ])),
+    ]);
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  const _StatChip({required this.icon, required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(children: [
+        Icon(icon, color: color, size: 22),
+        const SizedBox(height: 8),
+        Text(value, style: TextStyle(
+            fontSize: 16, fontWeight: FontWeight.w800, color: color)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.darkTextSecondary)),
+      ]),
     );
   }
+}
 
-  // ✅ NEW: Passenger avatar widget — real photo > initial fallback
-  Widget _buildPassengerAvatar(String? avatarUrl, String initial) {
-    const double size = 48.0;
+class _DarkDialog extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String message;
+  final List<Widget> actions;
+  const _DarkDialog({
+    required this.icon, required this.iconColor,
+    required this.title, required this.message,
+    required this.actions,
+  });
 
-    // ── Gold initial circle (used as placeholder + error fallback) ──
-    final fallbackWidget = Container(
-      width:  size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: AppColors.primaryGold,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          initial,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primaryBlack,
-          ),
-        ),
-      ),
-    );
-
-    if (avatarUrl == null) return fallbackWidget;
-
-    return ClipOval(
-      child: CachedNetworkImage(
-        imageUrl:    avatarUrl,
-        width:       size,
-        height:      size,
-        fit:         BoxFit.cover,
-        placeholder: (_, __) => fallbackWidget,
-        errorWidget: (_, __, ___) {
-          debugPrint('⚠️ [TRIP-REQUEST] Avatar failed to load: $avatarUrl');
-          return fallbackWidget;
-        },
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // REUSABLE WIDGETS
-  // ═══════════════════════════════════════════════════════════════════
-
-  Widget _buildLocationRow({
-    required IconData icon,
-    required String   label,
-    required String   address,
-    required Color    color,
-    required Color    backgroundColor,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.darkSurface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      title: Row(children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 20),
+              color: iconColor.withOpacity(0.14), borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, color: iconColor, size: 22),
         ),
         const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
-              const SizedBox(height: 4),
-              Text(
-                address,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
+        Expanded(child: Text(title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary))),
+      ]),
+      content: Text(message, style: const TextStyle(fontSize: 14, color: AppColors.darkTextSecondary)),
+      actions: [Row(children: actions.map((w) => w is _GoldButton ? Expanded(child: w) : (w is _OutlinedDarkButton ? Expanded(child: w) : w)).toList())],
     );
   }
+}
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String   label,
-    required String   value,
-    required Color    color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundLight,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary)),
-        ],
+class _GoldButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _GoldButton({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryGold, foregroundColor: Colors.black,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0,
+        ),
+        child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
       ),
     );
   }
+}
 
-  // ═══════════════════════════════════════════════════════════════════
-  // ACTION BUTTONS
-  // ═══════════════════════════════════════════════════════════════════
+class _OutlinedDarkButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _OutlinedDarkButton({required this.label, required this.onTap});
 
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        // ── Decline ────────────────────────────────────────────────
-        Expanded(
-          flex: 1,
-          child: ElevatedButton(
-            onPressed: _isProcessing || _hasTimedOut ? null : _handleDecline,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.backgroundWhite,
-              foregroundColor: AppColors.error,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: AppColors.error, width: 2),
-              ),
-            ),
-            child: _isProcessing
-                ? const SizedBox(
-              width:  20,
-              height: 20,
-              child:  CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor:
-                AlwaysStoppedAnimation(AppColors.error),
-              ),
-            )
-                : const Text('Decline',
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w700)),
-          ),
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: AppColors.darkBorder, width: 1.5),
+          foregroundColor: AppColors.darkTextPrimary,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-
-        const SizedBox(width: 16),
-
-        // ── Accept ─────────────────────────────────────────────────
-        Expanded(
-          flex: 2,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color:  AppColors.primaryGold.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed:
-              _isProcessing || _hasTimedOut ? null : _handleAccept,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:  Colors.transparent,
-                foregroundColor:  AppColors.primaryBlack,
-                shadowColor:      Colors.transparent,
-                elevation:        0,
-                padding:
-                const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: _isProcessing
-                  ? const SizedBox(
-                width:  20,
-                height: 20,
-                child:  CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(
-                      AppColors.primaryBlack),
-                ),
-              )
-                  : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.check_circle, size: 20),
-                  SizedBox(width: 8),
-                  Text('Accept Trip',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+        child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      ),
     );
   }
 }

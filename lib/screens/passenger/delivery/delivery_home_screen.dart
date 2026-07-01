@@ -150,7 +150,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.darkBg,
       body: FadeTransition(
         opacity: _pageFade,
         child: SlideTransition(
@@ -242,7 +242,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
   Widget _buildSubtitle() {
     return Text('How would you like to track your delivery?',
         style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary, fontSize: 14));
+            color: AppColors.darkTextSecondary, fontSize: 14));
   }
 
   // ── Regular card ───────────────────────────────────────────────────────────
@@ -254,12 +254,12 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
         onTap: () => _selectType('regular'),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.darkSurface,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: AppColors.darkBorder),
             boxShadow: [BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 12, offset: const Offset(0, 6))],
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 16, offset: const Offset(0, 6))],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +289,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                                 fontFamily: 'Poppins',
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary,
+                                color: AppColors.darkTextPrimary,
                                 letterSpacing: -0.3,
                               )),
                           const SizedBox(height: 3),
@@ -297,7 +297,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                               style: TextStyle(
                                 fontFamily: 'Roboto',
                                 fontSize: 13,
-                                color: AppColors.textSecondary,
+                                color: AppColors.darkTextSecondary,
                               )),
                         ],
                       ),
@@ -321,11 +321,11 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                         fontFamily: 'Roboto',
                         fontSize: 13,
                         height: 1.55,
-                        color: AppColors.textSecondary,
+                        color: AppColors.darkTextSecondary,
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Container(height: 1, color: AppColors.borderLight),
+                    Container(height: 1, color: AppColors.darkBorder),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8, runSpacing: 8,
@@ -349,8 +349,8 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                   child: ElevatedButton(
                     onPressed: () => _selectType('regular'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryDark,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.primaryGold,
+                      foregroundColor: Colors.black,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
@@ -567,20 +567,20 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.infoLight,
+        color: AppColors.primaryGold.withOpacity(0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.info.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primaryGold.withOpacity(0.25)),
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline_rounded, color: AppColors.info, size: 20),
+          const Icon(Icons.verified_user_rounded, color: AppColors.primaryGold, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
                 'Both options include driver tracking, PIN protection, '
                     'and support for MTN MoMo, Orange Money, or cash.',
                 style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.info, fontSize: 12, height: 1.5)),
+                    color: AppColors.primaryGold.withOpacity(0.85), fontSize: 12, height: 1.5)),
           ),
         ],
       ),
@@ -595,12 +595,12 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
       decoration: BoxDecoration(
         color: isExpress
             ? Colors.white.withOpacity(0.07)
-            : AppColors.backgroundLight,
+            : AppColors.darkSurfaceAlt,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isExpress
               ? Colors.white.withOpacity(0.12)
-              : AppColors.borderLight,
+              : AppColors.darkBorder,
         ),
       ),
       child: Row(
@@ -617,7 +617,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                 fontWeight: FontWeight.w500,
                 color: isExpress
                     ? Colors.white.withOpacity(0.75)
-                    : AppColors.textSecondary,
+                    : AppColors.darkTextSecondary,
               )),
         ],
       ),

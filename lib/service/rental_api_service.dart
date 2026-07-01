@@ -281,11 +281,16 @@ class RentalApiService {
         double? minPrice,
         double? maxPrice,
         int? seats,
+        int page = 1,
+        int limit = 20,
       }) async {
     String endpoint = '/rentals/vehicles/available';
 
     // Build query parameters
-    List<String> queryParams = [];
+    List<String> queryParams = [
+      'page=$page',
+      'limit=$limit',
+    ];
     if (region != null && region.isNotEmpty) {
       queryParams.add('region=${Uri.encodeComponent(region)}');
     }

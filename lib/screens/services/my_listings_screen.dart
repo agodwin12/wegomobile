@@ -1,14 +1,51 @@
 // lib/screens/services/my_listings_screen.dart
-// ✅ FIXED: All null safety issues resolved
+// ─────────────────────────────────────────────────────────────────────────────
+// My Listings Screen  (Provider view)
+// Overflow-fixed + aligned to AppColors / AppTypography
+// ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+
 import '../../models/services/service_listing_model.dart';
 import '../../providers/services.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 
+// ─── Local design tokens ──────────────────────────────────────────────────────
+const _kPrimary      = AppColors.primaryGold;
+const _kPrimaryDark  = AppColors.primaryGoldDark;
+const _kPrimaryLight = Color(0xFFFFFDE7);
+const _kSurface      = AppColors.backgroundWhite;
+const _kPageBg       = AppColors.backgroundLight;
+const _kInputBg      = AppColors.inputBackground;
+const _kBorder       = AppColors.borderLight;
+const _kTextPrimary  = AppColors.textPrimary;
+const _kTextSecond   = AppColors.textSecondary;
+const _kTextLight    = AppColors.textLight;
+const _kError        = AppColors.error;
+const _kErrorLight   = AppColors.errorLight;
+const _kSuccess      = AppColors.success;
+const _kSuccessLight = AppColors.successLight;
+const _kWarning      = AppColors.warning;
+const _kWarningLight = AppColors.warningLight;
+const _kInfo         = AppColors.info;
+
+const double _rSm   = 6.0;
+const double _rMd   = 12.0;
+const double _rLg   = 16.0;
+const double _rXl   = 24.0;
+const double _rPill = 999.0;
+
+const List<BoxShadow> _kCardShadow = [
+  BoxShadow(color: Color(0x0F000000), blurRadius: 8, offset: Offset(0, 2)),
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({Key? key}) : super(key: key);
 
@@ -21,17 +58,14 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   late TabController _tabController;
   bool _isLoading = true;
 
-  final List<String> _tabs = ['All', 'Active', 'Pending', 'Rejected', 'Inactive'];
+  static const _tabs = ['Tous', 'Actifs', 'En attente', 'Rejetés', 'Inactifs'];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
-
-    // ✅ FIX: Load data after build completes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadMyListings();
-    });
+    _tabController.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   @override
@@ -40,292 +74,207 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     super.dispose();
   }
 
-  Future<void> _loadMyListings() async {
+  Future<void> _load() async {
     if (!mounted) return;
-
     setState(() => _isLoading = true);
-
-    // ✅ FIX: Use Provider.of with listen: false
-    final provider = Provider.of<ServicesProvider>(context, listen: false);
-    await provider.fetchMyListings();
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+    await context.read<ServicesProvider>().fetchMyListings();
+    if (mounted) setState(() => _isLoading = false);
   }
 
-  List<ServiceListing> _filterListingsByTab(List<ServiceListing> allListings) {
-    final selectedTab = _tabs[_tabController.index];
-
-    switch (selectedTab) {
-      case 'Active':
-        return allListings
-            .where((l) => l.status == ListingStatus.active)
-            .toList();
-      case 'Pending':
-        return allListings
-            .where((l) => l.status == ListingStatus.pending)
-            .toList();
-      case 'Rejected':
-        return allListings
-            .where((l) => l.status == ListingStatus.rejected)
-            .toList();
-      case 'Inactive':
-        return allListings
+  List<ServiceListing> _filter(List<ServiceListing> all) {
+    switch (_tabs[_tabController.index]) {
+      case 'Actifs':
+        return all.where((l) => l.status == ListingStatus.active).toList();
+      case 'En attente':
+        return all.where((l) => l.status == ListingStatus.pending).toList();
+      case 'Rejetés':
+        return all.where((l) => l.status == ListingStatus.rejected).toList();
+      case 'Inactifs':
+        return all
             .where((l) =>
         l.status == ListingStatus.inactive ||
             l.status == ListingStatus.deleted)
             .toList();
       default:
-        return allListings;
+        return all;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isTablet = size.width > 600;
-
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: _buildAppBar(),
-      floatingActionButton: _buildFAB(),
-      body: _isLoading
-          ? _buildLoadingState()
-          : RefreshIndicator(
-        color: AppColors.primaryGold,
-        onRefresh: _loadMyListings,
-        child: Consumer<ServicesProvider>(
-          builder: (context, provider, child) {
-            final allListings = provider.myListings ?? [];
-
-            if (allListings.isEmpty) {
-              return _buildEmptyState('No listings yet', isTablet);
-            }
-
-            return Column(
-              children: [
-                _buildStatsSummary(allListings, isTablet),
-                _buildTabBar(allListings, isTablet),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: _tabs.map((tab) {
-                      final listings = _filterListingsByTab(allListings);
-
-                      if (listings.isEmpty) {
-                        return _buildEmptyState(
-                          'No ${tab.toLowerCase()} listings',
-                          isTablet,
-                        );
-                      }
-
-                      return _buildListingsList(listings, isTablet);
-                    }).toList(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: _kPageBg,
+        appBar: _buildAppBar(),
+        floatingActionButton: _buildFab(),
+        body: _isLoading
+            ? const Center(
+          child: CircularProgressIndicator(
+              color: _kPrimary, strokeWidth: 2),
+        )
+            : RefreshIndicator(
+          color: _kPrimary,
+          onRefresh: _load,
+          child: Consumer<ServicesProvider>(
+            builder: (_, provider, __) {
+              final all = provider.myListings ?? [];
+              return Column(
+                children: [
+                  _buildStats(all),
+                  _buildTabBar(all),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: _tabs.map((tab) {
+                        final items = _filter(all);
+                        return items.isEmpty
+                            ? _buildEmpty(tab)
+                            : _buildList(items);
+                      }).toList(),
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // APP BAR
-  // ═══════════════════════════════════════════════════════════════════
+  // ── App bar ───────────────────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: AppColors.backgroundWhite,
+      backgroundColor: _kSurface,
       elevation: 0,
-      title: const Text('My Listings'),
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
       ),
-      actions: [
-        IconButton(
-          onPressed: _showFilterOptions,
-          icon: const Icon(Icons.filter_list_rounded),
-        ),
-      ],
+      title: Text('Mes annonces', style: AppTypography.titleLarge),
+      centerTitle: true,
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // FLOATING ACTION BUTTON
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildFAB() {
+  // ── FAB ───────────────────────────────────────────────────────────────────
+  Widget _buildFab() {
     return FloatingActionButton.extended(
-      onPressed: () {
-        Navigator.pushNamed(context, '/services/post').then((_) {
-          _loadMyListings();
-        });
-      },
-      backgroundColor: AppColors.primaryGold,
-      foregroundColor: AppColors.primaryBlack,
-      icon: const Icon(Icons.add),
-      label: const Text('Post Service'),
+      onPressed: () =>
+          Navigator.pushNamed(context, '/services/listing-plan').then((_) => _load()),
+      backgroundColor: _kPrimary,
+      // FIX: dark foreground on gold (correct contrast)
+      foregroundColor: _kTextPrimary,
+      elevation: 3,
+      icon: const Icon(Icons.add_rounded),
+      label: Text('Nouvelle annonce', style: AppTypography.buttonSmall),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // STATS SUMMARY
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildStatsSummary(List<ServiceListing> listings, bool isTablet) {
-    final activeCount = listings
-        .where((l) => l.status == ListingStatus.active)
-        .length;
-
-    final totalViews = listings.fold<int>(
-      0,
-          (sum, listing) => sum + listing.viewCount,
-    );
-
-    final totalContacts = listings.fold<int>(
-      0,
-          (sum, listing) => sum + listing.contactCount,
-    );
+  // ── Stats banner ──────────────────────────────────────────────────────────
+  Widget _buildStats(List<ServiceListing> all) {
+    final active       = all.where((l) => l.status == ListingStatus.active).length;
+    final totalViews   = all.fold<int>(0, (s, l) => s + l.viewCount);
+    final totalContacts = all.fold<int>(0, (s, l) => s + l.contactCount);
 
     return Container(
-      margin: EdgeInsets.all(isTablet ? 24 : 16),
-      padding: EdgeInsets.all(isTablet ? 20 : 16),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(16),
+        // FIX: use gold→goldDark gradient (correct brand colours)
+        gradient: const LinearGradient(
+          colors: [_kPrimary, _kPrimaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(_rXl),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryGold.withOpacity(0.3),
+            color: _kPrimary.withOpacity(0.35),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              _buildStatItem(
-                'Active',
-                activeCount.toString(),
-                Icons.check_circle_rounded,
-                isTablet,
-              ),
-              _buildStatDivider(),
-              _buildStatItem(
-                'Views',
-                totalViews.toString(),
-                Icons.visibility_rounded,
-                isTablet,
-              ),
-              _buildStatDivider(),
-              _buildStatItem(
-                'Contacts',
-                totalContacts.toString(),
-                Icons.message_rounded,
-                isTablet,
-              ),
-            ],
-          ),
+          _StatItem(
+              label: 'Actifs', value: '$active',
+              icon: Icons.check_circle_rounded),
+          _VerticalDivider(),
+          _StatItem(
+              label: 'Vues', value: '$totalViews',
+              icon: Icons.visibility_rounded),
+          _VerticalDivider(),
+          _StatItem(
+              label: 'Contacts', value: '$totalContacts',
+              icon: Icons.message_rounded),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(
-      String label, String value, IconData icon, bool isTablet) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.primaryBlack, size: isTablet ? 28 : 24),
-          SizedBox(height: isTablet ? 12 : 8),
-          Text(
-            value,
-            style: (isTablet
-                ? AppTypography.displaySmall
-                : AppTypography.headlineMedium)
-                .copyWith(
-              fontWeight: FontWeight.w900,
-              color: AppColors.primaryBlack,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.primaryDark,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatDivider() {
+  // ── Tab bar ───────────────────────────────────────────────────────────────
+  Widget _buildTabBar(List<ServiceListing> all) {
     return Container(
-      width: 1,
-      height: 60,
-      color: AppColors.primaryBlack.withOpacity(0.2),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // TAB BAR
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildTabBar(List<ServiceListing> listings, bool isTablet) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: isTablet ? 24 : 16),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      color: _kSurface,
       child: TabBar(
         controller: _tabController,
         isScrollable: true,
         tabAlignment: TabAlignment.start,
-        indicatorColor: AppColors.primaryGold,
+        indicatorColor: _kPrimary,
         indicatorWeight: 3,
-        labelColor: AppColors.primaryGold,
-        unselectedLabelColor: AppColors.textSecondary,
-        labelStyle:
-        AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
-        unselectedLabelStyle:
-        AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w500),
+        labelColor: _kPrimary,
+        unselectedLabelColor: _kTextSecond,
+        labelStyle: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
         tabs: _tabs.map((tab) {
-          final count = _filterListingsByTab(listings).length;
+          // FIX: compute count for this specific tab rather than reusing
+          // _filter() which references _tabController.index — building tabs
+          // during build() while the controller is animating caused index
+          // mismatch and incorrect badge counts on every tab.
+          final count = _countForTab(tab, all);
+          final isSelected = _tabs[_tabController.index] == tab;
+
           return Tab(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(tab),
-                if (count > 0) ...[
+                // FIX: constrain tab label so very long translated strings
+                // don't expand the Tab beyond the screen width
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 88),
+                  child: Text(
+                    tab,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (count > 0 && tab != 'Tous') ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: _tabController.index == _tabs.indexOf(tab)
-                          ? AppColors.primaryGold
-                          : AppColors.backgroundLight,
-                      borderRadius: BorderRadius.circular(10),
+                      // FIX: selected badge gets _kPrimary bg with dark text;
+                      // unselected gets inputBg with secondary text
+                      color: isSelected ? _kPrimary : _kInputBg,
+                      borderRadius: BorderRadius.circular(_rPill),
                     ),
                     child: Text(
-                      count.toString(),
-                      style: AppTypography.caption.copyWith(
-                        color: _tabController.index == _tabs.indexOf(tab)
-                            ? AppColors.primaryBlack
-                            : AppColors.textSecondary,
+                      '$count',
+                      style: TextStyle(
+                        fontFamily: 'Roboto',
+                        fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        fontSize: 11,
+                        color: isSelected ? _kTextPrimary : _kTextSecond,
                       ),
                     ),
                   ),
@@ -334,130 +283,162 @@ class _MyListingsScreenState extends State<MyListingsScreen>
             ),
           );
         }).toList(),
-        onTap: (index) => setState(() {}),
+        onTap: (_) => setState(() {}),
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // LISTINGS LIST
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildListingsList(List<ServiceListing> listings, bool isTablet) {
+  int _countForTab(String tab, List<ServiceListing> all) {
+    switch (tab) {
+      case 'Actifs':    return all.where((l) => l.status == ListingStatus.active).length;
+      case 'En attente': return all.where((l) => l.status == ListingStatus.pending).length;
+      case 'Rejetés':   return all.where((l) => l.status == ListingStatus.rejected).length;
+      case 'Inactifs':  return all.where((l) =>
+      l.status == ListingStatus.inactive ||
+          l.status == ListingStatus.deleted).length;
+      default:          return all.length;
+    }
+  }
+
+  // ── List ──────────────────────────────────────────────────────────────────
+  Widget _buildList(List<ServiceListing> items) {
     return ListView.builder(
-      padding: EdgeInsets.all(isTablet ? 24 : 16),
-      itemCount: listings.length,
-      itemBuilder: (context, index) {
-        final listing = listings[index];
-        return _buildListingCard(listing, isTablet);
-      },
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+      itemCount: items.length,
+      itemBuilder: (_, i) => _ListingCard(
+        listing: items[i],
+        onRefresh: _load,
+      ),
     );
   }
 
-  Widget _buildListingCard(ServiceListing listing, bool isTablet) {
+  // ── Empty state ───────────────────────────────────────────────────────────
+  Widget _buildEmpty(String tab) {
+    final isAll = tab == 'Tous';
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.work_outline_rounded,
+                size: 56, color: _kTextLight),
+            const SizedBox(height: 16),
+            Text(
+              isAll ? 'Aucune annonce' : 'Aucune annonce $tab',
+              style: AppTypography.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isAll
+                  ? 'Commencez à proposer vos services aux clients à Douala'
+                  : 'Rien ici pour le moment',
+              style: AppTypography.bodySmall.copyWith(color: _kTextSecond),
+              textAlign: TextAlign.center,
+            ),
+            if (isAll) ...[
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pushNamed(context, '/services/listing-plan')
+                    .then((_) => _load()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kPrimary,
+                  foregroundColor: _kTextPrimary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_rLg)),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Publier votre premier service'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LISTING CARD
+// ─────────────────────────────────────────────────────────────────────────────
+class _ListingCard extends StatelessWidget {
+  final ServiceListing listing;
+  final VoidCallback onRefresh;
+
+  const _ListingCard({required this.listing, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(_rLg),
+        boxShadow: _kCardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildListingHeader(listing, isTablet),
-          const Divider(height: 1),
-          _buildListingBody(listing, isTablet),
-          _buildListingFooter(listing, isTablet),
+          _buildHeader(),
+          const Divider(height: 1, color: _kBorder),
+          _buildBody(),
+          _buildFooter(context),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // ✅ FIXED: LISTING HEADER WITH NULL SAFETY
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildListingHeader(ServiceListing listing, bool isTablet) {
-    // ✅ FIX: Safely get category name with fallback
-    String categoryName = 'Uncategorized';
-
-    // Try to get from categoryName field
-    if (listing.categoryName != null && listing.categoryName!.isNotEmpty) {
-      categoryName = listing.categoryName!;
-    }
-    // Try to get from category object if available
-    else if (listing.category != null) {
-      final categoryMap = listing.category as Map<String, dynamic>?;
-      if (categoryMap != null) {
-        categoryName = categoryMap['name_en']?.toString() ??
-            categoryMap['name_fr']?.toString() ??
-            categoryMap['name']?.toString() ??
-            'Uncategorized';
-      }
-    }
+  // ── Header ────────────────────────────────────────────────────────────────
+  Widget _buildHeader() {
+    final categoryName = (listing.categoryName?.isNotEmpty == true)
+        ? listing.categoryName!
+        : 'Non catégorisé';
 
     return Padding(
-      padding: EdgeInsets.all(isTablet ? 20 : 16),
+      padding: const EdgeInsets.all(14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Thumbnail or Icon
-          Container(
-            width: isTablet ? 80 : 64,
-            height: isTablet ? 80 : 64,
-            decoration: BoxDecoration(
-              color: AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(12),
-              image: listing.photos.isNotEmpty
-                  ? DecorationImage(
-                image: NetworkImage(listing.photos.first),
-                fit: BoxFit.cover,
-              )
-                  : null,
-            ),
-            child: listing.photos.isEmpty
-                ? const Icon(
-              Icons.work_outline_rounded,
-              size: 32,
-              color: AppColors.textLight,
+          // Thumbnail — fixed 72×72, never in an Expanded
+          ClipRRect(
+            borderRadius: BorderRadius.circular(_rMd),
+            child: listing.photos.isNotEmpty
+                ? Image.network(
+              listing.photos.first,
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _placeholder(),
             )
-                : null,
+                : _placeholder(),
           ),
 
-          SizedBox(width: isTablet ? 16 : 12),
+          const SizedBox(width: 12),
 
+          // Title + category — Expanded so they shrink before the badge
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   listing.title,
-                  style: (isTablet
-                      ? AppTypography.titleLarge
-                      : AppTypography.titleMedium)
-                      .copyWith(fontWeight: FontWeight.w700),
+                  style: AppTypography.titleSmall,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.category_outlined,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
+                    const Icon(Icons.category_outlined,
+                        size: 12, color: _kTextLight),
                     const SizedBox(width: 4),
+                    // FIX: Expanded so long category name doesn't push
+                    // status badge off the right edge
                     Expanded(
                       child: Text(
-                        categoryName, // ✅ FIXED: Safe category name
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                        categoryName,
+                        style: AppTypography.labelSmall,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -469,733 +450,466 @@ class _MyListingsScreenState extends State<MyListingsScreen>
           ),
 
           const SizedBox(width: 8),
-
-          _buildStatusBadge(listing.status, isTablet),
+          // Status badge — intrinsic width, never in Expanded
+          _StatusBadge(status: listing.status),
         ],
       ),
     );
   }
 
-  Widget _buildStatusBadge(ListingStatus status, bool isTablet) {
-    Color bgColor;
-    Color textColor;
-    IconData icon;
-    String text;
-
-    switch (status) {
-      case ListingStatus.active:
-        bgColor = AppColors.successLight;
-        textColor = AppColors.success;
-        icon = Icons.check_circle_rounded;
-        text = 'ACTIVE';
-        break;
-      case ListingStatus.approved:
-        bgColor = AppColors.successLight;
-        textColor = AppColors.success;
-        icon = Icons.verified_rounded;
-        text = 'APPROVED';
-        break;
-      case ListingStatus.pending:
-        bgColor = AppColors.warningLight;
-        textColor = AppColors.warning;
-        icon = Icons.pending_rounded;
-        text = 'PENDING';
-        break;
-      case ListingStatus.rejected:
-        bgColor = AppColors.errorLight;
-        textColor = AppColors.error;
-        icon = Icons.cancel_rounded;
-        text = 'REJECTED';
-        break;
-      case ListingStatus.inactive:
-      case ListingStatus.deleted:
-        bgColor = AppColors.backgroundLight;
-        textColor = AppColors.textLight;
-        icon = Icons.visibility_off_rounded;
-        text = 'INACTIVE';
-        break;
-    }
-
+  Widget _placeholder() {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isTablet ? 12 : 10,
-        vertical: isTablet ? 6 : 5,
-      ),
+      width: 72,
+      height: 72,
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        color: _kInputBg,
+        borderRadius: BorderRadius.circular(_rMd),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: isTablet ? 16 : 14, color: textColor),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: (isTablet
-                ? AppTypography.labelMedium
-                : AppTypography.labelSmall)
-                .copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+      child: const Icon(Icons.work_outline_rounded,
+          color: _kTextLight, size: 28),
     );
   }
 
-  Widget _buildListingBody(ServiceListing listing, bool isTablet) {
+  // ── Body ──────────────────────────────────────────────────────────────────
+  Widget _buildBody() {
     return Padding(
-      padding: EdgeInsets.all(isTablet ? 20 : 16),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Description Preview
-          Text(
-            listing.description,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-
-          const SizedBox(height: 16),
-
-          // Pricing
+          // Price + location + date row
           Row(
             children: [
-              const Icon(
-                Icons.payments_rounded,
-                size: 16,
-                color: AppColors.primaryGold,
+              // Price chip — intrinsic width
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _kPrimaryLight,
+                  borderRadius: BorderRadius.circular(_rMd),
+                ),
+                child: Text(
+                  listing.priceDisplay,
+                  style: AppTypography.titleSmall
+                      .copyWith(color: _kPrimaryDark),
+                ),
               ),
+
               const SizedBox(width: 8),
+
+              // Location — Flexible so it never pushes the date off-screen
+              const Icon(Icons.location_on_outlined,
+                  size: 13, color: _kTextLight),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  listing.city,
+                  style: AppTypography.labelSmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              const Spacer(),
+
+              // Date — fixed intrinsic width
               Text(
-                _getPriceDisplay(listing),
-                style: AppTypography.titleSmall.copyWith(
-                  color: AppColors.primaryGold,
-                  fontWeight: FontWeight.w700,
-                ),
+                _postedDate(listing.createdAt),
+                style: AppTypography.labelSmall
+                    .copyWith(color: _kTextLight),
               ),
             ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Stats Row
-          Row(
-            children: [
-              _buildStatChip(
-                Icons.visibility_rounded,
-                '${listing.viewCount} views',
-                isTablet,
-              ),
-              const SizedBox(width: 12),
-              _buildStatChip(
-                Icons.message_rounded,
-                '${listing.contactCount} contacts',
-                isTablet,
-              ),
-            ],
-          ),
-
-          if (listing.averageRating != null && listing.averageRating! > 0) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(
-                  Icons.star,
-                  size: 16,
-                  color: AppColors.primaryGold,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  listing.averageRating!.toStringAsFixed(1),
-                  style: AppTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '(${listing.totalReviews})',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatChip(IconData icon, String label, bool isTablet) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundLight,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.textSecondary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListingFooter(ServiceListing listing, bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 20 : 16),
-      decoration: const BoxDecoration(
-        color: AppColors.backgroundLight,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Posted Date
-          Row(
-            children: [
-              const Icon(
-                Icons.access_time_rounded,
-                size: 14,
-                color: AppColors.textLight,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Posted ${_formatDate(listing.createdAt)}',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.textLight,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Action Buttons
+          // Stats chips row
+          // FIX: Wrap so that on narrow screens or when all three chips are
+          // present they flow to a second line instead of overflowing
           Wrap(
             spacing: 8,
-            runSpacing: 8,
-            children: _buildActionButtons(listing, isTablet),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildActionButtons(ServiceListing listing, bool isTablet) {
-    final buttons = <Widget>[];
-
-    // View Stats Button (always available)
-    buttons.add(
-      OutlinedButton.icon(
-        onPressed: () => _showStatsDialog(listing),
-        icon: const Icon(Icons.bar_chart_rounded, size: 16),
-        label: const Text('Stats'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primaryGold,
-          side: const BorderSide(color: AppColors.primaryGold),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        ),
-      ),
-    );
-
-    // Edit Button (if can edit)
-    if (listing.status.canEdit) {
-      buttons.add(
-        OutlinedButton.icon(
-          onPressed: () => _editListing(listing),
-          icon: const Icon(Icons.edit_outlined, size: 16),
-          label: const Text('Edit'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.info,
-            side: const BorderSide(color: AppColors.info),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
-        ),
-      );
-    }
-
-    // Delete Button (always available)
-    buttons.add(
-      IconButton(
-        onPressed: () => _deleteListing(listing),
-        icon: const Icon(Icons.delete_outline_rounded),
-        color: AppColors.error,
-        iconSize: 20,
-      ),
-    );
-
-    return buttons;
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // EMPTY STATE
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildEmptyState(String message, bool isTablet) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: const BoxDecoration(
-                color: AppColors.backgroundLight,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.work_outline_rounded,
-                size: isTablet ? 80 : 64,
-                color: AppColors.textLight,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              message,
-              style: (isTablet
-                  ? AppTypography.headlineMedium
-                  : AppTypography.titleLarge)
-                  .copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Start offering your services to customers',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textLight,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pushNamed(context, '/services/post').then((_) {
-                  _loadMyListings();
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGold,
-                foregroundColor: AppColors.primaryBlack,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+            runSpacing: 6,
+            children: [
+              _StatChip(
+                  icon: Icons.visibility_rounded,
+                  label: '${listing.viewCount} vues'),
+              _StatChip(
+                  icon: Icons.message_rounded,
+                  label: '${listing.contactCount} contacts'),
+              if (listing.averageRating != null &&
+                  listing.averageRating! > 0)
+                _StatChip(
+                  icon: Icons.star_rounded,
+                  label:
+                  '${listing.averageRating!.toStringAsFixed(1)} (${listing.totalReviews})',
+                  iconColor: _kWarning,
                 ),
-              ),
-              icon: const Icon(Icons.add),
-              label: const Text('Post Your First Service'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // LOADING STATE
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryGold.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
-            ),
-            child: const Padding(
-              padding: EdgeInsets.all(20.0),
-              child: CircularProgressIndicator(
-                color: AppColors.primaryBlack,
-                strokeWidth: 4,
-              ),
-            ),
+            ],
           ),
-          const SizedBox(height: 30),
-          Text(
-            'Loading your listings...',
-            style: AppTypography.titleLarge.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // HELPER METHODS
-  // ═══════════════════════════════════════════════════════════════════
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return 'today';
-    } else if (difference.inDays == 1) {
-      return 'yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '$weeks week${weeks > 1 ? "s" : ""} ago';
-    } else {
-      return DateFormat('MMM dd, yyyy').format(date);
-    }
-  }
-
-  String _getPriceDisplay(ServiceListing listing) {
-    switch (listing.pricingType) {
-      case PricingType.negotiable:
-        return 'Negotiable';
-      case PricingType.hourly:
-        if (listing.hourlyRate != null) {
-          final price =
-          NumberFormat('#,###').format(listing.hourlyRate!.toInt());
-          return '$price FCFA/hour';
-        }
-        return 'Price not set';
-      case PricingType.fixed:
-        if (listing.fixedPrice != null) {
-          final price =
-          NumberFormat('#,###').format(listing.fixedPrice!.toInt());
-          return '$price FCFA';
-        }
-        return 'Price not set';
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // ACTION HANDLERS
-  // ═══════════════════════════════════════════════════════════════════
-
-  void _showStatsDialog(ServiceListing listing) {
-    showDialog(
-      context: context,
-      builder: (context) => _StatsDialog(listing: listing),
-    );
-  }
-
-  void _editListing(ServiceListing listing) {
-    Navigator.pushNamed(
-      context,
-      '/services/edit-listing',
-      arguments: {'listing': listing},
-    ).then((result) {
-      if (result == true) _loadMyListings(); // Refresh if updated
-    });
-  }
-
-  void _deleteListing(ServiceListing listing) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Listing?'),
-        content: const Text(
-          'This action cannot be undone. Are you sure you want to delete this listing?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              final provider = Provider.of<ServicesProvider>(context, listen: false);
-              final success = await provider.deleteListing(listing.id);
-
-              if (success && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Listing deleted successfully'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-                _loadMyListings();
-              } else if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      provider.listingsError ?? 'Failed to delete listing',
-                    ),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
-            child: const Text('Yes, Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFilterOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Sort & Filter',
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildFilterOption('Most Recent', Icons.access_time),
-            _buildFilterOption('Most Popular', Icons.trending_up),
-            _buildFilterOption('Highest Rated', Icons.star),
-            _buildFilterOption('Most Views', Icons.visibility),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterOption(String label, IconData icon) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primaryGold),
-      title: Text(label),
-      onTap: () {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sorted by: $label'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// STATS DIALOG
-// ═══════════════════════════════════════════════════════════════════════
-
-class _StatsDialog extends StatelessWidget {
-  final ServiceListing listing;
-
-  const _StatsDialog({required this.listing});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        constraints: const BoxConstraints(maxHeight: 500),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
+          // Rejection reason
+          if (listing.status == ListingStatus.rejected &&
+              listing.rejectionReason != null &&
+              listing.rejectionReason!.isNotEmpty) ...[
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
+                color: _kErrorLight,
+                borderRadius: BorderRadius.circular(_rMd),
+                border: Border.all(color: _kError.withOpacity(0.3)),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.bar_chart_rounded,
-                    color: AppColors.primaryBlack,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
+                  const Icon(Icons.info_outline_rounded,
+                      size: 15, color: _kError),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Performance Stats',
-                      style: AppTypography.titleLarge.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryBlack,
-                      ),
+                      'Rejeté : ${listing.rejectionReason}',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: _kError),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                    color: AppColors.primaryBlack,
                   ),
                 ],
               ),
             ),
+          ],
 
-            // Stats Content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    _buildStatRow(
-                      'Total Views',
-                      '${listing.viewCount}',
-                      Icons.visibility_rounded,
-                      AppColors.info,
+          // Pending info
+          if (listing.status == ListingStatus.pending) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _kWarningLight,
+                borderRadius: BorderRadius.circular(_rMd),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.pending_rounded,
+                      size: 15, color: _kWarning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'En cours d\'examen — approbation sous 24 h',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: _kWarning),
                     ),
-                    const Divider(height: 24),
-                    _buildStatRow(
-                      'Contact Requests',
-                      '${listing.contactCount}',
-                      Icons.message_rounded,
-                      AppColors.primaryGold,
-                    ),
-                    const Divider(height: 24),
-                    _buildStatRow(
-                      'Average Rating',
-                      listing.averageRating != null
-                          ? listing.averageRating!.toStringAsFixed(1)
-                          : 'N/A',
-                      Icons.star_rounded,
-                      AppColors.warning,
-                    ),
-                    const Divider(height: 24),
-                    _buildStatRow(
-                      'Total Reviews',
-                      '${listing.totalReviews}',
-                      Icons.rate_review_rounded,
-                      AppColors.info,
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Conversion Rate
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.infoLight,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Conversion Rate',
-                            style: AppTypography.labelLarge.copyWith(
-                              color: AppColors.info,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _calculateConversionRate(),
-                            style: AppTypography.headlineMedium.copyWith(
-                              color: AppColors.info,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Views to contacts',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.info,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatRow(
-      String label, String value, IconData icon, Color color) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 24),
+  // ── Footer: action buttons ────────────────────────────────────────────────
+  Widget _buildFooter(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+      decoration: BoxDecoration(
+        color: _kPageBg,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(_rLg),
+          bottomRight: Radius.circular(_rLg),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+      ),
+      child: Row(
+        children: [
+          if (_canEdit()) ...[
+            Expanded(
+              child: _OutlineBtn(
+                label: 'Modifier',
+                icon: Icons.edit_outlined,
+                color: AppColors.info,
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  '/services/edit-listing',
+                  arguments: {'listing': listing},
+                ).then((_) => onRefresh()),
               ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+            const SizedBox(width: 8),
+          ],
+          _DeleteBtn(onTap: () => _confirmDelete(context)),
+        ],
+      ),
     );
   }
 
-  String _calculateConversionRate() {
-    final views = listing.viewCount;
-    final contacts = listing.contactCount;
+  bool _canEdit() =>
+      listing.status == ListingStatus.active ||
+          listing.status == ListingStatus.pending ||
+          listing.status == ListingStatus.rejected ||
+          listing.status == ListingStatus.inactive;
 
-    if (views == 0) return '0%';
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_rXl)),
+        title: Text('Supprimer l\'annonce ?',
+            style: AppTypography.titleLarge),
+        content: Text(
+          'Cela supprimera définitivement « ${listing.title} ». Cette action est irréversible.',
+          style: AppTypography.bodySmall,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Annuler',
+              style: AppTypography.labelMedium
+                  .copyWith(color: _kTextSecond),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final p = context.read<ServicesProvider>();
+              final ok = await p.deleteListing(listing.id);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(ok
+                      ? 'Annonce supprimée'
+                      : (p.listingsError ?? 'Échec de la suppression')),
+                  backgroundColor: ok ? _kSuccess : _kError,
+                ),
+              );
+              if (ok) onRefresh();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kError,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(_rMd)),
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
 
-    final rate = (contacts / views * 100).toStringAsFixed(1);
-    return '$rate%';
+  String _postedDate(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inDays == 0) return 'Aujourd\'hui';
+    if (diff.inDays == 1) return 'Hier';
+    if (diff.inDays < 7) return 'Il y a ${diff.inDays}j';
+    if (diff.inDays < 30) return 'Il y a ${(diff.inDays / 7).floor()}sem';
+    return DateFormat('dd MMM').format(date);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STAT ITEM  (inside the gradient banner)
+// ─────────────────────────────────────────────────────────────────────────────
+class _StatItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  const _StatItem(
+      {required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.black87, size: 24),
+          const SizedBox(height: 6),
+          // FIX: constrain value text so a very large number (e.g. 10 000+)
+          // doesn't overflow the banner column
+          Text(
+            value,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.black87,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 11,
+              color: Colors.black54,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VERTICAL DIVIDER inside banner
+// ─────────────────────────────────────────────────────────────────────────────
+class _VerticalDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 1,
+    height: 48,
+    color: Colors.black.withOpacity(0.15),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS BADGE
+// ─────────────────────────────────────────────────────────────────────────────
+class _StatusBadge extends StatelessWidget {
+  final ListingStatus status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color bg;
+    Color fg;
+    String label;
+
+    switch (status) {
+      case ListingStatus.active:
+      case ListingStatus.approved:
+        bg = _kSuccessLight; fg = _kSuccess; label = 'ACTIF'; break;
+      case ListingStatus.pending:
+        bg = _kWarningLight; fg = _kWarning; label = 'ATTENTE'; break;
+      case ListingStatus.rejected:
+        bg = _kErrorLight;   fg = _kError;   label = 'REJETÉ'; break;
+      case ListingStatus.inactive:
+      case ListingStatus.deleted:
+        bg = _kInputBg;      fg = _kTextLight; label = 'INACTIF'; break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(_rPill),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: fg,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STAT CHIP  (views / contacts / rating)
+// ─────────────────────────────────────────────────────────────────────────────
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color? iconColor;
+  const _StatChip(
+      {required this.icon, required this.label, this.iconColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _kInputBg,
+        borderRadius: BorderRadius.circular(_rSm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: iconColor ?? _kTextSecond),
+          const SizedBox(width: 4),
+          // FIX: ConstrainedBox so a very long label (e.g. "1 200 vues")
+          // doesn't widen the chip beyond the screen
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 100),
+            child: Text(
+              label,
+              style: AppTypography.labelSmall.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OUTLINE BUTTON  (Edit)
+// ─────────────────────────────────────────────────────────────────────────────
+class _OutlineBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _OutlineBtn({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 15),
+      label: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        textStyle: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 12,
+            fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_rLg)),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE ICON BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
+class _DeleteBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _DeleteBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onTap,
+      icon: const Icon(Icons.delete_outline_rounded,
+          color: _kError, size: 22),
+      tooltip: 'Supprimer',
+      style: IconButton.styleFrom(
+        backgroundColor: _kErrorLight,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_rMd)),
+      ),
+    );
   }
 }

@@ -1,13 +1,48 @@
 // lib/screens/services/category_listings_screen.dart
+// ─────────────────────────────────────────────────────────────────────────────
+// Category Listings Screen
+// Overflow-fixed + aligned to AppColors / AppTypography
+// ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
 import '../../models/services/category_model.dart';
 import '../../models/services/service_listing_model.dart';
 import '../../providers/services.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
+import '../../widgets/services/service_card_widget.dart';
 
+// ─── Local design tokens ──────────────────────────────────────────────────────
+const _kPrimary      = AppColors.primaryGold;
+const _kPrimaryDark  = AppColors.primaryGoldDark;
+const _kPrimaryLight = Color(0xFFFFFDE7);
+const _kPrimaryMid   = Color(0xFFFFECB3);
+const _kSurface      = AppColors.backgroundWhite;
+const _kPageBg       = AppColors.backgroundLight;
+const _kInputBg      = AppColors.inputBackground;
+const _kBorder       = AppColors.borderLight;
+const _kTextPrimary  = AppColors.textPrimary;
+const _kTextSecond   = AppColors.textSecondary;
+const _kTextLight    = AppColors.textLight;
+const _kError        = AppColors.error;
+
+const double _rLg   = 16.0;
+const double _rXl   = 24.0;
+const double _rPill = 999.0;
+
+const List<BoxShadow> _kCardShadow = [
+  BoxShadow(color: Color(0x0F000000), blurRadius: 8, offset: Offset(0, 2)),
+];
+const List<BoxShadow> _kBottomShadow = [
+  BoxShadow(color: Color(0x14000000), blurRadius: 12, offset: Offset(0, -3)),
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
 class CategoryListingsScreen extends StatefulWidget {
   final ServiceCategory category;
 
@@ -17,46 +52,30 @@ class CategoryListingsScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<CategoryListingsScreen> createState() => _CategoryListingsScreenState();
+  State<CategoryListingsScreen> createState() =>
+      _CategoryListingsScreenState();
 }
 
 class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
   final ScrollController _scrollController = ScrollController();
-  String _sortBy = 'created_at';
+
+  int?   _selectedSubcategoryId;
+  String _sortBy    = 'created_at';
   String _sortOrder = 'desc';
+
+  static const _sorts = [
+    _SortOption('Plus récent',  'created_at',     'desc'),
+    _SortOption('Prix ↑',       'fixed_price',    'asc'),
+    _SortOption('Prix ↓',       'fixed_price',    'desc'),
+    _SortOption('Mieux noté',   'average_rating', 'desc'),
+    _SortOption('Populaire',    'view_count',      'desc'),
+  ];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadListings();
-    });
-
-    // Pagination
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent * 0.8) {
-        final provider = context.read<ServicesProvider>();
-        if (!provider.listingsLoading && provider.hasMoreListings) {
-          provider.fetchListings(
-            categoryId: widget.category.id,
-            sortBy: _sortBy,
-            sortOrder: _sortOrder,
-          );
-        }
-      }
-    });
-  }
-
-  Future<void> _loadListings() async {
-    if (!mounted) return;
-    final provider = context.read<ServicesProvider>();
-    await provider.fetchListings(
-      categoryId: widget.category.id,
-      refresh: true,
-      sortBy: _sortBy,
-      sortOrder: _sortOrder,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initialLoad());
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -65,645 +84,49 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isTablet = size.width > 600;
+  Future<void> _initialLoad() async {
+    if (!mounted) return;
+    final provider = context.read<ServicesProvider>();
+    await provider.fetchSubcategories(widget.category.id);
+    await _fetchListings(refresh: true);
+  }
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: _buildAppBar(),
-      body: RefreshIndicator(
-        onRefresh: _loadListings,
-        color: AppColors.primaryGold,
-        child: Consumer<ServicesProvider>(
-          builder: (context, provider, child) {
-            // Filter listings by category
-            final categoryListings = provider.listings
-                .where((listing) => listing.categoryId == widget.category.id)
-                .toList();
-
-            if (provider.listingsLoading && categoryListings.isEmpty) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: AppColors.primaryGold,
-                ),
-              );
-            }
-
-            if (provider.listingsError != null && categoryListings.isEmpty) {
-              return _buildErrorState(
-                message: provider.listingsError!,
-                onRetry: _loadListings,
-              );
-            }
-
-            if (categoryListings.isEmpty) {
-              return _buildEmptyState();
-            }
-
-            return Column(
-              children: [
-                _buildHeader(categoryListings.length, isTablet),
-                _buildSortOptions(),
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: categoryListings.length + (provider.listingsLoading ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == categoryListings.length) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(
-                              color: AppColors.primaryGold,
-                            ),
-                          ),
-                        );
-                      }
-
-                      final listing = categoryListings[index];
-                      return _buildListingCard(listing, isTablet);
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+  Future<void> _fetchListings({bool refresh = false}) async {
+    if (!mounted) return;
+    await context.read<ServicesProvider>().fetchListings(
+      categoryId: _selectedSubcategoryId ?? widget.category.id,
+      refresh: refresh,
+      sortBy: _sortBy,
+      sortOrder: _sortOrder,
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // APP BAR
-  // ═══════════════════════════════════════════════════════════════════
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.backgroundWhite,
-      elevation: 0,
-      leading: IconButton(
-        onPressed: () => Navigator.pop(context),
-        icon: const Icon(
-          Icons.arrow_back,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      title: Row(
-        children: [
-          if (widget.category.iconUrl != null)
-            Container(
-              width: 32,
-              height: 32,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: AppColors.primaryGold.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  widget.category.iconUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.work_outline,
-                      color: AppColors.primaryGold,
-                      size: 20,
-                    );
-                  },
-                ),
-              ),
-            )
-          else
-            Container(
-              width: 32,
-              height: 32,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: AppColors.primaryGold.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.work_outline,
-                color: AppColors.primaryGold,
-                size: 20,
-              ),
-            ),
-          Expanded(
-            child: Text(
-              widget.category.getLocalizedName(useFrench: true),
-              style: AppTypography.headlineSmall.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          onPressed: () => _showFiltersSheet(),
-          icon: const Icon(
-            Icons.tune,
-            color: AppColors.textPrimary,
-          ),
-        ),
-      ],
-    );
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.85) {
+      final provider = context.read<ServicesProvider>();
+      if (!provider.listingsLoading && provider.hasMoreListings) {
+        _fetchListings();
+      }
+    }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // HEADER
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildHeader(int count, bool isTablet) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: EdgeInsets.all(isTablet ? 24 : 16),
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryGold.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.category.getLocalizedName(useFrench: true),
-                  style: (isTablet
-                      ? AppTypography.headlineMedium
-                      : AppTypography.headlineSmall)
-                      .copyWith(
-                    color: AppColors.primaryBlack,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$count ${count == 1 ? 'service' : 'services'} available',
-                  style: (isTablet
-                      ? AppTypography.bodyLarge
-                      : AppTypography.bodyMedium)
-                      .copyWith(
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: isTablet ? 64 : 56,
-            height: isTablet ? 64 : 56,
-            decoration: BoxDecoration(
-              color: AppColors.backgroundWhite,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadowMedium,
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: widget.category.iconUrl != null
-                ? ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                widget.category.iconUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    Icons.work_outline,
-                    size: isTablet ? 32 : 28,
-                    color: AppColors.primaryGold,
-                  );
-                },
-              ),
-            )
-                : Icon(
-              Icons.work_outline,
-              size: isTablet ? 32 : 28,
-              color: AppColors.primaryGold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // SORT OPTIONS
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildSortOptions() {
-    return Container(
-      height: 50,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _buildSortChip(
-            label: 'Newest',
-            isSelected: _sortBy == 'created_at' && _sortOrder == 'desc',
-            onTap: () => _applySorting('created_at', 'desc'),
-          ),
-          _buildSortChip(
-            label: 'Price: Low to High',
-            isSelected: _sortBy == 'fixed_price' && _sortOrder == 'asc',
-            onTap: () => _applySorting('fixed_price', 'asc'),
-          ),
-          _buildSortChip(
-            label: 'Price: High to Low',
-            isSelected: _sortBy == 'fixed_price' && _sortOrder == 'desc',
-            onTap: () => _applySorting('fixed_price', 'desc'),
-          ),
-          _buildSortChip(
-            label: 'Top Rated',
-            isSelected: _sortBy == 'average_rating' && _sortOrder == 'desc',
-            onTap: () => _applySorting('average_rating', 'desc'),
-          ),
-          _buildSortChip(
-            label: 'Most Viewed',
-            isSelected: _sortBy == 'view_count' && _sortOrder == 'desc',
-            onTap: () => _applySorting('view_count', 'desc'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSortChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (_) => onTap(),
-        backgroundColor: AppColors.backgroundWhite,
-        selectedColor: AppColors.primaryGold,
-        labelStyle: TextStyle(
-          color: isSelected ? AppColors.primaryBlack : AppColors.textSecondary,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: isSelected ? AppColors.primaryGold : AppColors.borderLight,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _applySorting(String sortBy, String sortOrder) {
+  void _applySort(_SortOption opt) {
+    if (_sortBy == opt.sortBy && _sortOrder == opt.order) return;
     setState(() {
-      _sortBy = sortBy;
-      _sortOrder = sortOrder;
+      _sortBy    = opt.sortBy;
+      _sortOrder = opt.order;
     });
-    _loadListings();
+    _fetchListings(refresh: true);
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // LISTING CARD
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildListingCard(ServiceListing listing, bool isTablet) {
-    return InkWell(
-      onTap: () => _navigateToServiceDetail(listing),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundWhite,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
-              ),
-              child: listing.mainPhoto != null
-                  ? Image.network(
-                listing.mainPhoto!,
-                height: isTablet ? 220 : 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildPlaceholderImage(isTablet);
-                },
-              )
-                  : _buildPlaceholderImage(isTablet),
-            ),
-
-            // Content
-            Padding(
-              padding: EdgeInsets.all(isTablet ? 20 : 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    listing.title,
-                    style: (isTablet
-                        ? AppTypography.titleLarge
-                        : AppTypography.titleMedium)
-                        .copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Description
-                  Text(
-                    listing.description,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Provider Info
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.primaryGold.withOpacity(0.1),
-                        backgroundImage: listing.provider?.avatarUrl != null
-                            ? NetworkImage(listing.provider!.avatarUrl!)
-                            : null,
-                        child: listing.provider?.avatarUrl == null
-                            ? const Icon(
-                          Icons.person,
-                          size: 16,
-                          color: AppColors.primaryGold,
-                        )
-                            : null,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              listing.provider?.fullName ?? 'Unknown Provider',
-                              style: AppTypography.labelLarge.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (listing.averageRating != null &&
-                                listing.averageRating! > 0)
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    size: 14,
-                                    color: AppColors.warning,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${listing.averageRating!.toStringAsFixed(1)} (${listing.totalReviews} reviews)',
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            else
-                              Text(
-                                'New provider',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Price & Location
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Price
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGold.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          listing.priceDisplay,
-                          style: AppTypography.titleMedium.copyWith(
-                            color: AppColors.primaryGold,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-
-                      // Location
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on_outlined,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            listing.city,
-                            style: AppTypography.labelMedium.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  // Emergency Badge
-                  if (listing.emergencyService)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.emergency,
-                              size: 14,
-                              color: AppColors.error,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '24/7 Emergency Service',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.error,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _selectSubcategory(int? id) {
+    if (_selectedSubcategoryId == id) return;
+    setState(() => _selectedSubcategoryId = id);
+    _fetchListings(refresh: true);
   }
 
-  Widget _buildPlaceholderImage(bool isTablet) {
-    return Container(
-      height: isTablet ? 220 : 180,
-      width: double.infinity,
-      color: AppColors.backgroundLight,
-      child: const Icon(
-        Icons.image_outlined,
-        size: 64,
-        color: AppColors.textLight,
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // EMPTY STATE
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.shopping_bag_outlined,
-              size: 80,
-              color: AppColors.textLight,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No Services Yet',
-              style: AppTypography.headlineSmall.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'No services are available in this category at the moment. Check back later!',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGold,
-                foregroundColor: AppColors.primaryBlack,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Browse Other Categories'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // ERROR STATE
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildErrorState({
-    required String message,
-    required VoidCallback onRetry,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppColors.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGold,
-                foregroundColor: AppColors.primaryBlack,
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // NAVIGATION
-  // ═══════════════════════════════════════════════════════════════════
-  void _navigateToServiceDetail(ServiceListing listing) {
+  void _goToDetail(ServiceListing listing) {
     context.read<ServicesProvider>().selectListing(listing);
     Navigator.pushNamed(
       context,
@@ -712,21 +135,464 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light, // white icons on gold header
+      child: Scaffold(
+        backgroundColor: _kPageBg,
+        body: RefreshIndicator(
+          color: _kPrimary,
+          onRefresh: () => _fetchListings(refresh: true),
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            slivers: [
+              _buildHeroHeader(),
+              _buildSubcategoryChips(),
+              _buildSortChips(),
+              _buildCountLabel(),
+              _buildGrid(),
+              _buildPaginationLoader(),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Hero header ───────────────────────────────────────────────────────────
+  Widget _buildHeroHeader() {
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: 160,
+      // FIX: gold background for the collapsed bar, not hardcoded green
+      backgroundColor: _kPrimary,
+      // FIX: use light overlay style so back-button icon is white on gold
+      systemOverlayStyle: SystemUiOverlayStyle.light,
+      leading: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          margin: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.arrow_back_rounded,
+              color: Colors.black87, size: 20),
+        ),
+      ),
+      actions: [
+        GestureDetector(
+          onTap: _showFiltersSheet,
+          child: Container(
+            margin: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(_rPill),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.tune_rounded,
+                    color: Colors.black87, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  'Filtres',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.parallax,
+        background: Container(
+          // FIX: gold→goldDark gradient (correct brand) with dark text
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [_kPrimary, _kPrimaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: ClipRect(
+            child: Stack(
+              children: [
+                // Decorative circles — ClipRect prevents them from causing
+                // overflow assertions on the SliverAppBar
+                Positioned(
+                  right: -30,
+                  top: -30,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withOpacity(0.06),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 60,
+                  bottom: -20,
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withOpacity(0.04),
+                    ),
+                  ),
+                ),
+
+                // Content row
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+                  child: Row(
+                    children: [
+                      // Icon circle — fixed 64×64
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Colors.black.withOpacity(0.2),
+                              width: 2),
+                        ),
+                        child: widget.category.iconUrl != null
+                            ? ClipOval(
+                          child: Image.network(
+                            widget.category.iconUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _heroEmoji(),
+                          ),
+                        )
+                            : _heroEmoji(),
+                      ),
+
+                      const SizedBox(width: 16),
+
+                      // Name + count — Expanded to prevent overflow on long names
+                      Expanded(
+                        child: Consumer<ServicesProvider>(
+                          builder: (_, provider, __) {
+                            final count = provider.listings.length;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // FIX: max 2 lines + ellipsis for long category names
+                                Text(
+                                  widget.category
+                                      .getLocalizedName(useFrench: true),
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    // FIX: dark text on gold (correct contrast)
+                                    color: Colors.black87,
+                                    height: 1.2,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$count service${count == 1 ? '' : 's'} disponible${count == 1 ? '' : 's'}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Roboto',
+                                    fontSize: 13,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _heroEmoji() {
+    return Center(
+      child: Text(
+        _categoryEmoji(widget.category.nameEn),
+        style: const TextStyle(fontSize: 28),
+      ),
+    );
+  }
+
+  // ── Subcategory chips ─────────────────────────────────────────────────────
+  Widget _buildSubcategoryChips() {
+    return Consumer<ServicesProvider>(
+      builder: (_, provider, __) {
+        final subs = provider.subcategories ?? [];
+        if (subs.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+
+        return SliverToBoxAdapter(
+          child: Container(
+            color: _kSurface,
+            padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+            child: SizedBox(
+              height: 36,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: subs.length + 1, // +1 for "Tous"
+                itemBuilder: (_, i) {
+                  if (i == 0) {
+                    return _SubChip(
+                      label: 'Tous',
+                      selected: _selectedSubcategoryId == null,
+                      onTap: () => _selectSubcategory(null),
+                    );
+                  }
+                  final sub = subs[i - 1];
+                  return _SubChip(
+                    label: sub.getLocalizedName(useFrench: true),
+                    selected: _selectedSubcategoryId == sub.id,
+                    onTap: () => _selectSubcategory(sub.id),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Sort chips ────────────────────────────────────────────────────────────
+  Widget _buildSortChips() {
+    return SliverToBoxAdapter(
+      child: Container(
+        color: _kPageBg,
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 4),
+        child: SizedBox(
+          height: 36,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _sorts.length,
+            itemBuilder: (_, i) {
+              final opt      = _sorts[i];
+              final selected = _sortBy == opt.sortBy && _sortOrder == opt.order;
+              return _SortChip(
+                label: opt.label,
+                selected: selected,
+                onTap: () => _applySort(opt),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Count label ───────────────────────────────────────────────────────────
+  Widget _buildCountLabel() {
+    return Consumer<ServicesProvider>(
+      builder: (_, provider, __) {
+        final count = provider.listings.length;
+        if (count == 0) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              '$count résultat${count == 1 ? '' : 's'}',
+              style: AppTypography.labelMedium
+                  .copyWith(color: _kTextSecond),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── 2-column grid ─────────────────────────────────────────────────────────
+  Widget _buildGrid() {
+    return Consumer<ServicesProvider>(
+      builder: (_, provider, __) {
+        // Loading
+        if (provider.listingsLoading && provider.listings.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(
+                        color: _kPrimary, strokeWidth: 2),
+                    const SizedBox(height: 16),
+                    Text('Chargement des services…',
+                        style: AppTypography.bodySmall
+                            .copyWith(color: _kTextLight)),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Error
+        if (provider.listingsError != null && provider.listings.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.wifi_off_rounded,
+                      size: 48, color: _kTextLight),
+                  const SizedBox(height: 12),
+                  Text(
+                    provider.listingsError!,
+                    style: AppTypography.bodySmall
+                        .copyWith(color: _kTextSecond),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _fetchListings(refresh: true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kPrimary,
+                      foregroundColor: _kTextPrimary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_rLg)),
+                    ),
+                    child: const Text('Réessayer'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Empty
+        if (provider.listings.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.shopping_bag_outlined,
+                      size: 56, color: _kTextLight),
+                  const SizedBox(height: 16),
+                  const Text('Aucun service ici',
+                      style: AppTypography.titleLarge),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Soyez le premier à proposer un service dans cette catégorie !',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: _kTextSecond),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/services/post'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kPrimary,
+                      foregroundColor: _kTextPrimary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_rLg)),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Publier un service'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          sliver: SliverGrid(
+            gridDelegate:
+            const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.72,
+            ),
+            delegate: SliverChildBuilderDelegate(
+                  (_, i) => ServiceGridCard(
+                listing: provider.listings[i],
+                onTap: () => _goToDetail(provider.listings[i]),
+              ),
+              childCount: provider.listings.length,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Pagination loader ─────────────────────────────────────────────────────
+  Widget _buildPaginationLoader() {
+    return Consumer<ServicesProvider>(
+      builder: (_, provider, __) {
+        if (!provider.listingsLoading || provider.listings.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+        return const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Center(
+              child: CircularProgressIndicator(
+                  color: _kPrimary, strokeWidth: 2),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Filters sheet ─────────────────────────────────────────────────────────
   void _showFiltersSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _FiltersBottomSheet(
-        categoryId: widget.category.id,
-        onApply: (filters) {
+      builder: (_) => _FiltersSheet(
+        onApply: ({
+          String? city,
+          double? minPrice,
+          double? maxPrice,
+          double? minRating,
+        }) {
           context.read<ServicesProvider>().fetchListings(
-            categoryId: widget.category.id,
+            categoryId: _selectedSubcategoryId ?? widget.category.id,
             refresh: true,
-            city: filters['city'],
-            minPrice: filters['minPrice'],
-            maxPrice: filters['maxPrice'],
-            minRating: filters['minRating'],
+            city: city,
+            minPrice: minPrice,
+            maxPrice: maxPrice,
+            minRating: minRating,
             sortBy: _sortBy,
             sortOrder: _sortOrder,
           );
@@ -734,205 +600,317 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
       ),
     );
   }
+
+  String _categoryEmoji(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('plomb') || n.contains('plumb')) return '🔧';
+    if (n.contains('elec')) return '⚡';
+    if (n.contains('nettoy') || n.contains('clean')) return '🧹';
+    if (n.contains('coiff') || n.contains('hair')) return '✂️';
+    if (n.contains('menuis') || n.contains('carpen')) return '🪚';
+    if (n.contains('paint') || n.contains('peintr')) return '🎨';
+    if (n.contains('mec') || n.contains('auto')) return '🚗';
+    if (n.contains('garden') || n.contains('jardin')) return '🌿';
+    return '🛠️';
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// FILTERS BOTTOM SHEET
-// ═══════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
+// SUBCATEGORY CHIP
+// ─────────────────────────────────────────────────────────────────────────────
+class _SubChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
-class _FiltersBottomSheet extends StatefulWidget {
-  final int categoryId;
-  final Function(Map<String, dynamic>) onApply;
-
-  const _FiltersBottomSheet({
-    required this.categoryId,
-    required this.onApply,
+  const _SubChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
-  State<_FiltersBottomSheet> createState() => _FiltersBottomSheetState();
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? _kPrimary : _kSurface,
+          borderRadius: BorderRadius.circular(_rPill),
+          border: Border.all(
+            color: selected ? _kPrimary : _kBorder,
+          ),
+          boxShadow: selected ? _kCardShadow : null,
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelSmall.copyWith(
+            // FIX: dark text on gold chip (correct contrast)
+            color: selected ? _kTextPrimary : _kTextSecond,
+            fontWeight: FontWeight.w600,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
 }
 
-class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
-  RangeValues _priceRange = const RangeValues(0, 100000);
-  double _minRating = 0;
-  String? _selectedCity;
+// ─────────────────────────────────────────────────────────────────────────────
+// SORT CHIP
+// ─────────────────────────────────────────────────────────────────────────────
+class _SortChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
-  final List<String> _cities = [
-    'Douala',
-    'Yaoundé',
-    'Bafoussam',
-    'Bamenda',
-    'Garoua',
+  const _SortChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? _kPrimaryLight : _kSurface,
+          borderRadius: BorderRadius.circular(_rPill),
+          border: Border.all(
+            color: selected ? _kPrimary : _kBorder,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelSmall.copyWith(
+            color: selected ? _kPrimaryDark : _kTextSecond,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SORT OPTION
+// ─────────────────────────────────────────────────────────────────────────────
+class _SortOption {
+  final String label;
+  final String sortBy;
+  final String order;
+  const _SortOption(this.label, this.sortBy, this.order);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTERS BOTTOM SHEET
+// ─────────────────────────────────────────────────────────────────────────────
+class _FiltersSheet extends StatefulWidget {
+  final Function({
+  String? city,
+  double? minPrice,
+  double? maxPrice,
+  double? minRating,
+  }) onApply;
+
+  const _FiltersSheet({required this.onApply});
+
+  @override
+  State<_FiltersSheet> createState() => _FiltersSheetState();
+}
+
+class _FiltersSheetState extends State<_FiltersSheet> {
+  String? _city;
+  RangeValues _price = const RangeValues(0, 100000);
+  double _minRating  = 0;
+
+  static const _cities = [
+    'Douala', 'Yaoundé', 'Bafoussam',
+    'Bamenda', 'Garoua', 'Kribi', 'Limbé',
   ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: MediaQuery.of(context).size.height * 0.65,
       decoration: const BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: _kSurface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(_rXl)),
       ),
       child: Column(
         children: [
           // Handle
           Container(
             margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40,
+            width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.borderLight,
-              borderRadius: BorderRadius.circular(2),
+              color: _kBorder,
+              borderRadius: BorderRadius.circular(_rPill),
             ),
           ),
 
-          // Title
+          // Header
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Filters',
-                  style: AppTypography.headlineMedium.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                Text('Filtres', style: AppTypography.headlineSmall),
                 TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _priceRange = const RangeValues(0, 100000);
-                      _minRating = 0;
-                      _selectedCity = null;
-                    });
-                  },
-                  child: const Text('Reset'),
+                  onPressed: () => setState(() {
+                    _city      = null;
+                    _price     = const RangeValues(0, 100000);
+                    _minRating = 0;
+                  }),
+                  child: Text(
+                    'Réinitialiser',
+                    style: AppTypography.labelMedium
+                        .copyWith(color: _kError),
+                  ),
                 ),
               ],
             ),
           ),
 
+          const Divider(height: 1, color: _kBorder),
+
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // City Filter
-                  Text(
-                    'City',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  // City
+                  Text('Ville', style: AppTypography.titleMedium),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _cities.map((city) {
-                      final isSelected = _selectedCity == city;
-                      return ChoiceChip(
-                        label: Text(city),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCity = selected ? city : null;
-                          });
-                        },
+                    children: _cities.map((c) {
+                      final sel = _city == c;
+                      return GestureDetector(
+                        onTap: () =>
+                            setState(() => _city = sel ? null : c),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: sel ? _kPrimary : _kInputBg,
+                            borderRadius: BorderRadius.circular(_rPill),
+                            border: Border.all(
+                              color: sel ? _kPrimary : _kBorder,
+                            ),
+                          ),
+                          child: Text(
+                            c,
+                            style: AppTypography.labelMedium.copyWith(
+                              // FIX: dark text on gold selected chip
+                              color: sel ? _kTextPrimary : _kTextSecond,
+                            ),
+                          ),
+                        ),
                       );
                     }).toList(),
                   ),
 
                   const SizedBox(height: 24),
 
-                  // Price Range
-                  Text(
-                    'Price Range (FCFA)',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  RangeSlider(
-                    values: _priceRange,
-                    min: 0,
-                    max: 100000,
-                    divisions: 20,
-                    labels: RangeLabels(
-                      '${_priceRange.start.toInt()}',
-                      '${_priceRange.end.toInt()}',
-                    ),
-                    onChanged: (values) {
-                      setState(() {
-                        _priceRange = values;
-                      });
-                    },
-                  ),
+                  // Price range
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('${_priceRange.start.toInt()} FCFA'),
-                      Text('${_priceRange.end.toInt()} FCFA'),
+                      // FIX: Flexible prevents label from pushing value off-screen
+                      const Flexible(
+                        child: Text(
+                          'Fourchette de prix (XAF)',
+                          style: AppTypography.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_price.start.toInt()} – ${_price.end.toInt()}',
+                        style: AppTypography.labelMedium
+                            .copyWith(color: _kPrimary),
+                      ),
                     ],
+                  ),
+                  RangeSlider(
+                    values: _price,
+                    min: 0,
+                    max: 100000,
+                    divisions: 20,
+                    activeColor: _kPrimary,
+                    inactiveColor: _kPrimaryMid,
+                    onChanged: (v) => setState(() => _price = v),
                   ),
 
                   const SizedBox(height: 24),
 
-                  // Rating Filter
-                  Text(
-                    'Minimum Rating',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                  // Min rating
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Note minimale',
+                          style: AppTypography.titleMedium),
+                      Text(
+                        _minRating > 0
+                            ? '${_minRating.toStringAsFixed(1)} ★'
+                            : 'Toutes',
+                        style: AppTypography.labelMedium
+                            .copyWith(color: _kPrimary),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
                   Slider(
                     value: _minRating,
                     min: 0,
                     max: 5,
                     divisions: 10,
-                    label: _minRating.toStringAsFixed(1),
-                    onChanged: (value) {
-                      setState(() {
-                        _minRating = value;
-                      });
-                    },
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('0.0 ★'),
-                      Text('${_minRating.toStringAsFixed(1)} ★'),
-                      const Text('5.0 ★'),
-                    ],
+                    activeColor: _kPrimary,
+                    inactiveColor: _kPrimaryMid,
+                    onChanged: (v) => setState(() => _minRating = v),
                   ),
                 ],
               ),
             ),
           ),
 
-          // Apply Button
+          // Apply button
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             child: SizedBox(
               width: double.infinity,
+              height: 52,
               child: ElevatedButton(
                 onPressed: () {
-                  widget.onApply({
-                    'city': _selectedCity,
-                    'minPrice': _priceRange.start,
-                    'maxPrice': _priceRange.end,
-                    'minRating': _minRating > 0 ? _minRating : null,
-                  });
                   Navigator.pop(context);
+                  widget.onApply(
+                    city:      _city,
+                    minPrice:  _price.start > 0 ? _price.start : null,
+                    maxPrice:  _price.end < 100000 ? _price.end : null,
+                    minRating: _minRating > 0 ? _minRating : null,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGold,
-                  foregroundColor: AppColors.primaryBlack,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: _kPrimary,
+                  foregroundColor: _kTextPrimary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_rLg)),
                 ),
-                child: const Text('Apply Filters'),
+                child: Text('Appliquer les filtres',
+                    style: AppTypography.buttonLarge),
               ),
             ),
           ),

@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/config.dart';
-import '../driver payout/driver_payout_screen.dart';
 
 const _kBlack   = Color(0xFF0A0A0A);
 const _kGold    = Color(0xFFFFDC71);
@@ -257,20 +256,11 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
     }
   }
 
+  // Payouts/withdrawals removed — WeGo is deposit/top-up only. No-op kept so
+  // existing call sites stay valid.
   Future<void> _loadRecentPayouts() async {
     if (!mounted) return;
-    setState(() => _recentPayoutsLoading = true);
-    try {
-      final res = await _EarningsApi.getRecentPayouts();
-      if (!mounted) return;
-      setState(() {
-        _recentPayouts = res['success'] == true ? (res['data']['requests'] ?? []) : [];
-        _recentPayoutsLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _recentPayoutsLoading = false);
-    }
+    setState(() => _recentPayoutsLoading = false);
   }
 
   void _onTripsScroll() {
@@ -460,34 +450,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (!isFrozen)
-                    GestureDetector(
-                      onTap: _openPayoutSheet,
-                      child: Container(
-                        padding:     const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration:  BoxDecoration(
-                          color:        _kGold,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.arrow_upward_rounded, color: _kBlack, size: 14),
-                            SizedBox(width: 4),
-                            Text(
-                              'Withdraw',
-                              style: TextStyle(
-                                fontFamily: 'Quicksand',
-                                fontSize:   12,
-                                fontWeight: FontWeight.w700,
-                                color:      _kBlack,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  // Withdraw button removed — WeGo is deposit/top-up only.
                 ],
               ),
             ],
@@ -607,8 +570,6 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_summary != null) _buildLifetimeStats(),
-            const SizedBox(height: 24),
-            _buildRecentPayoutsSection(),
             const SizedBox(height: 24),
             Row(
               children: [
@@ -731,171 +692,6 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
         ),
       ],
     );
-  }
-
-  // ── Recent payouts ────────────────────────────────────────────────
-
-  Widget _buildRecentPayoutsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Payout Requests',
-              style: TextStyle(
-                fontFamily: 'LeagueSpartan',
-                fontSize:   20,
-                fontWeight: FontWeight.w700,
-                color:      _kWhite,
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DriverPayoutHistoryScreen()),
-              ).then((_) => _loadRecentPayouts()),
-              child: const Text(
-                'View All',
-                style: TextStyle(
-                  fontFamily: 'Quicksand',
-                  fontSize:   13,
-                  fontWeight: FontWeight.w700,
-                  color:      _kGold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (_recentPayoutsLoading)
-          Container(
-            height:     80,
-            decoration: BoxDecoration(color: _kCard, borderRadius: BorderRadius.circular(16)),
-            child:      const Center(child: CircularProgressIndicator(color: _kGold, strokeWidth: 2)),
-          )
-        else if (_recentPayouts.isEmpty)
-          _buildEmptyPayouts()
-        else
-          ..._recentPayouts.map((p) => _buildPayoutRequestRow(p as Map<String, dynamic>)),
-        const SizedBox(height: 12),
-        GestureDetector(
-          onTap: _openPayoutSheet,
-          child: Container(
-            width:       double.infinity,
-            padding:     const EdgeInsets.symmetric(vertical: 14),
-            decoration:  BoxDecoration(color: _kGold, borderRadius: BorderRadius.circular(14)),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.arrow_upward_rounded, color: _kBlack, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'Request Payout',
-                  style: TextStyle(
-                    fontFamily: 'LeagueSpartan',
-                    fontSize:   16,
-                    fontWeight: FontWeight.w700,
-                    color:      _kBlack,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPayoutRequestRow(Map<String, dynamic> p) {
-    final status       = (p['status'] ?? 'PENDING') as String;
-    final statusConfig = _payoutStatusConfig(status);
-    final method       = p['paymentMethod'] ?? 'CASH';
-
-    return Container(
-      margin:      const EdgeInsets.only(bottom: 10),
-      padding:     const EdgeInsets.all(14),
-      decoration:  BoxDecoration(
-        color:        _kCard,
-        borderRadius: BorderRadius.circular(14),
-        border:       Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width:  42, height: 42,
-            decoration: BoxDecoration(
-              color:        (statusConfig['color'] as Color).withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(statusConfig['icon'] as String, style: const TextStyle(fontSize: 20)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _formatAmount(p['amount'] ?? 0),
-                  style: const TextStyle(
-                    fontFamily: 'LeagueSpartan',
-                    fontSize:   16,
-                    fontWeight: FontWeight.w700,
-                    color:      _kWhite,
-                  ),
-                ),
-                Text(
-                  '${_methodLabel(method)} • ${_formatDate(p['createdAt'])}',
-                  style: const TextStyle(fontFamily: 'Quicksand', fontSize: 11, color: _kGrey),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding:     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration:  BoxDecoration(
-              color:        (statusConfig['color'] as Color).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              statusConfig['label'] as String,
-              style: TextStyle(
-                fontFamily: 'Quicksand',
-                fontSize:   11,
-                fontWeight: FontWeight.w700,
-                color:      statusConfig['color'] as Color,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyPayouts() => Container(
-    padding:     const EdgeInsets.symmetric(vertical: 20),
-    decoration:  BoxDecoration(color: _kCard, borderRadius: BorderRadius.circular(16)),
-    child: const Center(
-      child: Column(children: [
-        Text('💸', style: TextStyle(fontSize: 28)),
-        SizedBox(height: 8),
-        Text('No payout requests yet', style: TextStyle(fontFamily: 'Quicksand', color: _kGrey, fontSize: 13)),
-      ]),
-    ),
-  );
-
-  Map<String, dynamic> _payoutStatusConfig(String status) {
-    switch (status.toUpperCase()) {
-      case 'PENDING':    return {'color': _kGold,        'label': 'Pending',    'icon': '⏳'};
-      case 'PROCESSING': return {'color': Colors.blue,   'label': 'Processing', 'icon': '⚙️'};
-      case 'PAID':       return {'color': _kGreen,       'label': 'Paid',       'icon': '✅'};
-      case 'REJECTED':   return {'color': _kRed,         'label': 'Rejected',   'icon': '❌'};
-      case 'CANCELLED':  return {'color': _kGrey,        'label': 'Cancelled',  'icon': '🚫'};
-      default:           return {'color': _kGrey,        'label': status,       'icon': '💸'};
-    }
   }
 
   // ── Quest cards ───────────────────────────────────────────────────

@@ -155,12 +155,17 @@ enum ListingStatus {
     if (value == null) return ListingStatus.pending;
     switch (value.toLowerCase()) {
       case 'pending':
+      case 'pending_review': // backend v2: post awaiting moderation
+      case 'draft':
         return ListingStatus.pending;
       case 'approved':
         return ListingStatus.approved;
       case 'active':
+      case 'hero_pending': // live, hero placement under review
         return ListingStatus.active;
       case 'inactive':
+      case 'expired': // plan ran out — hidden, can be renewed
+      case 'suspended':
         return ListingStatus.inactive;
       case 'rejected':
         return ListingStatus.rejected;

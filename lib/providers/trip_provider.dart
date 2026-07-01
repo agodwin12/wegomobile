@@ -169,6 +169,7 @@ class TripProvider with ChangeNotifier {
       notifyListeners();
     });
 
+
     // ═══════════════════════════════════════════════════════════════
     // GENERIC STATUS CHANGES (fallback for anything not handled above)
     // ═══════════════════════════════════════════════════════════════

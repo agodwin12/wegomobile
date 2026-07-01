@@ -11,14 +11,16 @@ class AppConfig {
   // ═══════════════════════════════════════════════════════════════
   // AUTHENTICATION
   // ═══════════════════════════════════════════════════════════════
-  static String get jwtSecret => dotenv.get('JWT_SECRET', fallback: 'wegocameroonapp');
+  // NOTE: the JWT *secret* lives on the server only. A mobile app never
+  // signs or verifies tokens itself — it just stores the access/refresh
+  // tokens the API returns. Never ship a signing secret inside the binary.
   static String get refreshTokenExpiry => dotenv.get('REFRESH_TOKEN_EXPIRY', fallback: '90d');
   static String get accessTokenExpiry => dotenv.get('ACCESS_TOKEN_EXPIRY', fallback: '24h');
 
   // ═══════════════════════════════════════════════════════════════
-  // GOOGLE MAPS
+  // MAPBOX
   // ═══════════════════════════════════════════════════════════════
-  static String get googleMapsApiKey => dotenv.get('GOOGLE_MAPS_API_KEY', fallback: '');
+  static String get mapboxToken => dotenv.get('MAPBOX_ACCESS_TOKEN', fallback: '');
 
   // ═══════════════════════════════════════════════════════════════
   // FIREBASE
@@ -32,13 +34,10 @@ class AppConfig {
   // ═══════════════════════════════════════════════════════════════
   // PAYMENT GATEWAY
   // ═══════════════════════════════════════════════════════════════
+  // Only the *publishable* key is client-safe. The Stripe secret key and
+  // the FCM server key are server-side credentials and were removed —
+  // payments are charged and pushes are sent by the backend, not the app.
   static String get stripePublishableKey => dotenv.get('STRIPE_PUBLISHABLE_KEY', fallback: '');
-  static String get stripeSecretKey => dotenv.get('STRIPE_SECRET_KEY', fallback: '');
-
-  // ═══════════════════════════════════════════════════════════════
-  // PUSH NOTIFICATIONS
-  // ═══════════════════════════════════════════════════════════════
-  static String get fcmServerKey => dotenv.get('FCM_SERVER_KEY', fallback: '');
 
   // ═══════════════════════════════════════════════════════════════
   // IMAGE UPLOAD
@@ -104,7 +103,7 @@ class AppConfig {
     print('🔗 API Base URL: $apiBaseUrl');
     print('⏱️  API Timeout: ${apiTimeout}ms');
     print('🔌 Socket URL: $socketUrl');
-    print('🗺️  Google Maps Key: ${googleMapsApiKey.isNotEmpty ? "Configured ✓" : "Not configured ✗"}');
+    print('🗺️  Mapbox Token: ${mapboxToken.isNotEmpty ? "Configured ✓" : "Not configured ✗"}');
     print('🔥 Firebase: ${firebaseApiKey.isNotEmpty ? "Configured ✓" : "Not configured ✗"}');
     print('💳 Stripe: ${stripePublishableKey.isNotEmpty ? "Configured ✓" : "Not configured ✗"}');
     print('📧 Support Email: $supportEmail');

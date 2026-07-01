@@ -38,10 +38,12 @@ import '../main.dart'; // SocketHelper
 
 // ─── Result object returned by switchTo() ────────────────────────────
 
+// NEW
 class ModeSwitchResult {
   final bool    success;
   final String? route;
   final String? activeMode;
+  final String? newAccessToken;   // ← new token issued by switch-mode
   final String? errorMessage;
   final String? errorCode;
 
@@ -49,6 +51,7 @@ class ModeSwitchResult {
     required this.success,
     this.route,
     this.activeMode,
+    this.newAccessToken,
     this.errorMessage,
     this.errorCode,
   });
@@ -56,9 +59,14 @@ class ModeSwitchResult {
   factory ModeSwitchResult.ok({
     required String route,
     required String activeMode,
+    required String newAccessToken,
   }) =>
       ModeSwitchResult._(
-          success: true, route: route, activeMode: activeMode);
+        success:        true,
+        route:          route,
+        activeMode:     activeMode,
+        newAccessToken: newAccessToken,
+      );
 
   factory ModeSwitchResult.fail({
     required String message,
@@ -254,32 +262,18 @@ class ModeService {
 
         debugPrint('✅ [MODE-SERVICE] Saved — active_mode: $newActiveMode');
 
-        // ── Reconnect socket ─────────────────────────────────────
-        SocketHelper.disconnect();
-        if (newToken.isNotEmpty &&
-            userId.isNotEmpty &&
-            userType.isNotEmpty) {
-          try {
-            await SocketHelper.connect(
-              accessToken: newToken,
-              userId:      userId,
-              userType:    userType,
-            );
-            debugPrint('✅ [MODE-SERVICE] Socket reconnected');
-          } catch (e) {
-            debugPrint(
-                '⚠️  [MODE-SERVICE] Socket reconnect failed (non-fatal): $e');
-          }
-        }
+
 
         final route = _routes[newActiveMode] ?? '/login';
 
         debugPrint('✅ [MODE-SERVICE] Switch complete → $route');
         debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
+// NEW
         return ModeSwitchResult.ok(
-          route:      route,
-          activeMode: newActiveMode,
+          route:          route,
+          activeMode:     newActiveMode,
+          newAccessToken: newToken,
         );
       } else {
         final message =

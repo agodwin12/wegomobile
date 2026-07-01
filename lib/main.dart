@@ -2,22 +2,25 @@
 // WEGO App - Complete Main Entry Point
 // Includes: Ride Booking + Services Marketplace + Profile Management
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wego_v1/screens/delivery%20agent/dashboard/delivery_agent_dashboard.dart';
-import 'package:wego_v1/screens/services/dispute_filling_screen.dart';
+import 'package:wego_v1/screens/notification/notification_badge.dart';
+import 'package:wego_v1/screens/notification/notification_screen.dart';
 import 'package:wego_v1/screens/services/edit_listing_screen.dart';
 import 'package:wego_v1/screens/services/search_screen.dart';
 import 'package:wego_v1/screens/splash/splash.dart';
+import 'package:wego_v1/service/notification_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 // SCREENS - AUTHENTICATION
 // ═══════════════════════════════════════════════════════════════════════
+import 'firebase_options.dart';
 import 'models/services/service_listing_model.dart';
-import 'models/services/service_request_model.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/signup/sign_up_passenger/signup_passenger_screen.dart';
 import 'screens/signup/driver sign up/signup_driver_screen.dart';
@@ -37,22 +40,24 @@ import 'screens/driver/driver_container/driver_container_screen.dart';
 import 'screens/passenger/account/my_account/account_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
-// SCREENS - PROFILE MANAGEMENT ✅ NEW
+// SCREENS - PROFILE MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/edit_profile_screen.dart';
 import 'screens/profile/change_password_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
+// SCREENS - NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════
 // SCREENS - SERVICES MARKETPLACE
 // ═══════════════════════════════════════════════════════════════════════
 import 'screens/services/services_home_screen.dart';
 import 'screens/services/service_detail_screen.dart';
-import 'screens/services/contact_provider_screen.dart';
 import 'screens/services/all_categories_screen.dart';
 import 'screens/services/category_listings_screen.dart';
-import 'screens/services/incoming_requests_screen.dart';
-import 'screens/services/my_bookings_screen.dart';
+import 'screens/services/listing_plan_screen.dart';
 import 'screens/services/my_listings_screen.dart';
 import 'screens/services/post_service_screen.dart';
 
@@ -75,6 +80,10 @@ import 'providers/profile_provider.dart';
 import 'models/services/category_model.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
+// FIREBASE
+// ═══════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════
 // MAIN ENTRY POINT
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -90,16 +99,38 @@ Future<void> main() async {
     debugPrint("✅ [STARTUP] .env file loaded successfully");
     debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     debugPrint("📍 API Base URL: ${dotenv.env['API_BASE_URL']}");
-    debugPrint("🗺️  Google Maps Key: ${dotenv.env['GOOGLE_MAPS_API_KEY']?.substring(0, 10)}...");
+    debugPrint("🗺️  Mapbox Token: ${dotenv.env['MAPBOX_ACCESS_TOKEN']?.substring(0, 10)}...");
     debugPrint("🔌 Socket URL: ${dotenv.env['SOCKET_URL']}");
     debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
   } catch (e) {
     debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     debugPrint("❌ [STARTUP ERROR] Failed to load .env file");
-    debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    debugPrint("Error: $e");
+    debugPrint("   Error: $e");
     debugPrint("⚠️  Make sure .env file exists in project root");
     debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // INITIALIZE FIREBASE
+  // ═══════════════════════════════════════════════════════════════
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint("✅ [STARTUP] Firebase initialized");
+  } catch (e) {
+    debugPrint("❌ [STARTUP] Firebase initialization failed: $e");
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // INITIALIZE NOTIFICATION SERVICE
+  // Must be after Firebase.initializeApp()
+  // ═══════════════════════════════════════════════════════════════
+  try {
+    await NotificationService.instance.init();
+    debugPrint("✅ [STARTUP] NotificationService initialized");
+  } catch (e) {
+    debugPrint("❌ [STARTUP] NotificationService init failed: $e");
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -134,63 +165,131 @@ Future<void> main() async {
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════
 
-class WegoApp extends StatelessWidget {
+class WegoApp extends StatefulWidget {
   const WegoApp({super.key});
+
+  @override
+  State<WegoApp> createState() => _WegoAppState();
+}
+
+class _WegoAppState extends State<WegoApp> {
+
+  // ── Global navigator key — needed for notification deep-link routing ─────
+  static final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _setupNotificationRouting();
+  }
+
+  // ── Wire up NotificationService tap callback ──────────────────────────────
+  // This runs when user taps a notification (foreground or background).
+  // Add more cases here as you build out screens.
+  void _setupNotificationRouting() {
+    NotificationService.instance.onNotificationTap = (type, data) {
+      final nav = _navigatorKey.currentState;
+      if (nav == null) return;
+
+      debugPrint('🔔 [NAV] Notification tap → type: $type | data: $data');
+
+      // Refresh badge count on any notification tap
+      NotificationBadge.refresh();
+
+      switch (type) {
+        case NotificationType.rideDriverMatched:
+        case NotificationType.rideDriverArrived:
+        case NotificationType.rideCancelled:
+          nav.pushNamed('/dashboard/passenger');
+          break;
+
+        case NotificationType.rideTripOffer:
+        case NotificationType.rideOfferExpired:
+        case NotificationType.ridePaymentReceived:
+          nav.pushNamed('/dashboard/driver');
+          break;
+
+        case NotificationType.deliveryAgentAssigned:
+        case NotificationType.deliveryPickedUp:
+        case NotificationType.deliveryCancelled:
+        // Navigate to delivery tracking — update when screen exists
+          nav.pushNamed('/notifications');
+          break;
+
+        case NotificationType.deliveryOffer:
+        case NotificationType.deliveryOfferExpired:
+        case NotificationType.deliveryPaymentReceived:
+          nav.pushNamed('/dashboard/delivery-agent');
+          break;
+
+        case NotificationType.walletTopupSuccess:
+        case NotificationType.walletTopupFailed:
+        case NotificationType.walletWithdrawalRequested:
+        case NotificationType.walletWithdrawalCompleted:
+        case NotificationType.walletWithdrawalFailed:
+          nav.pushNamed('/notifications');
+          break;
+
+        case NotificationType.serviceRequestAccepted:
+        case NotificationType.serviceRequestRejected:
+        case NotificationType.serviceDisputeResolved:
+        case NotificationType.serviceNewRequest:
+          nav.pushNamed('/services/my-listings');
+          break;
+
+        case NotificationType.rentalApproved:
+        case NotificationType.rentalExpiryReminder:
+          nav.pushNamed('/notifications');
+          break;
+
+        case NotificationType.accountApproved:
+        case NotificationType.accountSuspended:
+        case NotificationType.accountPasswordChanged:
+        case NotificationType.accountNewDeviceLogin:
+          nav.pushNamed('/profile');
+          break;
+
+        case NotificationType.supportTicketReply:
+        case NotificationType.supportTicketResolved:
+          nav.pushNamed('/notifications');
+          break;
+
+        case NotificationType.broadcast:
+        case NotificationType.unknown:
+        default:
+          nav.pushNamed('/notifications');
+          break;
+      }
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // ═══════════════════════════════════════════════════════════════
-        // RIDE BOOKING PROVIDERS
-        // ═══════════════════════════════════════════════════════════════
-
-        /// Trip Provider for real-time trip management
-        ChangeNotifierProvider(
-          create: (_) => TripProvider(),
-        ),
-
-        /// Chat Service for in-app messaging
-        ChangeNotifierProvider(
-          create: (_) => ChatService(SocketHelper.socketService!),
-        ),
-
-        // ═══════════════════════════════════════════════════════════════
-        // SERVICES MARKETPLACE & PROFILE PROVIDERS
-        // ═══════════════════════════════════════════════════════════════
-
-        /// Services Provider for marketplace (categories, listings, requests, ratings, disputes)
-        ChangeNotifierProvider(
-          create: (_) => ServicesProvider(),
-        ),
-
-        /// Profile Provider for user profile management ✅ NEW
-        ChangeNotifierProvider(
-          create: (_) => ProfileProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => TripProvider()),
+        ChangeNotifierProvider(create: (_) => ChatService(SocketHelper.socketService!)),
+        ChangeNotifierProvider(create: (_) => ServicesProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MaterialApp(
         title: 'WEGO',
         debugShowCheckedModeBanner: false,
+        navigatorKey: _navigatorKey,
 
         // ════════════════════════════════════════════════════════
         // THEME CONFIGURATION (WEGO Gold & Black)
         // ════════════════════════════════════════════════════════
         theme: ThemeData(
           useMaterial3: true,
-
-          // WEGO Gold color scheme
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFFFFDC71), // WEGO Gold
-            primary: const Color(0xFFFFDC71),
-            secondary: const Color(0xFFF5C844),
-            surface: Colors.white,
+            seedColor:  const Color(0xFFFFDC71),
+            primary:    const Color(0xFFFFDC71),
+            secondary:  const Color(0xFFF5C844),
+            surface:    Colors.white,
             background: const Color(0xFFF5F5F5),
           ),
-
           scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-
-          // AppBar Theme
           appBarTheme: const AppBarTheme(
             centerTitle: true,
             elevation: 0,
@@ -202,17 +301,12 @@ class WegoApp extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-
-          // Elevated Button Theme
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFDC71), // WEGO Gold
+              backgroundColor: const Color(0xFFFFDC71),
               foregroundColor: Colors.black87,
               elevation: 2,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -222,8 +316,6 @@ class WegoApp extends StatelessWidget {
               ),
             ),
           ),
-
-          // Input Decoration Theme
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
             fillColor: Colors.white,
@@ -237,17 +329,12 @@ class WegoApp extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFFFFDC71), // WEGO Gold
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFFFDC71), width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
+              horizontal: 16, vertical: 16,
             ),
           ),
-
           cardTheme: CardThemeData(
             elevation: 2,
             shape: RoundedRectangleBorder(
@@ -255,10 +342,8 @@ class WegoApp extends StatelessWidget {
             ),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           ),
-
-          // Bottom Navigation Bar Theme
           bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-            selectedItemColor: Color(0xFFFFDC71),
+            selectedItemColor:   Color(0xFFFFDC71),
             unselectedItemColor: Colors.grey,
             showUnselectedLabels: true,
             type: BottomNavigationBarType.fixed,
@@ -273,41 +358,26 @@ class WegoApp extends StatelessWidget {
           debugPrint('🧭 [NAVIGATION] Route: ${settings.name}');
 
           switch (settings.name) {
-          // ══════════════════════════════════════════════════
-          // AUTHENTICATION ROUTES
-          // ══════════════════════════════════════════════════
 
+          // ── Auth ────────────────────────────────────────────
             case '/':
-              return MaterialPageRoute(
-                builder: (_) => const SplashScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const SplashScreen());
+
             case '/login':
-              return MaterialPageRoute(
-                builder: (_) => const LoginScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const LoginScreen());
 
             case '/signup/passenger':
-              return MaterialPageRoute(
-                builder: (_) => const SignupPassengerScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const SignupPassengerScreen());
 
             case '/signup/driver':
-              return MaterialPageRoute(
-                builder: (_) => const SignupDriverScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const SignupDriverScreen());
 
             case '/forgot-password':
-              return MaterialPageRoute(
-                builder: (_) => const ForgotPasswordScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
 
-          // ══════════════════════════════════════════════════
-          // DASHBOARD ROUTES
-          // ══════════════════════════════════════════════════
+          // ── Dashboards ──────────────────────────────────────
             case '/dashboard/passenger':
-              return MaterialPageRoute(
-                builder: (_) => const PassengerDashboard(),
-              );
+              return MaterialPageRoute(builder: (_) => const PassengerDashboard());
 
             case '/dashboard/driver':
               return MaterialPageRoute(
@@ -315,208 +385,119 @@ class WegoApp extends StatelessWidget {
                   initialAccessToken: settings.arguments as String?,
                 ),
               );
-            case '/dashboard/delivery-agent':
-              return MaterialPageRoute(
-                builder: (_) => DeliveryAgentDashboard(
-                ),
-              );
 
-          // ══════════════════════════════════════════════════
-          // ACCOUNT ROUTES
-          // ══════════════════════════════════════════════════
+            case '/dashboard/delivery-agent':
+              return MaterialPageRoute(builder: (_) => const DeliveryAgentDashboard());
+
+          // ── Account ─────────────────────────────────────────
             case '/account':
               return MaterialPageRoute(
-                builder: (_) => const AccountScreen(
-                  user: {},
-                  accessToken: '',
-                ),
+                builder: (_) => const AccountScreen(user: {}, accessToken: ''),
               );
 
-          // ══════════════════════════════════════════════════
-          // PROFILE
-          // ══════════════════════════════════════════════════
+          // ── Profile ─────────────────────────────────────────
             case '/profile':
-              return MaterialPageRoute(
-                builder: (_) => const ProfileScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const ProfileScreen());
 
             case '/profile/edit':
-              return MaterialPageRoute(
-                builder: (_) => const EditProfileScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const EditProfileScreen());
 
             case '/profile/change-password':
-              return MaterialPageRoute(
-                builder: (_) => const ChangePasswordScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const ChangePasswordScreen());
 
             case '/profile/avatar':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Change Avatar',
-                  message: 'Upload or change your profile picture',
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'Change Avatar', message: 'Upload or change your profile picture',
+              ));
 
             case '/profile/help':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Help & FAQ',
-                  message: 'Get answers to common questions',
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'Help & FAQ', message: 'Get answers to common questions',
+              ));
 
             case '/profile/notifications':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Notification Settings',
-                  message: 'Manage your notification preferences',
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const NotificationScreen());
 
             case '/profile/privacy':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Privacy & Security',
-                  message: 'Control your privacy settings',
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'Privacy & Security', message: 'Control your privacy settings',
+              ));
 
             case '/profile/support':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Contact Support',
-                  message: 'Get help from our support team',
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'Contact Support', message: 'Get help from our support team',
+              ));
 
             case '/profile/report-problem':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Report a Problem',
-                  message: 'Let us know about any issues',
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'Report a Problem', message: 'Let us know about any issues',
+              ));
 
             case '/profile/vehicle':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Vehicle Information',
-                  message: 'Manage your vehicle details',
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'Vehicle Information', message: 'Manage your vehicle details',
+              ));
 
             case '/profile/documents':
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'Driver Documents', message: 'Manage your license, CNI, and insurance',
+              ));
+
+          // ── Notifications ────────────────────────────────────
+            case '/notifications':
               return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Driver Documents',
-                  message: 'Manage your license, CNI, and insurance',
-                ),
+                builder: (_) => const NotificationScreen(),
               );
 
-          // ══════════════════════════════════════════════════
-          // SERVICES MARKETPLACE ROUTES
-          // ══════════════════════════════════════════════════
-
-          // Services Home
+          // ── Services Marketplace ────────────────────────────
             case '/services':
-              return MaterialPageRoute(
-                builder: (_) => const ServicesHomeScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const ServicesHomeScreen());
 
-          // Service Detail
             case '/services/detail':
-              final args = settings.arguments as Map<String, dynamic>?;
+              final args    = settings.arguments as Map<String, dynamic>?;
               final listingId = args?['listingId'] as int?;
-
               return MaterialPageRoute(
-                builder: (_) => ServiceDetailScreen(
-                  listingId: listingId,
-                ),
+                builder: (_) => ServiceDetailScreen(listingId: listingId),
               );
 
-          // Contact Provider / Book Service
-            case '/services/contact':
-              final args = settings.arguments as Map<String, dynamic>?;
-              final listing = args?['listing'];
+            case '/services/listing-plan':
+              return MaterialPageRoute(builder: (_) => const ListingPlanScreen());
 
-              return MaterialPageRoute(
-                builder: (_) => ContactProviderScreen(
-                  listing: listing,
-                ),
-              );
-
-          // Incoming Requests (Provider View)
-            case '/services/incoming-requests':
-              return MaterialPageRoute(
-                builder: (_) => const IncomingRequestsScreen(),
-              );
-
-          // Post Service
             case '/services/post':
-              return MaterialPageRoute(
-                builder: (_) => PostServiceScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => PostServiceScreen());
 
-          // My Bookings
-            case '/services/my-bookings':
-              return MaterialPageRoute(
-                builder: (_) => MyBookingsScreen(),
-              );
-
-          // My Listings
             case '/services/my-listings':
-              return MaterialPageRoute(
-                builder: (_) => MyListingsScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => MyListingsScreen());
 
-          // All Categories
             case '/services/categories':
-              return MaterialPageRoute(
-                builder: (_) => const AllCategoriesScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const AllCategoriesScreen());
 
-          // Category Listings
             case '/services/category-listings':
-              final args = settings.arguments as Map<String, dynamic>;
+              final args     = settings.arguments as Map<String, dynamic>;
               final category = args['category'] as ServiceCategory;
               return MaterialPageRoute(
-                builder: (_) => CategoryListingsScreen(
-                  category: category,
-                ),
+                builder: (_) => CategoryListingsScreen(category: category),
               );
 
-          // All Services (Coming Soon)
             case '/services/all':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'All Services',
-                  message: 'Browse all available services',
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'All Services', message: 'Browse all available services',
+              ));
+
             case '/services/search':
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              final args = ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?;
               return MaterialPageRoute(
                 builder: (_) => ServiceSearchScreen(
                   initialQuery: args?['query'] as String?,
                 ),
               );
 
-          // All Reviews (Coming Soon)
             case '/services/reviews':
-              return MaterialPageRoute(
-                builder: (_) => const _ComingSoonScreen(
-                  title: 'Reviews',
-                  message: 'Read all reviews for this service',
-                ),
-              );
-            case '/services/dispute':
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-              return MaterialPageRoute(
-                builder: (_) => DisputeFilingScreen(
-                  request: args?['request'] as ServiceRequest,
-                ),
-              );
+              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
+                title: 'Reviews', message: 'Read all reviews for this service',
+              ));
+
             case '/services/edit-listing':
               final args = ModalRoute.of(context)?.settings.arguments
               as Map<String, dynamic>?;
@@ -526,13 +507,9 @@ class WegoApp extends StatelessWidget {
                 ),
               );
 
-          // ══════════════════════════════════════════════════
-          // DEFAULT ROUTE
-          // ══════════════════════════════════════════════════
+          // ── Default ─────────────────────────────────────────
             default:
-              return MaterialPageRoute(
-                builder: (_) => const LoginScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const LoginScreen());
           }
         },
       ),
@@ -541,7 +518,7 @@ class WegoApp extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// COMING SOON SCREEN (Placeholder for unimplemented screens)
+// COMING SOON SCREEN
 // ═══════════════════════════════════════════════════════════════════════
 
 class _ComingSoonScreen extends StatelessWidget {
@@ -560,10 +537,7 @@ class _ComingSoonScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        title: Text(
-          title,
-          style: const TextStyle(color: Colors.white),
-        ),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -586,35 +560,25 @@ class _ComingSoonScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFFFDC71).withOpacity(0.3),
+                      color:      const Color(0xFFFFDC71).withOpacity(0.3),
                       blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      offset:     const Offset(0, 10),
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.construction,
-                  size: 64,
-                  color: Colors.black87,
-                ),
+                child: const Icon(Icons.construction, size: 64, color: Colors.black87),
               ),
               const SizedBox(height: 32),
               const Text(
                 'Coming Soon!',
                 style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+                  fontSize: 28, fontWeight: FontWeight.w700, color: Colors.black87,
                 ),
               ),
               const SizedBox(height: 16),
               Text(
                 message,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                  height: 1.5,
-                ),
+                style: const TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -623,21 +587,15 @@ class _ComingSoonScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFDC71),
                   foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                icon: const Icon(Icons.arrow_back),
+                icon:  const Icon(Icons.arrow_back),
                 label: const Text(
                   'Go Back',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -649,14 +607,10 @@ class _ComingSoonScreen extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// SOCKET HELPER (Existing)
+// SOCKET HELPER (unchanged)
 // ═══════════════════════════════════════════════════════════════════════
 
 class SocketHelper {
-  // ═══════════════════════════════════════════════════════════════
-  // SINGLETON PATTERN
-  // ═══════════════════════════════════════════════════════════════
-
   static SocketHelper? _instance;
   static SocketService? _socketService;
 
@@ -667,12 +621,7 @@ class SocketHelper {
     return _instance!;
   }
 
-  /// Expose socket service for ChatService
   static SocketService? get socketService => _socketService;
-
-  // ═══════════════════════════════════════════════════════════════
-  // INITIALIZATION
-  // ═══════════════════════════════════════════════════════════════
 
   static Future<void> initialize() async {
     debugPrint('🔌 [SOCKET-HELPER] Initializing...');
@@ -680,11 +629,6 @@ class SocketHelper {
     debugPrint('✅ [SOCKET-HELPER] Initialized successfully');
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // CONNECTION MANAGEMENT
-  // ═══════════════════════════════════════════════════════════════
-
-  /// Connect to the socket server after login
   static Future<void> connect({
     required String accessToken,
     required String userId,
@@ -700,171 +644,80 @@ class SocketHelper {
 
     debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('🔌 [SOCKET-HELPER] Connecting to socket...');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('🌐 URL: $socketUrl');
-    debugPrint('👤 User ID: $userId');
-    debugPrint('🎭 User Type: $userType');
-    debugPrint('🎫 Token: ${accessToken.substring(0, 20)}...');
+    debugPrint('   URL: $socketUrl | User: $userId | Type: $userType');
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     try {
       await _socketService!.connect(
-        url: socketUrl,
-        accessToken: accessToken,
-        userId: userId,
-        userType: userType,
+        url:          socketUrl,
+        accessToken:  accessToken,
+        userId:       userId,
+        userType:     userType,
         onTokenExpired: onTokenExpired,
       );
-
       debugPrint('✅ [SOCKET-HELPER] Connected successfully\n');
     } catch (e) {
       debugPrint('❌ [SOCKET-HELPER] Connection failed: $e\n');
     }
   }
 
-  /// Disconnect from the socket server
   static void disconnect() {
     if (_socketService == null) return;
-
     debugPrint('🔌 [SOCKET-HELPER] Disconnecting...');
     _socketService!.disconnect();
     debugPrint('✅ [SOCKET-HELPER] Disconnected\n');
   }
 
-  /// Reconnect to the socket server
   void reconnect() {
-    if (_socketService == null) {
-      debugPrint('❌ [SOCKET-HELPER] Cannot reconnect - service not initialized');
-      return;
-    }
-
-    debugPrint('🔄 [SOCKET-HELPER] Attempting to reconnect...');
+    if (_socketService == null) return;
     _attemptReconnectWithStoredCredentials();
   }
 
   Future<void> _attemptReconnectWithStoredCredentials() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs       = await SharedPreferences.getInstance();
       final accessToken = prefs.getString('access_token');
-      final userId = prefs.getString('user_uuid');
-      final userType = prefs.getString('user_type');
-
+      final userId      = prefs.getString('user_uuid');
+      final userType    = prefs.getString('user_type');
       if (accessToken != null && userId != null && userType != null) {
-        debugPrint('🔑 [SOCKET-HELPER] Found stored credentials, reconnecting...');
-        await connect(
-          accessToken: accessToken,
-          userId: userId,
-          userType: userType,
-        );
-      } else {
-        debugPrint('❌ [SOCKET-HELPER] Cannot reconnect - missing connection details');
+        await connect(accessToken: accessToken, userId: userId, userType: userType);
       }
     } catch (e) {
       debugPrint('❌ [SOCKET-HELPER] Reconnect failed: $e');
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // GETTERS FOR SOCKET ACCESS
-  // ═══════════════════════════════════════════════════════════════
+  dynamic get socket                                    => _socketService?.socket;
+  Stream<bool> get connectionStateStream                => _socketService?.connectionStateStream ?? Stream.value(false);
+  Stream<Map<String, dynamic>> get tripOfferStream      => _socketService?.tripOfferStream ?? const Stream.empty();
+  Stream<Map<String, dynamic>> get tripCanceledStream   => _socketService?.tripCanceledStream ?? const Stream.empty();
+  Stream<Map<String, dynamic>> get tripMatchedStream    => _socketService?.tripMatchedStream ?? const Stream.empty();
+  Stream<Map<String, dynamic>> get tripStatusStream     => _socketService?.tripStatusStream ?? const Stream.empty();
+  Stream<Map<String, dynamic>> get driverLocationStream => _socketService?.driverLocationStream ?? const Stream.empty();
+  bool get isConnected                                  => socket?.connected ?? false;
 
-  /// Get the underlying socket instance (for emit operations)
-  dynamic get socket => _socketService?.socket;
-
-  /// Get connection state stream
-  Stream<bool> get connectionStateStream {
-    if (_socketService == null) {
-      debugPrint('⚠️ [SOCKET-HELPER] Socket service not initialized');
-      return Stream.value(false);
-    }
-    return _socketService!.connectionStateStream;
-  }
-
-  /// Get trip offer stream (for drivers)
-  Stream<Map<String, dynamic>> get tripOfferStream {
-    if (_socketService == null) {
-      debugPrint('⚠️ [SOCKET-HELPER] Socket service not initialized');
-      return const Stream.empty();
-    }
-    return _socketService!.tripOfferStream;
-  }
-
-  /// Get trip canceled stream
-  Stream<Map<String, dynamic>> get tripCanceledStream {
-    if (_socketService == null) {
-      debugPrint('⚠️ [SOCKET-HELPER] Socket service not initialized');
-      return const Stream.empty();
-    }
-    return _socketService!.tripCanceledStream;
-  }
-
-  /// Get trip matched stream (for drivers)
-  Stream<Map<String, dynamic>> get tripMatchedStream {
-    if (_socketService == null) {
-      debugPrint('⚠️ [SOCKET-HELPER] Socket service not initialized');
-      return const Stream.empty();
-    }
-    return _socketService!.tripMatchedStream;
-  }
-
-  /// Get trip status stream (for passengers)
-  Stream<Map<String, dynamic>> get tripStatusStream {
-    if (_socketService == null) {
-      debugPrint('⚠️ [SOCKET-HELPER] Socket service not initialized');
-      return const Stream.empty();
-    }
-    return _socketService!.tripStatusStream;
-  }
-
-  /// Get driver location stream (for passengers)
-  Stream<Map<String, dynamic>> get driverLocationStream {
-    if (_socketService == null) {
-      debugPrint('⚠️ [SOCKET-HELPER] Socket service not initialized');
-      return const Stream.empty();
-    }
-    return _socketService!.driverLocationStream;
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // CONVENIENCE METHODS
-  // ═══════════════════════════════════════════════════════════════
-
-  /// Check if socket is connected
-  bool get isConnected => socket?.connected ?? false;
-
-  /// Emit an event to the server
   void emit(String event, dynamic data) {
-    if (socket == null) {
-      debugPrint('⚠️ [SOCKET-HELPER] Cannot emit - socket not connected');
-      return;
-    }
-
-    debugPrint('📤 [SOCKET-HELPER] Emitting event: $event');
+    if (socket == null) return;
     socket.emit(event, data);
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// AUTO-CONNECT ON APP STARTUP (OPTIONAL)
+// AUTO-CONNECT ON APP STARTUP
 // ═══════════════════════════════════════════════════════════════════════
 
-/// Auto-connect to socket if user is already logged in
 Future<void> autoConnectIfLoggedIn() async {
   try {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs       = await SharedPreferences.getInstance();
     final accessToken = prefs.getString('access_token');
-    final userId = prefs.getString('user_uuid');
-    final userType = prefs.getString('user_type');
-
+    final userId      = prefs.getString('user_uuid');
+    final userType    = prefs.getString('user_type');
     if (accessToken != null && userId != null && userType != null) {
-      debugPrint('🔑 [AUTO-CONNECT] Found stored credentials');
       await SocketHelper.connect(
         accessToken: accessToken,
-        userId: userId,
-        userType: userType,
+        userId:      userId,
+        userType:    userType,
       );
-    } else {
-      debugPrint('ℹ️ [AUTO-CONNECT] No stored credentials found');
     }
   } catch (e) {
     debugPrint('❌ [AUTO-CONNECT] Failed: $e');

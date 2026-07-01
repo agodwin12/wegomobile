@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../utils/app_colors.dart';
 import '../../../../utils/app_typography.dart';
 import '../../../../core/config.dart';
@@ -253,7 +254,12 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
           ),
           if (phone != null)
             GestureDetector(
-              onTap: () {}, // TODO: launch phone dialer
+              onTap: () async {
+                final uri = Uri.parse('tel:$phone');
+                try {
+                  if (await canLaunchUrl(uri)) await launchUrl(uri);
+                } catch (_) {}
+              },
               child: Container(
                 width: 44, height: 44,
                 decoration: BoxDecoration(

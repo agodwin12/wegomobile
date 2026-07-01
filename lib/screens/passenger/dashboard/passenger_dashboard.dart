@@ -15,9 +15,10 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,7 +27,11 @@ import '../../../providers/profile_provider.dart';
 import '../../../service/api_services.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_typography.dart';
+import '../../../utils/map_style.dart';
+import '../../../widgets/map_style_button.dart';
 import '../../../widgets/mode_switch_sheet.dart';
+import '../../notification/notification_badge.dart';
+import '../../notification/notification_screen.dart';
 import '../../profile/profile_screen.dart';
 import '../../services/services_home_screen.dart';
 import '../activity/activity_screen.dart';
@@ -91,6 +96,10 @@ class _PassengerDashboardState extends State<PassengerDashboard>
   late Animation<Offset>   _entrySlide;
   late Animation<double>   _pulse;
 
+  // ── Map style ───────────────────────────────────────────────────
+  MapStyle _mapStyle = MapStyle.dark;
+  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+
   // ── Service press states ─────────────────────────────────────────
   final Map<String, bool> _servicePressed = {};
 
@@ -105,6 +114,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
     _setupAnimations();
     _initializeDashboard();
     _fetchLocation();
+    loadMapStylePref().then((s) { if (mounted) setState(() => _mapStyle = s); });
   }
 
   void _setupAnimations() {
@@ -159,15 +169,29 @@ class _PassengerDashboardState extends State<PassengerDashboard>
       String label =
           '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}';
       try {
-        final placemarks =
-        await placemarkFromCoordinates(pos.latitude, pos.longitude);
-        if (placemarks.isNotEmpty) {
-          final p = placemarks.first;
-          final parts = [p.street, p.subLocality, p.locality]
-              .where((s) => s != null && s.isNotEmpty)
-              .take(2)
-              .join(', ');
-          if (parts.isNotEmpty) label = parts;
+        final token = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+        final url   = Uri.parse(
+          'https://api.mapbox.com/geocoding/v5/mapbox.places/'
+          '${pos.longitude},${pos.latitude}.json'
+          '?access_token=$token'
+          '&types=address,neighborhood,locality,place'
+          '&limit=1',
+        );
+        final response =
+            await http.get(url).timeout(const Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          final data     = json.decode(response.body);
+          final features = data['features'] as List?;
+          if (features != null && features.isNotEmpty) {
+            final name  = features[0]['place_name']?.toString() ?? '';
+            final parts = name
+                .split(',')
+                .take(2)
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .join(', ');
+            if (parts.isNotEmpty) label = parts;
+          }
         }
       } catch (_) {}
 
@@ -518,12 +542,8 @@ class _PassengerDashboardState extends State<PassengerDashboard>
               ),
               children: [
                 TileLayer(
-                  urlTemplate:
-                  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                  subdomains: const ['a', 'b', 'c', 'd'],
+                  urlTemplate: _mapStyle.tileUrl(_mapboxToken),
                   userAgentPackageName: 'com.yourapp.passenger',
-                  retinaMode:
-                  MediaQuery.of(context).devicePixelRatio > 1.0,
                 ),
                 if (_currentLatLng != null)
                   MarkerLayer(markers: [
@@ -536,6 +556,12 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                   ]),
               ],
             ),
+          ),
+
+          MapStyleButton(
+            current: _mapStyle,
+            onChanged: (s) { setState(() => _mapStyle = s); saveMapStylePref(s); },
+            bottom: 14,
           ),
 
           // Top gradient
@@ -725,43 +751,33 @@ class _PassengerDashboardState extends State<PassengerDashboard>
           ],
 
           // Notification button
-          GestureDetector(
-            onTap: () => _showComingSoon('Notifications'),
+          NotificationBadge(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const NotificationScreen(),
+                ),
+              ).then((_) => NotificationBadge.refresh());
+            },
             child: ClipRRect(
               borderRadius: BorderRadius.circular(13),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Stack(
-                  children: [
-                    Container(
-                      width:  42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color:        Colors.black.withOpacity(0.38),
-                        borderRadius: BorderRadius.circular(13),
-                        border: Border.all(
-                            color: Colors.white.withOpacity(0.12)),
-                      ),
-                      child: Icon(
-                        Icons.notifications_outlined,
-                        color: Colors.white.withOpacity(0.9),
-                        size:  20,
-                      ),
-                    ),
-                    Positioned(
-                      top: 9, right: 9,
-                      child: Container(
-                        width:  7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color:  _kGold,
-                          shape:  BoxShape.circle,
-                          border: Border.all(
-                              color: Colors.black, width: 1),
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Container(
+                  width:  42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color:        Colors.black.withOpacity(0.38),
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.12)),
+                  ),
+                  child: Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white.withOpacity(0.9),
+                    size:  20,
+                  ),
                 ),
               ),
             ),

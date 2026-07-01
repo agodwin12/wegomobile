@@ -30,6 +30,13 @@ class _RentalScreenState extends State<RentalScreen>
   String _selectedCategoryId = 'ALL';
   Set<String> _favorites = {};
 
+  // Pagination — load the fleet page by page (scales to 50k+ vehicles).
+  int _page = 1;
+  int _totalPages = 1;
+  bool _loadingMore = false;
+  final ScrollController _scroll = ScrollController();
+  bool get _hasMore => _page < _totalPages;
+
   // Nullable so dispose() never throws if initState fails mid-way
   AnimationController? _headerController;
   AnimationController? _staggerController;
@@ -51,7 +58,17 @@ class _RentalScreenState extends State<RentalScreen>
       if (mounted) setState(() => _searchFocused = _searchFocus.hasFocus);
     });
 
+    _scroll.addListener(_onScroll);
+
     _initData();
+  }
+
+  void _onScroll() {
+    if (!_scroll.hasClients) return;
+    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 400 &&
+        _hasMore && !_loadingMore && !_loading) {
+      _loadMore();
+    }
   }
 
   @override
@@ -60,6 +77,7 @@ class _RentalScreenState extends State<RentalScreen>
     _staggerController?.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -80,13 +98,18 @@ class _RentalScreenState extends State<RentalScreen>
   }
 
   Future<void> _fetchVehicles() async {
-    final r = await RentalApiService.fetchAvailableVehicles(widget.accessToken);
+    final r = await RentalApiService.fetchAvailableVehicles(
+        widget.accessToken, page: 1, limit: 20);
     if (!mounted) return;
     setState(() => _loading = false);
 
     if (r['success'] == true) {
       final d = r['data'];
-      setState(() => _vehicles = d['vehicles'] ?? (d is List ? d : []));
+      setState(() {
+        _vehicles = (d['vehicles'] ?? (d is List ? d : [])) as List<dynamic>;
+        _page = (d is Map && d['page'] is int) ? d['page'] as int : 1;
+        _totalPages = (d is Map && d['totalPages'] is int) ? d['totalPages'] as int : 1;
+      });
       _headerController?.forward();
       _staggerController?.forward();
     } else {
@@ -96,6 +119,28 @@ class _RentalScreenState extends State<RentalScreen>
             ? 'Unable to connect. Check your internet connection.'
             : r['error'] ?? 'Failed to load vehicles',
       );
+    }
+  }
+
+  // Append the next page when the user scrolls near the bottom.
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    final next = _page + 1;
+    final r = await RentalApiService.fetchAvailableVehicles(
+        widget.accessToken, page: next, limit: 20);
+    if (!mounted) return;
+    if (r['success'] == true && r['data'] is Map) {
+      final d = r['data'] as Map;
+      final more = (d['vehicles'] ?? []) as List<dynamic>;
+      setState(() {
+        _vehicles = [..._vehicles, ...more];
+        _page = (d['page'] is int) ? d['page'] as int : next;
+        _totalPages = (d['totalPages'] is int) ? d['totalPages'] as int : _totalPages;
+        _loadingMore = false;
+      });
+    } else {
+      setState(() => _loadingMore = false);
     }
   }
 
@@ -424,6 +469,7 @@ class _RentalScreenState extends State<RentalScreen>
 
   Widget _buildGrid() {
     return CustomScrollView(
+      controller: _scroll,
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverPadding(
@@ -458,6 +504,19 @@ class _RentalScreenState extends State<RentalScreen>
             ),
           ),
         ),
+        if (_loadingMore)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 28),
+              child: Center(
+                child: SizedBox(
+                  width: 26, height: 26,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.4, color: AppColors.primaryGold),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

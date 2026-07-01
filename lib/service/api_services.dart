@@ -661,11 +661,11 @@ class ApiService {
     required String accessToken,
   }) async {
     print('\n🔍 [GET ACTIVE TRIP] Fetching active trip...');
-    print('URL: $baseUrl/api/trips/active');
+    print('URL: $baseUrl/trips/active');
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/trips/active'),
+        Uri.parse('$baseUrl/trips/active'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -691,11 +691,11 @@ class ApiService {
     int limit = 20,
   }) async {
     print('\n📜 [GET TRIP HISTORY] Fetching history...');
-    print('URL: $baseUrl/api/trips/history?page=$page&limit=$limit');
+    print('URL: $baseUrl/trips/history?page=$page&limit=$limit');
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/trips/history?page=$page&limit=$limit'),
+        Uri.parse('$baseUrl/trips/history?page=$page&limit=$limit'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -730,11 +730,11 @@ class ApiService {
     required String tripId,
   }) async {
     print('\n📊 [GET TRIP EVENTS] Fetching events for trip: $tripId');
-    print('URL: $baseUrl/api/trips/$tripId/events');
+    print('URL: $baseUrl/trips/$tripId/events');
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/trips/$tripId/events'),
+        Uri.parse('$baseUrl/trips/$tripId/events'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -1509,10 +1509,10 @@ class ApiService {
     required String phone,       // 9-digit number e.g. '670000000'
   }) async {
     debugPrint('\n💳 [INITIATE PAYMENT] vertical=$vertical id=$verticalId phone=$phone');
-    debugPrint('URL: $baseUrl/api/payments/initiate');
+    debugPrint('URL: $baseUrl/payments/initiate');
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/payments/initiate'),
+        Uri.parse('$baseUrl/payments/initiate'),
         headers: {
           'Content-Type':  'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -1552,10 +1552,10 @@ class ApiService {
     required String campayRef,
   }) async {
     debugPrint('\n🔄 [CHECK PAYMENT STATUS] campayRef=$campayRef');
-    debugPrint('URL: $baseUrl/api/payments/$campayRef/status');
+    debugPrint('URL: $baseUrl/payments/$campayRef/status');
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/payments/$campayRef/status'),
+        Uri.parse('$baseUrl/payments/$campayRef/status'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type':  'application/json',
@@ -1596,7 +1596,7 @@ class ApiService {
         if (vertical != null) 'vertical': vertical,
         if (status   != null) 'status':   status,
       };
-      final uri = Uri.parse('$baseUrl/api/payments/history')
+      final uri = Uri.parse('$baseUrl/payments/history')
           .replace(queryParameters: params);
       final response = await http.get(
         uri,

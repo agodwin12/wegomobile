@@ -21,16 +21,20 @@ import 'delivery_package_selector.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PlaceSuggestion {
-  final String placeId;
-  final String mainText;
-  final String secondaryText;
-  final bool isFallback;
+  final String  placeId;
+  final String  mainText;
+  final String  secondaryText;
+  final bool    isFallback;
+  final double? lat;
+  final double? lng;
 
   _PlaceSuggestion({
     required this.placeId,
     required this.mainText,
     required this.secondaryText,
     this.isFallback = false,
+    this.lat,
+    this.lng,
   });
 }
 
@@ -167,15 +171,20 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
 
   Future<String?> _reverseGeocode(double lat, double lng) async {
     try {
+      final token = AppConfig.mapboxToken;
       final uri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json'
-            '?latlng=$lat,$lng&key=${AppConfig.googleMapsApiKey}',
+        'https://api.mapbox.com/geocoding/v5/mapbox.places/'
+        '$lng,$lat.json'
+        '?access_token=$token'
+        '&types=address,neighborhood,locality,place'
+        '&limit=1',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
-        final results = jsonDecode(res.body)['results'] as List<dynamic>?;
-        if (results != null && results.isNotEmpty) {
-          return results[0]['formatted_address'] as String?;
+        final features =
+            jsonDecode(res.body)['features'] as List<dynamic>?;
+        if (features != null && features.isNotEmpty) {
+          return features[0]['place_name'] as String?;
         }
       }
     } catch (_) {}
@@ -198,30 +207,38 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
   Future<void> _fetchSuggestions(String input) async {
     setState(() { _loadingSuggest = true; });
     try {
+      final token   = AppConfig.mapboxToken;
       final biasLat = _pickupLat ?? 4.0280;
       final biasLng = _pickupLng ?? 9.7445;
+      final encoded = Uri.encodeComponent(input);
       final uri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/autocomplete/json',
-      ).replace(queryParameters: {
-        'input':        input,
-        'key':          AppConfig.googleMapsApiKey,
-        'language':     'fr',
-        'components':   'country:cm',
-        'location':     '$biasLat,$biasLng',
-        'radius':       '50000',
-        'strictbounds': 'false',
-      });
+        'https://api.mapbox.com/geocoding/v5/mapbox.places/'
+        '$encoded.json'
+        '?access_token=$token'
+        '&country=CM'
+        '&language=fr'
+        '&proximity=$biasLng,$biasLat'
+        '&limit=5',
+      );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
-        final data        = jsonDecode(res.body);
-        final predictions = data['predictions'] as List<dynamic>? ?? [];
-        if (predictions.isNotEmpty) {
-          final suggestions = predictions.map((p) {
-            final sf = p['structured_formatting'] as Map<String, dynamic>?;
+        final features =
+            jsonDecode(res.body)['features'] as List<dynamic>? ?? [];
+        if (features.isNotEmpty) {
+          final suggestions = features.map((f) {
+            final coords = f['geometry']?['coordinates'] as List<dynamic>?;
+            final lat = coords != null ? (coords[1] as num).toDouble() : null;
+            final lng = coords != null ? (coords[0] as num).toDouble() : null;
+            final placeName = f['place_name'] as String? ?? '';
+            final parts     = placeName.split(',');
             return _PlaceSuggestion(
-              placeId:       p['place_id'] as String,
-              mainText:      sf?['main_text'] as String? ?? p['description'] as String,
-              secondaryText: sf?['secondary_text'] as String? ?? '',
+              placeId:       f['id'] as String? ?? placeName,
+              mainText:      parts.isNotEmpty ? parts[0].trim() : placeName,
+              secondaryText: parts.length > 1
+                  ? parts.sublist(1).join(',').trim()
+                  : '',
+              lat: lat,
+              lng: lng,
             );
           }).toList();
           if (mounted) {
@@ -273,10 +290,11 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
   }
 
   Future<void> _selectSuggestion(_PlaceSuggestion suggestion) async {
-    setState(() { _showDropdown = false; _loadingSuggest = !suggestion.isFallback; });
+    setState(() { _showDropdown = false; });
+
     if (suggestion.isFallback) {
       final fb = _kLogpomFallbacks.firstWhere(
-            (f) => 'fallback_${f.name}' == suggestion.placeId,
+        (f) => 'fallback_${f.name}' == suggestion.placeId,
         orElse: () => const _FallbackPlace('', '', 4.0280, 9.7445),
       );
       if (mounted) {
@@ -285,42 +303,31 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
           _dropoffLng             = fb.lng;
           _dropoffAddress         = '${suggestion.mainText}, ${suggestion.secondaryText}';
           _dropoffSearchCtrl.text = suggestion.mainText;
-          _loadingSuggest         = false;
         });
       }
       return;
     }
-    try {
-      final uri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/details/json',
-      ).replace(queryParameters: {
-        'place_id': suggestion.placeId,
-        'fields':   'geometry,formatted_address',
-        'key':      AppConfig.googleMapsApiKey,
-      });
-      final res = await http.get(uri).timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final data     = jsonDecode(res.body);
-        final location = data['result']?['geometry']?['location'];
-        final address  = data['result']?['formatted_address'] as String?;
-        if (location != null && mounted) {
-          setState(() {
-            _dropoffLat             = (location['lat'] as num).toDouble();
-            _dropoffLng             = (location['lng'] as num).toDouble();
-            _dropoffAddress         = address ?? suggestion.mainText;
-            _dropoffSearchCtrl.text = suggestion.mainText;
-            _loadingSuggest         = false;
-          });
-          return;
-        }
+
+    // Mapbox features already carry coordinates — no second API call needed.
+    if (suggestion.lat != null && suggestion.lng != null) {
+      if (mounted) {
+        setState(() {
+          _dropoffLat             = suggestion.lat;
+          _dropoffLng             = suggestion.lng;
+          _dropoffAddress         = suggestion.secondaryText.isNotEmpty
+              ? '${suggestion.mainText}, ${suggestion.secondaryText}'
+              : suggestion.mainText;
+          _dropoffSearchCtrl.text = suggestion.mainText;
+        });
       }
-    } catch (_) {}
+      return;
+    }
+
     if (mounted) {
-      setState(() => _loadingSuggest = false);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Could not resolve address. Try searching again.'),
+        content:         Text('Could not resolve address. Try searching again.'),
         backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
+        behavior:        SnackBarBehavior.floating,
       ));
     }
   }

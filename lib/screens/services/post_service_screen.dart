@@ -1,15 +1,52 @@
+// lib/screens/services/post_service_screen.dart
+// ─────────────────────────────────────────────────────────────────────────────
+// Post Service Screen  (Provider — create a new listing)
+// Overflow-fixed + aligned to AppColors / AppTypography
+// ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import 'dart:io';
 
+import '../../models/listing_plan_model.dart';
 import '../../models/services/category_model.dart';
 import '../../providers/services.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 
+// ─── Local design tokens ──────────────────────────────────────────────────────
+const _kPrimary      = AppColors.primaryGold;
+const _kPrimaryLight = Color(0xFFFFFDE7);
+const _kPrimaryMid   = Color(0xFFFFECB3);
+const _kPrimaryDark  = AppColors.primaryGoldDark;
+const _kSurface      = AppColors.backgroundWhite;
+const _kPageBg       = AppColors.backgroundLight;
+const _kInputBg      = AppColors.inputBackground;
+const _kBorder       = AppColors.borderLight;
+const _kTextPrimary  = AppColors.textPrimary;
+const _kTextSecond   = AppColors.textSecondary;
+const _kTextLight    = AppColors.textLight;
+const _kError        = AppColors.error;
+const _kErrorLight   = AppColors.errorLight;
+const _kSuccess      = AppColors.success;
+const _kSuccessLight = AppColors.successLight;
 
+const double _rSm   = 6.0;
+const double _rMd   = 12.0;
+const double _rLg   = 16.0;
+const double _rXl   = 24.0;
+const double _rPill = 999.0;
+
+const List<BoxShadow> _kBottomShadow = [
+  BoxShadow(color: Color(0x14000000), blurRadius: 12, offset: Offset(0, -3)),
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
 class PostServiceScreen extends StatefulWidget {
   const PostServiceScreen({Key? key}) : super(key: key);
 
@@ -18,246 +55,379 @@ class PostServiceScreen extends StatefulWidget {
 }
 
 class _PostServiceScreenState extends State<PostServiceScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _minChargeController = TextEditingController();
-  final _experienceController = TextEditingController();
-
-  final ImagePicker _imagePicker = ImagePicker();
-  List<File> _selectedImages = [];
-
-  // Form state
-  ServiceCategory? _selectedParentCategory;
-  ServiceCategory? _selectedSubcategory;
-  String _pricingType = 'hourly'; // hourly, fixed, negotiable
-  String _selectedCity = 'Douala';
-  List<String> _selectedNeighborhoods = [];
-  bool _emergencyService = false;
-  bool _isSubmitting = false;
-  bool _isLoadingCategories = true;
-
-  // Cities in Cameroon
-  final List<String> _cities = [
-    'Douala',
-    'Yaoundé',
-    'Bafoussam',
-    'Bamenda',
-    'Garoua',
-    'Maroua',
-    'Ngaoundéré',
-    'Bertoua',
-    'Kribi',
-    'Limbe',
+  final _formKeys = [
+    GlobalKey<FormState>(),
+    GlobalKey<FormState>(),
+    GlobalKey<FormState>(),
   ];
 
-  // Neighborhoods per city (simplified)
-  final Map<String, List<String>> _neighborhoodsByCity = {
-    'Douala': ['Akwa', 'Bonanjo', 'Bassa', 'Bonabéri', 'Deido', 'Makepe', 'PK8', 'Logbaba'],
-    'Yaoundé': ['Centre-Ville', 'Bastos', 'Mimboman', 'Nsam', 'Emana', 'Essos', 'Nlongkak'],
+  final _pageController = PageController();
+  int  _currentStep  = 0;
+  bool _isSubmitting = false;
+
+  // ── Step 1 ────────────────────────────────────────────────────────────────
+  ServiceCategory? _parentCategory;
+  ServiceCategory? _subcategory;
+  final _titleCtrl = TextEditingController();
+  final _descCtrl  = TextEditingController();
+
+  // ── Step 2 ────────────────────────────────────────────────────────────────
+  String _pricingType  = 'fixed';
+  final _priceCtrl     = TextEditingController();
+  final _minChargeCtrl = TextEditingController();
+  String _selectedCity = 'Douala';
+  final List<String> _selectedNeighborhoods = [];
+  final List<String> _selectedDays          = [];
+  final _hoursCtrl     = TextEditingController();
+  bool _emergency      = false;
+
+  // ── Step 3 ────────────────────────────────────────────────────────────────
+  final List<File> _photos = [];
+  File? _video;
+  VideoPlayerController? _videoController;
+  final _experienceCtrl = TextEditingController();
+  final _certsCtrl      = TextEditingController();
+
+  final _picker = ImagePicker();
+
+  static const _cities = [
+    'Douala', 'Yaoundé', 'Bafoussam', 'Bamenda',
+    'Garoua', 'Maroua', 'Ngaoundéré', 'Kribi', 'Limbé',
+  ];
+
+  static const _neighborhoods = {
+    'Douala':    ['Akwa', 'Bonanjo', 'Bassa', 'Bonabéri', 'Deido', 'Makepe', 'PK8', 'Logbaba'],
+    'Yaoundé':   ['Centre-Ville', 'Bastos', 'Mimboman', 'Nsam', 'Emana', 'Essos', 'Nlongkak'],
     'Bafoussam': ['Centre', 'Famla', 'Tamdja', 'Tougang'],
-    'Bamenda': ['Commercial Avenue', 'Mile 3', 'Nkwen', 'Up Station'],
-    'Garoua': ['Centre', 'Doualaré', 'Roumde Adjia'],
+    'Bamenda':   ['Commercial Avenue', 'Mile 3', 'Nkwen', 'Up Station'],
+    'Garoua':    ['Centre', 'Doualaré', 'Roumde Adjia'],
   };
 
+  static const _days = [
+    'Lundi', 'Mardi', 'Mercredi', 'Jeudi',
+    'Vendredi', 'Samedi', 'Dimanche',
+  ];
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _loadCategories();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ServicesProvider>().fetchParentCategories();
+    });
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
-    _minChargeController.dispose();
-    _experienceController.dispose();
+    _pageController.dispose();
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    _minChargeCtrl.dispose();
+    _hoursCtrl.dispose();
+    _experienceCtrl.dispose();
+    _certsCtrl.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
-  Future<void> _loadCategories() async {
-    setState(() => _isLoadingCategories = true);
+  // ── Navigation ────────────────────────────────────────────────────────────
+  void _next() {
+    if (!_formKeys[_currentStep].currentState!.validate()) return;
 
-    final provider = context.read<ServicesProvider>();
-    await provider.fetchParentCategories();
-
-    if (mounted) {
-      setState(() => _isLoadingCategories = false);
+    if (_currentStep == 0 && _parentCategory == null) {
+      _snack('Veuillez sélectionner une catégorie', isError: true);
+      return;
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isTablet = size.width > 600;
+    if (_currentStep == 1) {
+      if (_pricingType != 'negotiable' &&
+          (_priceCtrl.text.trim().isEmpty ||
+              double.tryParse(_priceCtrl.text.trim()) == null)) {
+        _snack('Veuillez saisir un prix valide', isError: true);
+        return;
+      }
+      if (_selectedNeighborhoods.isEmpty) {
+        _snack('Veuillez sélectionner au moins une zone', isError: true);
+        return;
+      }
+    }
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: _buildAppBar(),
-      body: _isLoadingCategories
-          ? _buildLoadingState()
-          : Form(
-        key: _formKey,
-        child: ListView(
-          padding: EdgeInsets.all(isTablet ? 24 : 16),
-          children: [
-            // Header
-            _buildHeader(isTablet),
-
-            const SizedBox(height: 24),
-
-            // Category Selection
-            _buildCategorySection(isTablet),
-
-            const SizedBox(height: 24),
-
-            // Service Details
-            _buildServiceDetailsSection(isTablet),
-
-            const SizedBox(height: 24),
-
-            // Pricing
-            _buildPricingSection(isTablet),
-
-            const SizedBox(height: 24),
-
-            // Photos
-            _buildPhotosSection(isTablet),
-
-            const SizedBox(height: 24),
-
-            // Location
-            _buildLocationSection(isTablet),
-
-            const SizedBox(height: 24),
-
-            // Additional Info
-            _buildAdditionalInfoSection(isTablet),
-
-            const SizedBox(height: 32),
-
-            // Submit Button
-            _buildSubmitButton(isTablet),
-
-            const SizedBox(height: 24),
-
-            // Info Text
-            _buildInfoText(),
-
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // APP BAR
-  // ═══════════════════════════════════════════════════════════════════
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.backgroundWhite,
-      elevation: 0,
-      title: const Text('Post a Service'),
-      leading: IconButton(
-        onPressed: () => _handleBackPress(),
-        icon: const Icon(Icons.arrow_back),
-      ),
-    );
-  }
-
-  void _handleBackPress() {
-    if (_hasUnsavedChanges()) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Discard Changes?'),
-          content: const Text('You have unsaved changes. Are you sure you want to leave?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Close screen
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-              child: const Text('Discard'),
-            ),
-          ],
-        ),
+    if (_currentStep < 2) {
+      setState(() => _currentStep++);
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
       );
     } else {
-      Navigator.pop(context);
+      _submit();
     }
   }
 
-  bool _hasUnsavedChanges() {
-    return _titleController.text.isNotEmpty ||
-        _descriptionController.text.isNotEmpty ||
-        _selectedImages.isNotEmpty ||
-        _selectedParentCategory != null;
+  void _back() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _confirmDiscard();
+    }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // HEADER
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildHeader(bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 24 : 20),
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryGold.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+  void _confirmDiscard() {
+    final hasData = _titleCtrl.text.isNotEmpty ||
+        _descCtrl.text.isNotEmpty ||
+        _parentCategory != null;
+    if (!hasData) {
+      Navigator.pop(context);
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_rXl)),
+        title: Text('Abandonner le brouillon ?',
+            style: AppTypography.titleLarge),
+        content: Text('Vos modifications seront perdues.',
+            style: AppTypography.bodyMedium),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Continuer l\'édition',
+              style: AppTypography.labelMedium
+                  .copyWith(color: _kTextSecond),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kError,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(_rMd)),
+            ),
+            child: const Text('Abandonner'),
           ),
         ],
       ),
+    );
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+  Future<void> _submit() async {
+    setState(() => _isSubmitting = true);
+    try {
+      final provider = context.read<ServicesProvider>();
+      final price     = int.tryParse(_priceCtrl.text.trim());
+      final minCharge = int.tryParse(_minChargeCtrl.text.trim());
+
+
+      final args  = ModalRoute.of(context)?.settings.arguments
+      as Map<String, dynamic>?;
+      final plan  = args?['plan']  as ListingPlan?;
+      final phone = args?['phone'] as String?;
+      final isFree = plan == null || plan.isFree;
+
+      // ── 1. Create the listing ─────────────────────────────────────────────
+      final newListingId = await provider.createListing(
+        categoryId: (_subcategory ?? _parentCategory)!.id,
+        title: _titleCtrl.text.trim(),
+        description: _descCtrl.text.trim(),
+        pricingType: _pricingType,
+        price: _pricingType != 'negotiable' ? price : null,
+        minCharge: _pricingType == 'hourly' ? minCharge : null,
+        city: _selectedCity,
+        neighborhoods: _selectedNeighborhoods,
+        emergencyService: _emergency,
+        photos: _photos.isNotEmpty ? _photos : null,
+      );
+
+      if (newListingId == null || !mounted) {
+        if (mounted) {
+          _snack(provider.listingsError ?? 'Échec de la création',
+              isError: true);
+        }
+        return;
+      }
+
+      // ── 2a. Free plan — activate immediately, pop back with listingId ─────
+      // ListingPlanScreen receives { listingId } and shows its success dialog.
+      if (isFree) {
+        await provider.activateFreePlan(newListingId);
+        if (!mounted) return;
+        Navigator.pop(context, {'listingId': newListingId});
+        return;
+      }
+
+      // ── 2b. Paid plan — initiate CamPay USSD push, then hand back ─────────
+      // ListingPlanScreen is already polling checkAdPaymentStatus(listingId)
+      // every 3 s. We just need to trigger the payment and return the id.
+      await provider.initiateListingPayment(
+        listingId: newListingId,
+        planId:    plan!.id,
+        phone:     phone ?? '',
+      );
+      if (!mounted) return;
+      Navigator.pop(context, {'listingId': newListingId});
+
+    } catch (e) {
+      if (mounted) _snack('Erreur : $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _snack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? _kError : _kSuccess,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  // ── Media helpers ─────────────────────────────────────────────────────────
+  Future<void> _pickPhoto() async {
+    if (_photos.length >= 5) {
+      _snack('Maximum 5 photos autorisées', isError: true);
+      return;
+    }
+    final img = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1080,
+      imageQuality: 85,
+    );
+    if (img != null && mounted) {
+      setState(() => _photos.add(File(img.path)));
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    if (_video != null) {
+      _snack('Supprimez la vidéo actuelle avant d\'en ajouter une autre',
+          isError: true);
+      return;
+    }
+    final vid = await _picker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 3),
+    );
+    if (vid != null && mounted) {
+      final file  = File(vid.path);
+      final bytes = await file.length();
+      if (bytes > 100 * 1024 * 1024) {
+        _snack('La vidéo doit faire moins de 100 Mo', isError: true);
+        return;
+      }
+      final ctrl = VideoPlayerController.file(file);
+      await ctrl.initialize();
+      setState(() {
+        _video = file;
+        _videoController?.dispose();
+        _videoController = ctrl;
+      });
+    }
+  }
+
+  void _removePhoto(int i)  => setState(() => _photos.removeAt(i));
+  void _removeVideo() {
+    _videoController?.dispose();
+    setState(() { _video = null; _videoController = null; });
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: _kPageBg,
+        // FIX: explicit true so the keyboard never obscures the active field
+        resizeToAvoidBottomInset: true,
+        body: Column(
+          children: [
+            _buildHeader(),
+            _buildStepper(),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _buildStep1(),
+                  _buildStep2(),
+                  _buildStep3(),
+                ],
+              ),
+            ),
+            _buildBottomBar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  Widget _buildHeader() {
+    final topPad = MediaQuery.of(context).padding.top;
+    final subtitles = [
+      'Catégorie & Description',
+      'Tarification & Localisation',
+      'Photos, Vidéo & Détails',
+    ];
+
+    return Container(
+      color: _kSurface,
+      padding: EdgeInsets.fromLTRB(16, topPad + 10, 16, 14),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primaryBlack.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.add_business_rounded,
-              size: isTablet ? 40 : 32,
-              color: AppColors.primaryBlack,
-            ),
+          GestureDetector(
+            onTap: _back,
+            child: const Icon(Icons.arrow_back_rounded,
+                color: _kTextPrimary, size: 24),
           ),
-          SizedBox(width: isTablet ? 20 : 16),
+          const SizedBox(width: 16),
+          // FIX: Expanded on the title column so the "Step X/3" badge
+          // never gets pushed off-screen by a long subtitle
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text('Publier un service',
+                    style: AppTypography.titleLarge),
                 Text(
-                  'Offer Your Service',
-                  style: (isTablet
-                      ? AppTypography.headlineMedium
-                      : AppTypography.titleLarge)
-                      .copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryBlack,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Fill in the details below',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.primaryDark,
-                  ),
+                  subtitles[_currentStep],
+                  style: AppTypography.bodySmall
+                      .copyWith(color: _kTextSecond),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // FIX: badge has fixed intrinsic width — no flex needed
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _kPrimaryLight,
+              borderRadius: BorderRadius.circular(_rPill),
+              border: Border.all(color: _kPrimaryMid),
+            ),
+            child: Text(
+              'Étape ${_currentStep + 1}/3',
+              style: AppTypography.labelSmall.copyWith(
+                color: _kPrimaryDark,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -265,549 +435,652 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // CATEGORY SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildCategorySection(bool isTablet) {
-    return Consumer<ServicesProvider>(
-      builder: (context, provider, child) {
-        final parentCategories = provider.parentCategories ?? [];
-
-        return Container(
-          padding: EdgeInsets.all(isTablet ? 24 : 20),
-          decoration: BoxDecoration(
-            color: AppColors.backgroundWhite,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowLight,
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.category_rounded,
-                    color: AppColors.primaryGold,
-                    size: isTablet ? 28 : 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Category',
-                    style: (isTablet
-                        ? AppTypography.titleLarge
-                        : AppTypography.titleMedium)
-                        .copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const Text(' *', style: TextStyle(color: AppColors.error)),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Parent Category Dropdown
-              DropdownButtonFormField<ServiceCategory>(
-                value: _selectedParentCategory,
-                decoration: InputDecoration(
-                  labelText: 'Select Category',
-                  hintText: 'Choose a category',
-                  prefixIcon: const Icon(Icons.grid_view_rounded),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                items: parentCategories.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category.nameEn),
-                  );
-                }).toList(),
-                onChanged: (value) async {
-                  setState(() {
-                    _selectedParentCategory = value;
-                    _selectedSubcategory = null;
-                  });
-
-                  if (value != null) {
-                    await provider.fetchSubcategories(value.id);
-                  }
-                },
-                validator: (value) {
-                  if (value == null) {
-                    return 'Please select a category';
-                  }
-                  return null;
-                },
-              ),
-
-              // Subcategory Dropdown (if parent selected)
-              if (_selectedParentCategory != null) ...[
-                const SizedBox(height: 16),
-                DropdownButtonFormField<ServiceCategory>(
-                  value: _selectedSubcategory,
-                  decoration: InputDecoration(
-                    labelText: 'Select Subcategory',
-                    hintText: 'Choose a subcategory',
-                    prefixIcon: const Icon(Icons.subdirectory_arrow_right),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+  // ── Step progress bar ─────────────────────────────────────────────────────
+  Widget _buildStepper() {
+    return Container(
+      color: _kSurface,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Row(
+        children: List.generate(3, (i) {
+          final active = i <= _currentStep;
+          return Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: active ? _kPrimary : _kBorder,
+                      borderRadius: BorderRadius.circular(_rPill),
                     ),
                   ),
-                  items: (provider.subcategories ?? []).map((category) {
-                    return DropdownMenuItem(
-                      value: category,
-                      child: Text(category.nameEn),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() => _selectedSubcategory = value);
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Please select a subcategory';
-                    }
-                    return null;
-                  },
                 ),
+                if (i < 2) const SizedBox(width: 4),
               ],
-            ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 1 — Category + Title + Description
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildStep1() {
+    return Form(
+      key: _formKeys[0],
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _sectionLabel('Catégorie de service *'),
+          const SizedBox(height: 10),
+          _buildCategoryPicker(),
+          const SizedBox(height: 20),
+          _sectionLabel('Titre du service *'),
+          const SizedBox(height: 8),
+          _buildTextField(
+            controller: _titleCtrl,
+            hint: 'ex. Plombier professionnel — Urgence 24h/24',
+            maxLength: 200,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Veuillez saisir un titre';
+              }
+              if (v.trim().length < 5) {
+                return 'Le titre doit contenir au moins 5 caractères';
+              }
+              return null;
+            },
           ),
+          const SizedBox(height: 20),
+          _sectionLabel('Description *'),
+          const SizedBox(height: 8),
+          _buildTextField(
+            controller: _descCtrl,
+            hint: 'Décrivez votre service en détail — expérience, ce que vous offrez…',
+            maxLines: 6,
+            maxLength: 2000,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Veuillez saisir une description';
+              }
+              if (v.trim().length < 20) {
+                return 'La description doit contenir au moins 20 caractères';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryPicker() {
+    return Consumer<ServicesProvider>(
+      builder: (_, provider, __) {
+        final parents = provider.parentCategories;
+        final subs    = provider.subcategories ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDropdown<ServiceCategory>(
+              value: _parentCategory,
+              hint: 'Sélectionner une catégorie',
+              items: parents,
+              labelBuilder: (c) => c.getLocalizedName(useFrench: true),
+              onChanged: (c) async {
+                setState(() {
+                  _parentCategory = c;
+                  _subcategory    = null;
+                });
+                if (c != null) {
+                  await provider.fetchSubcategories(c.id);
+                }
+              },
+            ),
+            if (_parentCategory != null && subs.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _buildDropdown<ServiceCategory>(
+                value: _subcategory,
+                hint: 'Sous-catégorie (optionnel)',
+                items: subs,
+                labelBuilder: (c) => c.getLocalizedName(useFrench: true),
+                onChanged: (c) => setState(() => _subcategory = c),
+              ),
+            ],
+          ],
         );
       },
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // SERVICE DETAILS SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildServiceDetailsSection(bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 24 : 20),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 2 — Pricing + Location + Availability
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildStep2() {
+    return Form(
+      key: _formKeys[1],
+      child: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.description_rounded,
-                color: AppColors.primaryGold,
-                size: isTablet ? 28 : 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Service Details',
-                style: (isTablet
-                    ? AppTypography.titleLarge
-                    : AppTypography.titleMedium)
-                    .copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
+          _sectionLabel('Type de tarification *'),
+          const SizedBox(height: 10),
+          _buildPricingTypeRow(),
+          const SizedBox(height: 16),
+          _buildPricingFields(),
+          const SizedBox(height: 20),
+          _sectionLabel('Ville *'),
+          const SizedBox(height: 8),
+          _buildDropdown<String>(
+            value: _selectedCity,
+            hint: 'Sélectionner une ville',
+            items: _cities,
+            labelBuilder: (c) => c,
+            onChanged: (c) {
+              if (c != null) {
+                setState(() {
+                  _selectedCity = c;
+                  _selectedNeighborhoods.clear();
+                });
+              }
+            },
           ),
           const SizedBox(height: 20),
-
-          // Title
-          TextFormField(
-            controller: _titleController,
-            maxLength: 200,
-            decoration: InputDecoration(
-              labelText: 'Service Title *',
-              hintText: 'e.g., Professional Plumber - 24/7 Emergency',
-              prefixIcon: const Icon(Icons.title_rounded),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              counterText: '${_titleController.text.length}/200',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a service title';
-              }
-              if (value.trim().length < 5) {
-                return 'Title must be at least 5 characters';
-              }
-              return null;
-            },
-            onChanged: (value) => setState(() {}),
-          ),
-
+          _sectionLabel('Zones desservies * (au moins une)'),
+          const SizedBox(height: 10),
+          _buildNeighborhoodChips(),
           const SizedBox(height: 20),
-
-          // Description
-          TextFormField(
-            controller: _descriptionController,
-            maxLines: 6,
-            maxLength: 2000,
-            decoration: InputDecoration(
-              labelText: 'Description *',
-              hintText: 'Describe your service, experience, and what makes you unique...',
-              alignLabelWithHint: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              counterText: '${_descriptionController.text.length}/2000',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a description';
-              }
-              if (value.trim().length < 5) {
-                return 'Description must be at least 5 characters';
-              }
-              return null;
-            },
-            onChanged: (value) => setState(() {}),
+          _sectionLabel('Jours disponibles'),
+          const SizedBox(height: 10),
+          _buildDayChips(),
+          const SizedBox(height: 20),
+          _sectionLabel('Horaires (optionnel)'),
+          const SizedBox(height: 8),
+          _buildTextField(
+            controller: _hoursCtrl,
+            hint: 'ex. 08:00 – 18:00',
+            maxLines: 1,
           ),
+          const SizedBox(height: 20),
+          _buildEmergencyToggle(),
+          const SizedBox(height: 100),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // PRICING SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildPricingSection(bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 24 : 20),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.payments_rounded,
-                color: AppColors.primaryGold,
-                size: isTablet ? 28 : 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Pricing',
-                style: (isTablet
-                    ? AppTypography.titleLarge
-                    : AppTypography.titleMedium)
-                    .copyWith(fontWeight: FontWeight.w700),
-              ),
-              const Text(' *', style: TextStyle(color: AppColors.error)),
-            ],
-          ),
-          const SizedBox(height: 20),
+  Widget _buildPricingTypeRow() {
+    const types = [
+      ('fixed',      'Prix fixe'),
+      ('hourly',     'Taux horaire'),
+      ('negotiable', 'Négociable'),
+    ];
 
-          // Pricing Type
-          Text(
-            'Pricing Type',
-            style: AppTypography.labelLarge.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _buildPricingTypeChip('Hourly Rate', 'hourly', Icons.access_time),
-              _buildPricingTypeChip('Fixed Price', 'fixed', Icons.attach_money),
-              _buildPricingTypeChip('Negotiable', 'negotiable', Icons.handshake),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Price Fields
-          if (_pricingType == 'hourly') ...[
-            TextFormField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Hourly Rate (FCFA) *',
-                hintText: 'e.g., 5000',
-                prefixIcon: const Icon(Icons.money),
-                suffixText: 'FCFA/hour',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter hourly rate';
-                }
-                final price = int.tryParse(value);
-                if (price == null || price < 500) {
-                  return 'Minimum rate is 500 FCFA';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _minChargeController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Minimum Charge (FCFA)',
-                hintText: 'e.g., 10000',
-                prefixIcon: const Icon(Icons.money_off),
-                suffixText: 'FCFA',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ] else if (_pricingType == 'fixed') ...[
-            TextFormField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Fixed Price (FCFA) *',
-                hintText: 'e.g., 25000',
-                prefixIcon: const Icon(Icons.money),
-                suffixText: 'FCFA',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter fixed price';
-                }
-                final price = int.tryParse(value);
-                if (price == null || price < 500) {
-                  return 'Minimum price is 500 FCFA';
-                }
-                return null;
-              },
-            ),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.infoLight,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.info.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: AppColors.info),
-                  const SizedBox(width: 12),
-                  Expanded(
+    // FIX: LayoutBuilder gives us bounded width so each Expanded child
+    // has a concrete max-width; prevents unbounded-width RenderFlex crash
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemW = (constraints.maxWidth - 16) / 3;
+        return Row(
+          children: types.map((t) {
+            final selected = _pricingType == t.$1;
+            final isLast   = t.$1 == 'negotiable';
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _pricingType = t.$1;
+                      if (t.$1 == 'negotiable') {
+                        _priceCtrl.clear();
+                        _minChargeCtrl.clear();
+                      }
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: itemW,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: selected ? _kPrimary : _kSurface,
+                      borderRadius: BorderRadius.circular(_rLg),
+                      border: Border.all(
+                        color: selected ? _kPrimary : _kBorder,
+                      ),
+                    ),
                     child: Text(
-                      'Price will be discussed with customer',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.info,
+                      t.$2,
+                      textAlign: TextAlign.center,
+                      // FIX: overflow ellipsis so long labels never cause
+                      // RenderFlex overflow on small screens
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall.copyWith(
+                        fontWeight: FontWeight.w600,
+                        // FIX: dark text on gold (correct contrast)
+                        color: selected ? _kTextPrimary : _kTextSecond,
                       ),
                     ),
                   ),
-                ],
+                ),
+                if (!isLast) const SizedBox(width: 8),
+              ],
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildPricingFields() {
+    if (_pricingType == 'negotiable') {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _kPrimaryLight,
+          borderRadius: BorderRadius.circular(_rMd),
+          border: Border.all(color: _kPrimaryMid),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded,
+                size: 16, color: _kPrimaryDark),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Le prix sera discuté directement avec le client.',
+                style: AppTypography.bodySmall
+                    .copyWith(color: _kPrimaryDark),
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    }
 
-  Widget _buildPricingTypeChip(String label, String value, IconData icon) {
-    final isSelected = _pricingType == value;
+    if (_pricingType == 'fixed') {
+      return _buildTextField(
+        controller: _priceCtrl,
+        hint: 'ex. 15 000',
+        label: 'Prix fixe (XAF) *',
+        keyboardType: TextInputType.number,
+        suffix: 'XAF',
+      );
+    }
 
-    return ChoiceChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: isSelected ? AppColors.primaryBlack : AppColors.textSecondary,
-          ),
-          const SizedBox(width: 8),
-          Text(label),
-        ],
-      ),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _pricingType = value;
-          if (value == 'negotiable') {
-            _priceController.clear();
-            _minChargeController.clear();
-          }
-        });
-      },
-      selectedColor: AppColors.primaryGold,
-      backgroundColor: AppColors.backgroundLight,
-      labelStyle: AppTypography.labelLarge.copyWith(
-        fontWeight: FontWeight.w600,
-        color: isSelected ? AppColors.primaryBlack : AppColors.textSecondary,
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // PHOTOS SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildPhotosSection(bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 24 : 20),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.photo_library_rounded,
-                color: AppColors.primaryGold,
-                size: isTablet ? 28 : 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Photos',
-                style: (isTablet
-                    ? AppTypography.titleLarge
-                    : AppTypography.titleMedium)
-                    .copyWith(fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              Text(
-                '${_selectedImages.length}/5',
-                style: AppTypography.labelLarge.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add up to 5 photos (Optional but recommended)',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Photo Grid
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              // Selected Images
-              ..._selectedImages.asMap().entries.map((entry) {
-                final index = entry.key;
-                final image = entry.value;
-                return _buildImagePreview(image, index, isTablet);
-              }),
-
-              // Add Button
-              if (_selectedImages.length < 5)
-                _buildAddPhotoButton(isTablet),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImagePreview(File image, int index, bool isTablet) {
-    return Stack(
+    // hourly — two fields side by side
+    // FIX: use a Row with two Expanded children instead of nested
+    // Expanded inside a Column, which had no bounded width constraint
+    return Row(
       children: [
-        Container(
-          width: isTablet ? 120 : 100,
-          height: isTablet ? 120 : 100,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            image: DecorationImage(
-              image: FileImage(image),
-              fit: BoxFit.cover,
-            ),
+        Expanded(
+          child: _buildTextField(
+            controller: _priceCtrl,
+            hint: '5 000',
+            label: 'Taux/heure *',
+            keyboardType: TextInputType.number,
+            suffix: 'XAF/h',
           ),
         ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: GestureDetector(
-            onTap: () => _removeImage(index),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: AppColors.error,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildTextField(
+            controller: _minChargeCtrl,
+            hint: '10 000',
+            label: 'Minimum',
+            keyboardType: TextInputType.number,
+            suffix: 'XAF',
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAddPhotoButton(bool isTablet) {
-    return GestureDetector(
-      onTap: _pickImage,
-      child: Container(
-        width: isTablet ? 120 : 100,
-        height: isTablet ? 120 : 100,
-        decoration: BoxDecoration(
-          color: AppColors.backgroundLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.primaryGold.withOpacity(0.5),
-            width: 2,
-            style: BorderStyle.solid,
+  Widget _buildNeighborhoodChips() {
+    final hoods = _neighborhoods[_selectedCity] ?? [];
+    if (hoods.isEmpty) {
+      return Text(
+        'Pas de zones prédéfinies pour cette ville — les clients verront votre ville.',
+        style: AppTypography.bodySmall.copyWith(color: _kTextSecond),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: hoods.map((h) {
+        final sel = _selectedNeighborhoods.contains(h);
+        return GestureDetector(
+          onTap: () => setState(() {
+            sel
+                ? _selectedNeighborhoods.remove(h)
+                : _selectedNeighborhoods.add(h);
+          }),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: sel ? _kPrimary : _kSurface,
+              borderRadius: BorderRadius.circular(_rPill),
+              border: Border.all(
+                  color: sel ? _kPrimary : _kBorder),
+            ),
+            child: Text(
+              h,
+              style: AppTypography.labelMedium.copyWith(
+                // FIX: dark text on gold
+                color: sel ? _kTextPrimary : _kTextSecond,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDayChips() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _days.map((d) {
+        final sel = _selectedDays.contains(d);
+        return GestureDetector(
+          onTap: () => setState(() {
+            sel ? _selectedDays.remove(d) : _selectedDays.add(d);
+          }),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: sel ? _kPrimary : _kSurface,
+              borderRadius: BorderRadius.circular(_rPill),
+              border: Border.all(
+                  color: sel ? _kPrimary : _kBorder),
+            ),
+            child: Text(
+              // Abbreviate to 3 chars to keep chips narrow
+              d.length > 3 ? d.substring(0, 3) : d,
+              style: AppTypography.labelMedium.copyWith(
+                color: sel ? _kTextPrimary : _kTextSecond,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildEmergencyToggle() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _emergency ? _kErrorLight : _kSurface,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(
+          color: _emergency
+              ? _kError.withOpacity(0.4)
+              : _kBorder,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _emergency
+                  ? _kError.withOpacity(0.12)
+                  : _kInputBg,
+              borderRadius: BorderRadius.circular(_rMd),
+            ),
+            child: Icon(
+              Icons.emergency_rounded,
+              color: _emergency ? _kError : _kTextSecond,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // FIX: Expanded so the text column never overflows past the Switch
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Service d\'urgence 24h/24',
+                  style: AppTypography.titleSmall.copyWith(
+                    color: _emergency ? _kError : _kTextPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Disponible pour les demandes urgentes à toute heure',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: _kTextSecond),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _emergency,
+            onChanged: (v) => setState(() => _emergency = v),
+            activeColor: _kError,
+            activeTrackColor: _kError.withOpacity(0.3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 3 — Photos + Video + Extras
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildStep3() {
+    return Form(
+      key: _formKeys[2],
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Photos header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // FIX: Flexible so "Photos (5/5)" doesn't push "Optionnel" off
+              Flexible(
+                child: Text(
+                  'Photos (${_photos.length}/5)',
+                  style: AppTypography.titleMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text('Optionnel',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: _kTextLight)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildPhotoGrid(),
+
+          const SizedBox(height: 24),
+
+          // Video header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  'Vidéo (1 max)',
+                  style: AppTypography.titleMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _kPrimaryLight,
+                  borderRadius: BorderRadius.circular(_rPill),
+                  border: Border.all(color: _kPrimaryMid),
+                ),
+                child: Text(
+                  '3 min · 100 Mo',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: _kPrimaryDark),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildVideoSection(),
+
+          const SizedBox(height: 24),
+
+          _sectionLabel('Années d\'expérience (optionnel)'),
+          const SizedBox(height: 8),
+          _buildTextField(
+            controller: _experienceCtrl,
+            hint: 'ex. 5',
+            keyboardType: TextInputType.number,
+            suffix: 'ans',
+            maxLines: 1,
+          ),
+
+          const SizedBox(height: 20),
+
+          _sectionLabel('Certifications (optionnel)'),
+          const SizedBox(height: 8),
+          _buildTextField(
+            controller: _certsCtrl,
+            hint: 'ex. CAP Plombier, Diplôme ISTDI',
+            maxLines: 3,
+          ),
+
+          const SizedBox(height: 20),
+
+          // Info banner
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _kPrimaryLight,
+              borderRadius: BorderRadius.circular(_rLg),
+              border: Border.all(color: _kPrimaryMid),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline_rounded,
+                    size: 18, color: _kPrimaryDark),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Votre annonce sera examinée par notre équipe sous 24 h. Vous recevrez une notification une fois approuvée.',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: _kPrimaryDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoGrid() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        ..._photos.asMap().entries.map((e) => _PhotoTile(
+          file: e.value,
+          onRemove: () => _removePhoto(e.key),
+        )),
+        if (_photos.length < 5)
+          GestureDetector(
+            onTap: _pickPhoto,
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: _kInputBg,
+                borderRadius: BorderRadius.circular(_rLg),
+                border: Border.all(
+                    color: _kPrimary.withOpacity(0.4), width: 1.5),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_photo_alternate_outlined,
+                      color: _kPrimary, size: 28),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ajouter',
+                    style: AppTypography.labelSmall
+                        .copyWith(color: _kPrimary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildVideoSection() {
+    if (_video != null && _videoController != null) {
+      return _VideoPreview(
+        controller: _videoController!,
+        onRemove: _removeVideo,
+      );
+    }
+
+    return GestureDetector(
+      onTap: _pickVideo,
+      child: Container(
+        height: 120,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: _kInputBg,
+          borderRadius: BorderRadius.circular(_rLg),
+          border: Border.all(
+              color: _kPrimary.withOpacity(0.4), width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.add_photo_alternate_rounded,
-              size: isTablet ? 32 : 28,
-              color: AppColors.primaryGold,
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: const BoxDecoration(
+                color: _kPrimaryLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.videocam_outlined,
+                  color: _kPrimary, size: 32),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Appuyez pour ajouter une vidéo',
+              style: AppTypography.titleSmall
+                  .copyWith(color: _kPrimary),
             ),
             const SizedBox(height: 4),
             Text(
-              'Add Photo',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              'Montrez votre travail — 3 min max, 100 Mo',
+              style: AppTypography.labelSmall
+                  .copyWith(color: _kTextSecond),
             ),
           ],
         ),
@@ -815,352 +1088,73 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // LOCATION SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildLocationSection(bool isTablet) {
-    final availableNeighborhoods = _neighborhoodsByCity[_selectedCity] ?? [];
+  // ── Bottom bar ────────────────────────────────────────────────────────────
+  Widget _buildBottomBar() {
+    final isLast     = _currentStep == 2;
+    final bottomPad  = MediaQuery.of(context).padding.bottom;
 
     return Container(
-      padding: EdgeInsets.all(isTablet ? 24 : 20),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_rounded,
-                color: AppColors.primaryGold,
-                size: isTablet ? 28 : 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Service Location',
-                style: (isTablet
-                    ? AppTypography.titleLarge
-                    : AppTypography.titleMedium)
-                    .copyWith(fontWeight: FontWeight.w700),
-              ),
-              const Text(' *', style: TextStyle(color: AppColors.error)),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // City Dropdown
-          DropdownButtonFormField<String>(
-            value: _selectedCity,
-            decoration: InputDecoration(
-              labelText: 'City',
-              prefixIcon: const Icon(Icons.location_city_rounded),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            items: _cities.map((city) {
-              return DropdownMenuItem(
-                value: city,
-                child: Text(city),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedCity = value!;
-                _selectedNeighborhoods.clear();
-              });
-            },
-          ),
-
-          const SizedBox(height: 20),
-
-          // Neighborhoods
-          Text(
-            'Service Areas (Select at least one)',
-            style: AppTypography.labelLarge.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: availableNeighborhoods.map((neighborhood) {
-              final isSelected = _selectedNeighborhoods.contains(neighborhood);
-              return FilterChip(
-                label: Text(neighborhood),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedNeighborhoods.add(neighborhood);
-                    } else {
-                      _selectedNeighborhoods.remove(neighborhood);
-                    }
-                  });
-                },
-                selectedColor: AppColors.primaryGold,
-                backgroundColor: AppColors.backgroundLight,
-                labelStyle: AppTypography.labelMedium.copyWith(
-                  color: isSelected
-                      ? AppColors.primaryBlack
-                      : AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              );
-            }).toList(),
-          ),
-
-          if (_selectedNeighborhoods.isEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Please select at least one service area',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.error,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // ADDITIONAL INFO SECTION
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildAdditionalInfoSection(bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 24 : 20),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: AppColors.primaryGold,
-                size: isTablet ? 28 : 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Additional Information',
-                style: (isTablet
-                    ? AppTypography.titleLarge
-                    : AppTypography.titleMedium)
-                    .copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Years of Experience
-          TextFormField(
-            controller: _experienceController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Years of Experience (Optional)',
-              hintText: 'e.g., 5',
-              prefixIcon: const Icon(Icons.work_outline_rounded),
-              suffixText: 'years',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Emergency Service Toggle
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _emergencyService
-                  ? AppColors.errorLight
-                  : AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _emergencyService
-                    ? AppColors.error.withOpacity(0.3)
-                    : AppColors.borderLight,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.emergency_rounded,
-                  color: _emergencyService ? AppColors.error : AppColors.textSecondary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Emergency Service (24/7)',
-                        style: AppTypography.titleSmall.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: _emergencyService
-                              ? AppColors.error
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Available for urgent requests',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Switch(
-                  value: _emergencyService,
-                  onChanged: (value) {
-                    setState(() => _emergencyService = value);
-                  },
-                  activeColor: AppColors.error,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // SUBMIT BUTTON
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildSubmitButton(bool isTablet) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _submitListing,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryGold,
-          foregroundColor: AppColors.primaryBlack,
-          padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 4,
-        ),
-        child: _isSubmitting
-            ? const SizedBox(
-          height: 20,
-          width: 20,
-          child: CircularProgressIndicator(
-            color: AppColors.primaryBlack,
-            strokeWidth: 2,
-          ),
-        )
-            : Text(
-          'Submit for Approval',
-          style: (isTablet
-              ? AppTypography.buttonLarge
-              : AppTypography.buttonMedium)
-              .copyWith(
-            color: AppColors.primaryBlack,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // INFO TEXT
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildInfoText() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.infoLight,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.info.withOpacity(0.3),
-        ),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPad + 12),
+      decoration: const BoxDecoration(
+        color: _kSurface,
+        boxShadow: _kBottomShadow,
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.info_outline,
-            color: AppColors.info,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
+          if (_currentStep > 0) ...[
+            // Back button — fixed-width, never Expanded
+            OutlinedButton(
+              onPressed: _back,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _kTextSecond,
+                side: const BorderSide(color: _kBorder),
+                minimumSize: const Size(50, 50),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_rLg)),
+              ),
+              child: const Icon(Icons.arrow_back_rounded, size: 20),
+            ),
+            const SizedBox(width: 12),
+          ],
+
+          // Next / Submit button — Expanded so it fills remaining width
           Expanded(
-            child: Text(
-              'Your listing will be reviewed by our team within 24 hours. You\'ll receive a notification once approved.',
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.info,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // LOADING STATE
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryGold.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 5,
+            child: SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isSubmitting ? null : _next,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kPrimary,
+                  foregroundColor: _kTextPrimary,
+                  disabledBackgroundColor: _kBorder,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_rLg)),
                 ),
-              ],
-            ),
-            child: const Padding(
-              padding: EdgeInsets.all(20.0),
-              child: CircularProgressIndicator(
-                color: AppColors.primaryBlack,
-                strokeWidth: 4,
+                icon: _isSubmitting
+                    ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: _kTextPrimary,
+                  ),
+                )
+                    : Icon(
+                  isLast
+                      ? Icons.check_rounded
+                      : Icons.arrow_forward_rounded,
+                  size: 20,
+                ),
+                label: Text(
+                  isLast ? 'Envoyer pour approbation' : 'Suivant',
+                  style: AppTypography.buttonMedium,
+                  // FIX: ellipsis so "Envoyer pour approbation" doesn't
+                  // overflow on 320 dp wide screens
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 30),
-          Text(
-            'Loading categories...',
-            style: AppTypography.titleLarge.copyWith(
-              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -1168,159 +1162,250 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // HELPER METHODS
-  // ═══════════════════════════════════════════════════════════════════
+  // ── Shared helpers ────────────────────────────────────────────────────────
+  Widget _sectionLabel(String t) => Text(t,
+      style: AppTypography.titleSmall,
+      overflow: TextOverflow.ellipsis);
 
-  Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        setState(() {
-          _selectedImages.add(File(image.path));
-        });
-      }
-    } catch (e) {
-      _showErrorSnackBar('Failed to pick image: $e');
-    }
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    String? label,
+    String? suffix,
+    int maxLines = 1,
+    int? maxLength,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(color: _kBorder),
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        maxLength: maxLength,
+        keyboardType: keyboardType,
+        style: AppTypography.bodyMedium.copyWith(color: _kTextPrimary),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: AppTypography.labelMedium,
+          hintText: hint,
+          hintStyle: AppTypography.bodyMedium.copyWith(color: _kTextLight),
+          suffixText: suffix,
+          suffixStyle: AppTypography.labelSmall,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(14),
+          counterStyle: AppTypography.labelSmall,
+        ),
+        validator: validator,
+      ),
+    );
   }
 
-  void _removeImage(int index) {
+  Widget _buildDropdown<T>({
+    required T? value,
+    required String hint,
+    required List<T> items,
+    required String Function(T) labelBuilder,
+    required void Function(T?) onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(color: _kBorder),
+      ),
+      child: DropdownButtonFormField<T>(
+        value: value,
+        isExpanded: true, // FIX: prevents dropdown label from overflowing
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          contentPadding:
+          EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+        hint: Text(hint,
+            style: AppTypography.bodySmall.copyWith(color: _kTextLight)),
+        items: items
+            .map((item) => DropdownMenuItem<T>(
+          value: item,
+          child: Text(
+            labelBuilder(item),
+            style: AppTypography.bodySmall
+                .copyWith(color: _kTextPrimary),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ))
+            .toList(),
+        onChanged: onChanged,
+        dropdownColor: _kSurface,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: _kTextSecond),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHOTO TILE
+// ─────────────────────────────────────────────────────────────────────────────
+class _PhotoTile extends StatelessWidget {
+  final File file;
+  final VoidCallback onRemove;
+  const _PhotoTile({required this.file, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(_rLg),
+          child: Image.file(
+            file,
+            width: 96,
+            height: 96,
+            fit: BoxFit.cover,
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                color: _kError,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close,
+                  color: Colors.white, size: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VIDEO PREVIEW
+// ─────────────────────────────────────────────────────────────────────────────
+class _VideoPreview extends StatefulWidget {
+  final VideoPlayerController controller;
+  final VoidCallback onRemove;
+  const _VideoPreview({required this.controller, required this.onRemove});
+
+  @override
+  State<_VideoPreview> createState() => _VideoPreviewState();
+}
+
+class _VideoPreviewState extends State<_VideoPreview> {
+  bool _playing = false;
+
+  void _togglePlay() {
     setState(() {
-      _selectedImages.removeAt(index);
+      _playing = !_playing;
+      _playing ? widget.controller.play() : widget.controller.pause();
     });
   }
 
-  Future<void> _submitListing() async {
-    // Validate form
-    if (!_formKey.currentState!.validate()) {
-      _showErrorSnackBar('Please fill in all required fields');
-      return;
-    }
+  @override
+  Widget build(BuildContext context) {
+    final duration = widget.controller.value.duration;
+    final mins = duration.inMinutes.remainder(60)
+        .toString().padLeft(2, '0');
+    final secs = duration.inSeconds.remainder(60)
+        .toString().padLeft(2, '0');
 
-    // Validate neighborhoods
-    if (_selectedNeighborhoods.isEmpty) {
-      _showErrorSnackBar('Please select at least one service area');
-      return;
-    }
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(_rLg),
+        border: Border.all(color: _kPrimary, width: 2),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Video frame
+          ClipRRect(
+            borderRadius: BorderRadius.circular(_rLg - 2),
+            child: AspectRatio(
+              aspectRatio: widget.controller.value.aspectRatio,
+              child: VideoPlayer(widget.controller),
+            ),
+          ),
 
-    setState(() => _isSubmitting = true);
-
-    try {
-      final provider = context.read<ServicesProvider>();
-
-      // Prepare pricing data
-      int? price;
-      int? minCharge;
-
-      if (_pricingType != 'negotiable') {
-        price = int.tryParse(_priceController.text.trim());
-        if (_pricingType == 'hourly') {
-          minCharge = int.tryParse(_minChargeController.text.trim());
-        }
-      }
-
-      // Create listing
-      final success = await provider.createListing(
-        categoryId: _selectedSubcategory!.id,
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        pricingType: _pricingType,
-        price: price,
-        minCharge: minCharge,
-        city: _selectedCity,
-        neighborhoods: _selectedNeighborhoods,
-        emergencyService: _emergencyService,
-        photos: _selectedImages.isNotEmpty ? _selectedImages : null,
-      );
-
-      if (success && mounted) {
-        _showSuccessDialog();
-      } else if (mounted) {
-        _showErrorSnackBar(
-          provider.listingsError ?? 'Failed to create listing. Please try again.',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackBar('Error: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
-    }
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
+          // Play/pause overlay
+          GestureDetector(
+            onTap: _togglePlay,
+            child: Container(
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.successLight,
+                color: Colors.black.withOpacity(0.5),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.check_circle,
-                size: 64,
-                color: AppColors.success,
+              child: Icon(
+                _playing
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 32,
               ),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Listing Submitted!',
-              style: AppTypography.headlineMedium.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Your service listing has been submitted for review. We\'ll notify you once approved!',
-              style: AppTypography.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back to previous screen
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGold,
-                  foregroundColor: AppColors.primaryBlack,
-                ),
-                child: const Text('Done'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
+          // Duration badge
+          Positioned(
+            bottom: 10,
+            left: 10,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.65),
+                borderRadius: BorderRadius.circular(_rSm),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.videocam_rounded,
+                      size: 12, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$mins:$secs',
+                    style: const TextStyle(
+                      fontFamily: 'Roboto',
+                      fontSize: 11,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Remove button
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: widget.onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: const BoxDecoration(
+                  color: _kError,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close,
+                    color: Colors.white, size: 16),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

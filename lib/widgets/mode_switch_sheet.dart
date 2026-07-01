@@ -4,34 +4,35 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../service/mode_service.dart';
+import '../service/socket_service.dart';
 
 // ── Accent colours for each mode tile ────────────────────────────────
-const _kBlack     = Color(0xFF0A0A0A);
-const _kGold      = Color(0xFFFFDC71);
-const _kCard      = Color(0xFF181818);
-const _kCard2     = Color(0xFF222222);
-const _kWhite     = Colors.white;
-const _kGrey      = Color(0xFFA9A9A9);
-const _kGreen     = Color(0xFF4CAF50);
-const _kOrange    = Color(0xFFFF6B35);
-const _kBlue      = Color(0xFF3B82F6);
+const _kBlack  = Color(0xFF0A0A0A);
+const _kGold   = Color(0xFFFFDC71);
+const _kCard   = Color(0xFF181818);
+const _kCard2  = Color(0xFF222222);
+const _kWhite  = Colors.white;
+const _kGrey   = Color(0xFFA9A9A9);
+const _kGreen  = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF6B35);
+const _kBlue   = Color(0xFF3B82F6);
 
 // Per-mode visual config
 const _modeConfig = {
   'PASSENGER': {
-    'color':    _kBlue,
-    'bg':       Color(0xFF0A1020),
-    'icon':     Icons.person_rounded,
+    'color': _kBlue,
+    'bg':    Color(0xFF0A1020),
+    'icon':  Icons.person_rounded,
   },
   'DRIVER': {
-    'color':    _kGold,
-    'bg':       Color(0xFF1A1500),
-    'icon':     Icons.directions_car_rounded,
+    'color': _kGold,
+    'bg':    Color(0xFF1A1500),
+    'icon':  Icons.directions_car_rounded,
   },
   'DELIVERY_AGENT': {
-    'color':    _kOrange,
-    'bg':       Color(0xFF1A0A00),
-    'icon':     Icons.local_shipping_rounded,
+    'color': _kOrange,
+    'bg':    Color(0xFF1A0A00),
+    'icon':  Icons.local_shipping_rounded,
   },
 };
 
@@ -44,10 +45,10 @@ Future<void> showModeSwitchSheet(
       VoidCallback? onSwitched,
     }) {
   return showModalBottomSheet(
-    context:             context,
-    isScrollControlled:  true,
-    backgroundColor:     Colors.transparent,
-    barrierColor:        Colors.black.withOpacity(0.6),
+    context:            context,
+    isScrollControlled: true,
+    backgroundColor:    Colors.transparent,
+    barrierColor:       Colors.black.withOpacity(0.6),
     builder: (_) => _ModeSwitchSheet(onSwitched: onSwitched),
   );
 }
@@ -67,14 +68,14 @@ class _ModeSwitchSheet extends StatefulWidget {
 class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
 
   // ─── State ────────────────────────────────────────────────────
-  String  _userType   = '';
-  String  _activeMode = '';
-  String  _firstName  = '';
-  List<ModeTarget> _targets = [];
-  bool    _loading    = false;
-  String? _switchingTo;   // which mode is currently being switched to
-  String? _error;
-  bool    _initialized = false;
+  String           _userType    = '';
+  String           _activeMode  = '';
+  String           _firstName   = '';
+  List<ModeTarget> _targets     = [];
+  bool             _loading     = false;
+  String?          _switchingTo;
+  String?          _error;
+  bool             _initialized = false;
 
   @override
   void initState() {
@@ -83,10 +84,10 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
   }
 
   Future<void> _loadState() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userType   = prefs.getString('user_type')   ?? '';
+    final prefs      = await SharedPreferences.getInstance();
+    final userType   = prefs.getString('user_type')  ?? '';
     final activeMode = await ModeService.getCurrentMode();
-    final firstName  = prefs.getString('first_name')  ?? '';
+    final firstName  = prefs.getString('first_name') ?? '';
 
     final targets = ModeService.availableTargets(
       userType:   userType,
@@ -104,6 +105,10 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // SWITCH LOGIC
+  // ═══════════════════════════════════════════════════════════════
+
   Future<void> _switchTo(String targetMode) async {
     if (_loading) return;
 
@@ -118,11 +123,27 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
     if (!mounted) return;
 
     if (result.success) {
-      // Close the sheet first, then navigate
+      // ── 1. Reconnect socket with the new token BEFORE navigating ──
+      //
+      // ModeService.switchTo() saves the new access_token to
+      // SharedPreferences and returns it in result.newAccessToken.
+      // We must call reconnectWithNewToken() here so the new dashboard
+      // finds the socket already connected (or connecting) when it
+      // mounts — not a stale socket from the previous mode.
+      //
+      // _forceDisposeSocket() inside reconnectWithNewToken() does NOT
+      // emit false to connectionStateStream, so the old dashboard's
+      // _handleSocketDisconnection won't fire spurious reconnect retries
+      // while we navigate away.
+      await _reconnectSocket(result);
+
+      if (!mounted) return;
+
+      // ── 2. Close sheet ────────────────────────────────────────
       Navigator.of(context).pop();
       widget.onSwitched?.call();
 
-      // Replace the entire navigation stack with the new dashboard
+      // ── 3. Replace nav stack with new dashboard ───────────────
       Navigator.of(context).pushNamedAndRemoveUntil(
         result.route!,
             (route) => false,
@@ -136,7 +157,45 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
     }
   }
 
-  // ─── Current mode label ───────────────────────────────────────
+  /// Reconnects the socket with the new token issued by the mode-switch
+  /// endpoint. Reads userId / userType from SharedPreferences (already
+  /// updated by ModeService) and calls SocketService.reconnectWithNewToken().
+  ///
+  /// Non-fatal: if this fails the new dashboard will still mount and its
+  /// own _connectSocket() call will handle the connection.
+  Future<void> _reconnectSocket(ModeSwitchResult result) async {
+    try {
+      final newToken = result.newAccessToken;
+      if (newToken == null || newToken.isEmpty) {
+        debugPrint('⚠️ [MODE-SWITCH] No new token in result — skipping socket reconnect');
+        return;
+      }
+
+      final prefs    = await SharedPreferences.getInstance();
+      final userId   = prefs.getString('user_uuid') ?? '';
+      final userType = prefs.getString('user_type') ?? '';
+
+      if (userId.isEmpty || userType.isEmpty) {
+        debugPrint('⚠️ [MODE-SWITCH] Missing userId/userType in prefs — skipping socket reconnect');
+        return;
+      }
+
+      debugPrint('🔄 [MODE-SWITCH] Reconnecting socket with new token for $userType $userId');
+
+      await SocketService.instance.reconnectWithNewToken(
+        newToken: newToken,
+        userId:   userId,
+        userType: userType,
+      );
+
+      debugPrint('✅ [MODE-SWITCH] Socket reconnected with new token');
+    } catch (e) {
+      // Non-fatal — the new dashboard will call _connectSocket() on init
+      debugPrint('⚠️ [MODE-SWITCH] Socket reconnect failed (non-fatal): $e');
+    }
+  }
+
+  // ─── Current mode helpers ─────────────────────────────────────
   String get _currentModeLabel {
     switch (_activeMode) {
       case 'DRIVER':         return 'Driver Mode';
@@ -179,16 +238,16 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
 
   Widget _buildBody() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize:       MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
 
         // ── Handle ─────────────────────────────────────────────
         Center(
           child: Container(
-            margin:      const EdgeInsets.symmetric(vertical: 12),
-            width: 40,   height: 4,
-            decoration:  BoxDecoration(
+            margin:     const EdgeInsets.symmetric(vertical: 12),
+            width: 40,  height: 4,
+            decoration: BoxDecoration(
               color:        Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(2),
             ),
@@ -199,8 +258,8 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
         Row(
           children: [
             Container(
-              padding:     const EdgeInsets.all(10),
-              decoration:  BoxDecoration(
+              padding:    const EdgeInsets.all(10),
+              decoration: BoxDecoration(
                 color:        Colors.white.withOpacity(0.07),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -225,7 +284,9 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
                     ),
                   ),
                   Text(
-                    _firstName.isNotEmpty ? 'Hi $_firstName — choose how to continue' : 'Choose how to continue',
+                    _firstName.isNotEmpty
+                        ? 'Hi $_firstName — choose how to continue'
+                        : 'Choose how to continue',
                     style: const TextStyle(
                       fontFamily: 'Quicksand',
                       fontSize:   12,
@@ -254,8 +315,8 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
 
         // ── Current mode chip ────────────────────────────────────
         Container(
-          padding:     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration:  BoxDecoration(
+          padding:    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
             color:        Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(12),
             border:       Border.all(color: Colors.white.withOpacity(0.08)),
@@ -301,15 +362,17 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
         if (_error != null) ...[
           const SizedBox(height: 16),
           Container(
-            padding:     const EdgeInsets.all(14),
-            decoration:  BoxDecoration(
+            padding:    const EdgeInsets.all(14),
+            decoration: BoxDecoration(
               color:        const Color(0xFFEF5350).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border:       Border.all(color: const Color(0xFFEF5350).withOpacity(0.3)),
+              border:       Border.all(
+                  color: const Color(0xFFEF5350).withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.error_outline_rounded, color: Color(0xFFEF5350), size: 18),
+                const Icon(Icons.error_outline_rounded,
+                    color: Color(0xFFEF5350), size: 18),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -335,10 +398,10 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
   // ─── Mode tile ─────────────────────────────────────────────────
 
   Widget _buildModeTile(ModeTarget target) {
-    final config  = _modeConfig[target.mode] ?? _modeConfig['PASSENGER']!;
-    final color   = config['color'] as Color;
-    final bgColor = config['bg']    as Color;
-    final icon    = config['icon']  as IconData;
+    final config      = _modeConfig[target.mode] ?? _modeConfig['PASSENGER']!;
+    final color       = config['color'] as Color;
+    final bgColor     = config['bg']    as Color;
+    final icon        = config['icon']  as IconData;
     final isSwitching = _switchingTo == target.mode && _loading;
     final isDisabled  = _loading && !isSwitching;
 
@@ -364,7 +427,7 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
             // Icon circle
             AnimatedContainer(
               duration:    const Duration(milliseconds: 200),
-              width:  52, height: 52,
+              width: 52,   height: 52,
               decoration:  BoxDecoration(
                 color:        isSwitching
                     ? color.withOpacity(0.2)
@@ -406,19 +469,23 @@ class _ModeSwitchSheetState extends State<_ModeSwitchSheet> {
                     style: TextStyle(
                       fontFamily: 'Quicksand',
                       fontSize:   11,
-                      color:      isDisabled ? _kGrey.withOpacity(0.5) : _kGrey,
+                      color:      isDisabled
+                          ? _kGrey.withOpacity(0.5)
+                          : _kGrey,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Arrow or spinner
+            // Arrow
             if (!isSwitching)
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: isDisabled ? _kGrey.withOpacity(0.3) : color.withOpacity(0.7),
-                size:  16,
+                color: isDisabled
+                    ? _kGrey.withOpacity(0.3)
+                    : color.withOpacity(0.7),
+                size: 16,
               ),
           ],
         ),
@@ -452,8 +519,7 @@ class _LoadingBody extends StatelessWidget {
   }
 }
 
-// ─── No targets body (shown for PASSENGER — should never be reached
-//     if the calling screen checks before showing the button) ──────────
+// ─── No targets body ──────────────────────────────────────────────────
 
 class _NoTargetsBody extends StatelessWidget {
   const _NoTargetsBody();
@@ -467,9 +533,9 @@ class _NoTargetsBody extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              margin:      const EdgeInsets.symmetric(vertical: 12),
-              width: 40,   height: 4,
-              decoration:  BoxDecoration(
+              margin:     const EdgeInsets.symmetric(vertical: 12),
+              width: 40,  height: 4,
+              decoration: BoxDecoration(
                 color:        Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(2),
               ),

@@ -28,9 +28,9 @@ class SocketService {
   String? _userType;
   String? _currentToken;
   String? _serverUrl;
-  bool _isConnected = false;
-  bool _isReconnecting = false;
-  int _reconnectAttempts = 0;
+  bool _isConnected     = false;
+  bool _isReconnecting  = false;
+  int  _reconnectAttempts = 0;
   Timer? _heartbeatTimer;
 
   Future<String?> Function()? _onTokenExpired;
@@ -39,7 +39,7 @@ class SocketService {
   // STREAM CONTROLLERS
   // ═══════════════════════════════════════════════════════════════
 
-  final _connectionStateController = StreamController<bool>.broadcast();
+  final _connectionStateController    = StreamController<bool>.broadcast();
 
   // Passenger events
   final _tripAssignedController       = StreamController<Map<String, dynamic>>.broadcast();
@@ -48,13 +48,11 @@ class SocketService {
   final _noDriversController          = StreamController<Map<String, dynamic>>.broadcast();
   final _driverLocationController     = StreamController<Map<String, dynamic>>.broadcast();
   final _tripRequestExpiredController = StreamController<Map<String, dynamic>>.broadcast();
-
-  // ✅ NEW: dedicated stream for driver arrived event
-  final _driverArrivedController = StreamController<Map<String, dynamic>>.broadcast();
+  final _driverArrivedController      = StreamController<Map<String, dynamic>>.broadcast();
 
   // Driver events
-  final _tripOfferController        = StreamController<Map<String, dynamic>>.broadcast();
-  final _tripMatchedController      = StreamController<Map<String, dynamic>>.broadcast();
+  final _tripOfferController         = StreamController<Map<String, dynamic>>.broadcast();
+  final _tripMatchedController       = StreamController<Map<String, dynamic>>.broadcast();
   final _tripAcceptSuccessController = StreamController<Map<String, dynamic>>.broadcast();
   final _tripAcceptFailedController  = StreamController<Map<String, dynamic>>.broadcast();
 
@@ -76,9 +74,7 @@ class SocketService {
   Stream<Map<String, dynamic>> get noDriversStream          => _noDriversController.stream;
   Stream<Map<String, dynamic>> get driverLocationStream     => _driverLocationController.stream;
   Stream<Map<String, dynamic>> get tripRequestExpiredStream => _tripRequestExpiredController.stream;
-
-  // ✅ NEW: driver arrived stream
-  Stream<Map<String, dynamic>> get driverArrivedStream => _driverArrivedController.stream;
+  Stream<Map<String, dynamic>> get driverArrivedStream      => _driverArrivedController.stream;
 
   // Driver streams
   Stream<Map<String, dynamic>> get tripOfferStream         => _tripOfferController.stream;
@@ -88,20 +84,21 @@ class SocketService {
   Stream<Map<String, dynamic>> get tripAcceptFailedStream  => _tripAcceptFailedController.stream;
 
   // General streams
-  Stream<String> get errorStream                       => _errorController.stream;
-  Stream<Map<String, dynamic>> get messageStream       => _messageController.stream;
+  Stream<String>               get errorStream   => _errorController.stream;
+  Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
 
   // ═══════════════════════════════════════════════════════════════
   // GETTERS
   // ═══════════════════════════════════════════════════════════════
 
-  bool get isConnected      => _isConnected;
-  bool get isReconnecting   => _isReconnecting;
-  IO.Socket? get socket     => _socket;
-  String? get userId        => _userId;
-  String? get userType      => _userType;
-  String? get socketId      => _socket?.id;
-  int get reconnectAttempts => _reconnectAttempts;
+  bool        get isConnected      => _isConnected;
+  bool        get isReconnecting   => _isReconnecting;
+  IO.Socket?  get socket           => _socket;
+  String?     get userId           => _userId;
+  String?     get userType         => _userType;
+  String?     get currentToken     => _currentToken;
+  String?     get socketId         => _socket?.id;
+  int         get reconnectAttempts => _reconnectAttempts;
 
   // ═══════════════════════════════════════════════════════════════
   // CONNECT
@@ -114,16 +111,29 @@ class SocketService {
     required String userType,
     Future<String?> Function()? onTokenExpired,
   }) async {
-    if (_isConnected && _socket != null) {
-      debugPrint('✅ [SOCKET] Already connected');
+    // Guard: if already connected with the SAME token, skip.
+    // If token differs (e.g. after mode switch) we fall through and
+    // reconnectWithNewToken() should have been called instead — but as
+    // a safety net we also allow through if the token changed.
+    if (_isConnected && _socket != null && _currentToken == accessToken) {
+      debugPrint('✅ [SOCKET] Already connected with same token — skipping');
       return;
     }
 
-    _userId           = userId;
-    _userType         = userType;
-    _currentToken     = accessToken;
-    _serverUrl        = url;
-    _onTokenExpired   = onTokenExpired;
+    // If there is a stale socket from a previous session (different token
+    // or same token but socket object is dangling), tear it down cleanly
+    // before creating a new one. This prevents the double-connection that
+    // was causing the server to see two simultaneous sockets.
+    if (_socket != null) {
+      debugPrint('⚠️ [SOCKET] Stale socket found — disposing before reconnect');
+      _forceDisposeSocket();
+    }
+
+    _userId            = userId;
+    _userType          = userType;
+    _currentToken      = accessToken;
+    _serverUrl         = url;
+    _onTokenExpired    = onTokenExpired;
     _reconnectAttempts = 0;
 
     try {
@@ -132,7 +142,7 @@ class SocketService {
       debugPrint('👤 [SOCKET] User ID: $_userId | Type: $_userType');
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-      // Strip /api from URL — Socket.IO needs base server URL
+      // Strip /api from URL — Socket.IO needs the base server URL
       String baseUrl = url;
       if (url.contains('/api')) {
         baseUrl = url.substring(0, url.indexOf('/api'));
@@ -140,7 +150,7 @@ class SocketService {
       }
 
       final completer = Completer<void>();
-      bool completed = false;
+      bool completed  = false;
 
       _socket = IO.io(
         baseUrl,
@@ -153,8 +163,8 @@ class SocketService {
             .setReconnectionDelayMax(5000)
             .setTimeout(20000)
             .setAuth({
-          'token': accessToken,
-          'userId': userId,
+          'token':    accessToken,
+          'userId':   userId,
           'userType': userType,
         })
             .setExtraHeaders({'Authorization': 'Bearer $accessToken'})
@@ -194,6 +204,86 @@ class SocketService {
       _errorController.add('Failed to connect: $e');
       rethrow;
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // RECONNECT WITH NEW TOKEN  ← KEY METHOD FOR MODE SWITCHING
+  //
+  // Called by mode_switch_sheet.dart (and any other place that issues
+  // a fresh token) immediately after the new token is saved.
+  //
+  // Flow:
+  //   1. Hard-dispose the current socket (no graceful disconnect —
+  //      the server already cleaned up on the switch-mode side-effect).
+  //   2. Wait one tick so the engine.io transport fully closes.
+  //   3. Call connect() with the new token and (optionally) new userType.
+  //
+  // This is intentionally separate from reconnect() which reuses the
+  // existing token — here we MUST use a new token.
+  // ═══════════════════════════════════════════════════════════════
+
+  Future<void> reconnectWithNewToken({
+    required String newToken,
+    required String userId,
+    required String userType,
+    Future<String?> Function()? onTokenExpired,
+  }) async {
+    debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🔄 [SOCKET] reconnectWithNewToken — disposing old socket');
+    debugPrint('   userId:   $userId');
+    debugPrint('   userType: $userType');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    // Tear down the old socket completely — do not emit driver:offline
+    // here because the switch-mode backend side-effect already cleaned
+    // Redis presence. Emitting driver:offline would be a no-op but also
+    // risks firing on the wrong socket instance.
+    _forceDisposeSocket();
+
+    // Small delay to let the engine.io WebSocket frame fully close
+    // before the server sees the new connection attempt.
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (_serverUrl == null) {
+      debugPrint('❌ [SOCKET] reconnectWithNewToken — _serverUrl is null, cannot reconnect');
+      return;
+    }
+
+    await connect(
+      url:            _serverUrl!,
+      accessToken:    newToken,
+      userId:         userId,
+      userType:       userType,
+      onTokenExpired: onTokenExpired ?? _onTokenExpired,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // FORCE DISPOSE SOCKET (internal)
+  //
+  // Tears down the socket object without going through the normal
+  // disconnect() path so no false 'connectionStateStream' false event
+  // is emitted during a mode-switch reconnect sequence.
+  // ═══════════════════════════════════════════════════════════════
+
+  void _forceDisposeSocket() {
+    _stopHeartbeat();
+    if (_socket != null) {
+      try {
+        _socket!.disconnect();
+        _socket!.dispose();
+      } catch (_) {
+        // Ignore errors during force-dispose
+      }
+      _socket = null;
+    }
+    _isConnected       = false;
+    _isReconnecting    = false;
+    _reconnectAttempts = 0;
+    // Intentionally do NOT emit to _connectionStateController here —
+    // the caller (mode switch) is about to navigate away anyway and
+    // we don't want to trigger _handleSocketDisconnection retries on
+    // the old dashboard while the new one is loading.
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -239,8 +329,8 @@ class SocketService {
       if (error is Map && error['message'] != null) {
         final msg = error['message'].toString();
         if (msg.contains('Authentication') ||
-            msg.contains('expired') ||
-            msg.contains('invalid') ||
+            msg.contains('expired')        ||
+            msg.contains('invalid')        ||
             msg.contains('token')) {
           await _handleTokenExpiration();
         } else {
@@ -294,16 +384,13 @@ class SocketService {
       }
     });
 
-    // ✅ KEY FIX: trip:driver_arrived was missing — now handled properly
     _socket!.on('trip:driver_arrived', (data) {
       debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       debugPrint('📍 [SOCKET] trip:driver_arrived received');
       debugPrint('📦 [DATA]: $data');
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       if (data is Map) {
-        // Push to dedicated stream (TripProvider listens here)
         _driverArrivedController.add(Map<String, dynamic>.from(data));
-        // Also push to status stream as fallback with status field set
         _tripStatusController.add({
           ...Map<String, dynamic>.from(data),
           'status': 'DRIVER_ARRIVED',
@@ -360,7 +447,7 @@ class SocketService {
         _tripRequestExpiredController.add(Map<String, dynamic>.from(data));
       } else {
         _tripRequestExpiredController.add({
-          'tripId': data,
+          'tripId':  data,
           'message': 'Request expired. No drivers accepted.',
         });
       }
@@ -503,10 +590,10 @@ class SocketService {
 
       if (_serverUrl != null && _userId != null && _userType != null) {
         await connect(
-          url: _serverUrl!,
-          accessToken: newToken,
-          userId: _userId!,
-          userType: _userType!,
+          url:            _serverUrl!,
+          accessToken:    newToken,
+          userId:         _userId!,
+          userType:       _userType!,
           onTokenExpired: _onTokenExpired,
         );
       }
@@ -527,88 +614,52 @@ class SocketService {
     required double lat,
     required double lng,
     double heading = 0,
-    double speed = 0,
+    double speed   = 0,
   }) {
     if (!_canEmit('driver:online')) return;
     _socket!.emit('driver:online', {
-      'lat': lat, 'lng': lng,
-      'heading': heading, 'speed': speed,
+      'lat':       lat,
+      'lng':       lng,
+      'heading':   heading,
+      'speed':     speed,
       'timestamp': DateTime.now().toIso8601String(),
     });
   }
 
   void emitDriverOffline() {
     if (!_canEmit('driver:offline')) return;
-    _socket!.emit('driver:offline', {'timestamp': DateTime.now().toIso8601String()});
+    _socket!.emit('driver:offline', {
+      'timestamp': DateTime.now().toIso8601String(),
+    });
   }
 
   void updateDriverLocation({
     required double lat,
     required double lng,
     double heading = 0,
-    double speed = 0,
+    double speed   = 0,
   }) {
     if (!_canEmit('driver:location', silent: true)) return;
     _socket!.emit('driver:location', {
-      'lat': lat, 'lng': lng,
-      'heading': heading, 'speed': speed,
+      'lat':       lat,
+      'lng':       lng,
+      'heading':   heading,
+      'speed':     speed,
       'timestamp': DateTime.now().toIso8601String(),
     });
   }
 
-  void acceptTrip(String tripId) {
-    if (!_canEmit('trip:accept')) return;
-    debugPrint('📤 [SOCKET] trip:accept — $tripId');
-    _socket!.emit('trip:accept', {
-      'tripId': tripId,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-  }
-
-  void declineTrip(String tripId, {String? reason}) {
-    if (!_canEmit('trip:decline')) return;
-    debugPrint('📤 [SOCKET] trip:decline — $tripId');
-    _socket!.emit('trip:decline', {
-      'tripId': tripId,
-      'reason': reason ?? 'Driver declined',
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-  }
-
-  void arrivedAtPickup(String tripId) {
-    if (!_canEmit('trip:arrived')) return;
-    debugPrint('📤 [SOCKET] trip:arrived — $tripId');
-    _socket!.emit('trip:arrived', {
-      'tripId': tripId,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-  }
-
-  void startTrip(String tripId) {
-    if (!_canEmit('trip:start')) return;
-    debugPrint('📤 [SOCKET] trip:start — $tripId');
-    _socket!.emit('trip:start', {
-      'tripId': tripId,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-  }
-
-  void completeTrip(String tripId, {double? finalFare}) {
-    if (!_canEmit('trip:complete')) return;
-    debugPrint('📤 [SOCKET] trip:complete — $tripId');
-    _socket!.emit('trip:complete', {
-      'tripId': tripId,
-      'finalFare': finalFare,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-  }
+  // Driver ride-lifecycle socket commands (acceptTrip / declineTrip /
+  // arrivedAtPickup / startTrip / completeTrip) were removed — the driver app
+  // drives the lifecycle over HTTP and the backend pushes the passenger events.
+  // Sockets are push-only for the driver lifecycle now.
 
   void cancelTrip(String tripId, String reason) {
     if (!_canEmit('trip:cancel')) return;
     debugPrint('📤 [SOCKET] trip:cancel — $tripId');
     _socket!.emit('trip:cancel', {
-      'tripId': tripId,
-      'reason': reason,
+      'tripId':    tripId,
+      'reason':    reason,
       'timestamp': DateTime.now().toIso8601String(),
     });
   }
@@ -617,8 +668,8 @@ class SocketService {
     if (!_canEmit('trip:update_status')) return;
     debugPrint('📤 [SOCKET] trip:update_status — $tripId → $status');
     _socket!.emit('trip:update_status', {
-      'tripId': tripId,
-      'status': status,
+      'tripId':    tripId,
+      'status':    status,
       'timestamp': DateTime.now().toIso8601String(),
     });
   }
@@ -626,8 +677,8 @@ class SocketService {
   void sendTripMessage(String tripId, String message) {
     if (!_canEmit('trip:message')) return;
     _socket!.emit('trip:message', {
-      'tripId': tripId,
-      'message': message,
+      'tripId':    tripId,
+      'message':   message,
       'timestamp': DateTime.now().toIso8601String(),
     });
   }
@@ -641,11 +692,11 @@ class SocketService {
     if (!_canEmit('trip:request')) return;
     debugPrint('📤 [SOCKET] trip:request — ${pickup['address']} → ${dropoff['address']}');
     _socket!.emit('trip:request', {
-      'pickup': pickup,
-      'dropoff': dropoff,
+      'pickup':      pickup,
+      'dropoff':     dropoff,
       'vehicleType': vehicleType,
-      'notes': notes,
-      'timestamp': DateTime.now().toIso8601String(),
+      'notes':       notes,
+      'timestamp':   DateTime.now().toIso8601String(),
     });
   }
 
@@ -688,12 +739,16 @@ class SocketService {
 
   void testConnection() {
     if (!_canEmit('connection:test')) return;
-    _socket!.emit('connection:test', {'timestamp': DateTime.now().toIso8601String()});
+    _socket!.emit('connection:test', {
+      'timestamp': DateTime.now().toIso8601String(),
+    });
   }
 
+  /// Standard reconnect — reuses the existing token.
+  /// Use reconnectWithNewToken() after a mode switch.
   Future<void> reconnect() async {
     if (_serverUrl == null || _currentToken == null ||
-        _userId == null || _userType == null) {
+        _userId == null    || _userType == null) {
       debugPrint('❌ [SOCKET] Cannot reconnect — missing details');
       return;
     }
@@ -701,10 +756,10 @@ class SocketService {
     disconnect();
     await Future.delayed(const Duration(milliseconds: 500));
     await connect(
-      url: _serverUrl!,
-      accessToken: _currentToken!,
-      userId: _userId!,
-      userType: _userType!,
+      url:            _serverUrl!,
+      accessToken:    _currentToken!,
+      userId:         _userId!,
+      userType:       _userType!,
       onTokenExpired: _onTokenExpired,
     );
   }
@@ -723,16 +778,19 @@ class SocketService {
   // DISCONNECT & CLEANUP
   // ═══════════════════════════════════════════════════════════════
 
+  /// Graceful disconnect — emits false to connectionStateStream so that
+  /// any listening dashboard can react (e.g. show "Disconnected").
+  /// Do NOT call this during a mode-switch; use _forceDisposeSocket().
   void disconnect() {
     if (_socket != null) {
       debugPrint('🔌 [SOCKET] Disconnecting...');
       _stopHeartbeat();
       _socket!.disconnect();
       _socket!.dispose();
-      _socket             = null;
-      _isConnected        = false;
-      _isReconnecting     = false;
-      _reconnectAttempts  = 0;
+      _socket            = null;
+      _isConnected       = false;
+      _isReconnecting    = false;
+      _reconnectAttempts = 0;
       _connectionStateController.add(false);
     }
   }

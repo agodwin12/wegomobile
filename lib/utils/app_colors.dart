@@ -70,6 +70,18 @@ class AppColors {
   static Color shadowMedium = Colors.black.withOpacity(0.10);
   static Color shadowDark   = Colors.black.withOpacity(0.20);
 
+
+  // ── Dark UI surfaces (ride-hailing / map screens) ──────────────────────────
+  static const Color darkBg            = Color(0xFF0E0E10); // scaffold / map dim
+  static const Color darkSurface       = Color(0xFF1A1A1D); // bottom sheet
+  static const Color darkSurfaceAlt    = Color(0xFF26262B); // cards / inputs
+  static const Color darkSurfaceHigh   = Color(0xFF303036); // elevated chips
+  static const Color darkBorder        = Color(0xFF34343B);
+  static const Color darkDivider       = Color(0xFF2A2A2F);
+  static const Color darkTextPrimary   = Color(0xFFF5F5F7);
+  static const Color darkTextSecondary = Color(0xFF9A9AA2);
+  static const Color darkTextTertiary  = Color(0xFF6C6C74);
+
   // ── Gradients ─────────────────────────────────────────────────────────────
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFFFFD700), Color(0xFFFFC107)],

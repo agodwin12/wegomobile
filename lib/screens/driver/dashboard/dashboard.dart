@@ -1,19 +1,10 @@
-// lib/presentation/screens/driver/driver_main_screen.dart
-//
-// CHANGES IN THIS VERSION:
-//   ✅ Mode switch pill added to the top row in _buildDarkHeader()
-//      — sits to the left of the notification bell
-//      — taps showModeSwitchSheet() from widgets/mode_switch_sheet.dart
-//      — DRIVER in DRIVER mode sees: Switch to Delivery Agent / Regular User
-//      — DRIVER in DELIVERY_AGENT mode sees: Switch to Driver / Regular User
-//      — DRIVER in PASSENGER mode sees: Switch to Driver / Delivery Agent
+
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -23,8 +14,12 @@ import 'package:wego_v1/utils/app_colors.dart';
 import 'package:wego_v1/utils/app_typography.dart';
 import '../../../service/socket_service.dart';
 import '../../../widgets/mode_switch_sheet.dart';           // ← NEW
+import '../../notification/notification_badge.dart';
+import '../../notification/notification_screen.dart';
 import '../driver_top_up/top_up_screen.dart';
 import '../en_route_screen/driver_en_route_screen.dart';
+import '../arrived_screen/driver_arrived.dart';
+import '../Trip in progress/driver_trip_in_progress_screen.dart';
 import '../offer/trip_request_screen.dart';
 import '../trip history/driver_trips_screen.dart';
 
@@ -55,11 +50,12 @@ class _DriverMainScreenState extends State<DriverMainScreen>
   bool isInitialized = false;
   bool _isDisposed   = false;
   Position?            currentPosition;
-  GoogleMapController? mapController;
 
   // ─── Trip state ───────────────────────────────────────────────────
   Map<String, dynamic>? activeTripOffer;
   Map<String, dynamic>? currentTrip;
+  // Resume-into-trip is done once per dashboard session (on app start / resume).
+  bool _resumeChecked = false;
 
   // ─── Earnings ────────────────────────────────────────────────────
   double todayEarnings = 0.0;
@@ -69,6 +65,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
   // ─── Wallet ───────────────────────────────────────────────────────
   int    walletBalance    = 0;
   bool   walletLowBalance = false;
+  bool _isSocketConnected = false;
   String walletStatus     = 'ACTIVE';
   bool   walletLoaded     = false;
 
@@ -178,6 +175,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
       if (_isDisposed) return;
 
       _setupSocketListeners();
+      setState(() => _isSocketConnected = SocketService.instance.isConnected);
       _loadDriverStats();
       _loadWalletBalance();
       _checkCurrentTrip();
@@ -491,6 +489,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
 
     _socketConnectionSub = s.connectionStateStream.listen((connected) {
       if (_isDisposed || !mounted) return;
+      setState(() => _isSocketConnected = connected);
       if (connected) {
         reconnectAttempts = 0;
         if (isOnline && currentPosition != null && _isAppActive)
@@ -633,11 +632,8 @@ class _DriverMainScreenState extends State<DriverMainScreen>
         final passengerData = Map<String, dynamic>.from(
             data['data']['passenger'] ?? {});
 
-        SocketService.instance.socket?.emit('trip:accept', {
-          'tripId':    tripId,
-          'driverId':  tripData['driver_id'] ?? '',
-          'timestamp': DateTime.now().toIso8601String(),
-        });
+        // The HTTP accept above is authoritative — it assigns the driver and
+        // emits trip:driver_assigned to the passenger. No socket emit needed.
 
         if (mounted && !_isDisposed) {
           setState(() {
@@ -1072,12 +1068,57 @@ class _DriverMainScreenState extends State<DriverMainScreen>
         final data = json.decode(response.body);
         final trip = data['data']['currentTrip'];
         if (trip != null && mounted && !_isDisposed) {
-          setState(() => currentTrip = trip);
+          setState(() => currentTrip = Map<String, dynamic>.from(trip));
+          // Recover an interrupted ride (phone died mid-trip, app killed, etc.):
+          // take the driver straight back into the live trip screen so they can
+          // continue. Runs once per dashboard session.
+          _maybeResumeIntoTrip(Map<String, dynamic>.from(trip));
         }
       }
     } catch (e) {
       debugPrint('❌ Trip check error: $e');
     }
+  }
+
+  // ─── Resume an in-progress ride after an app/phone restart ──────────────────
+  void _maybeResumeIntoTrip(Map<String, dynamic> trip) {
+    if (_resumeChecked || !mounted || _isDisposed) return;
+    _resumeChecked = true;
+
+    final status = (trip['status'] ?? '').toString();
+    final tripId = (trip['id'] ?? '').toString();
+    if (tripId.isEmpty) return;
+
+    final passenger = (trip['passenger'] is Map)
+        ? Map<String, dynamic>.from(trip['passenger'] as Map)
+        : <String, dynamic>{};
+
+    Widget? screen;
+    switch (status) {
+      case 'MATCHED':
+      case 'DRIVER_ASSIGNED':
+      case 'DRIVER_EN_ROUTE':
+        screen = DriverEnRouteScreen(tripId: tripId, trip: trip, passenger: passenger);
+        break;
+      case 'DRIVER_ARRIVED':
+        screen = DriverArrivedScreen(tripId: tripId, trip: trip, passenger: passenger);
+        break;
+      case 'IN_PROGRESS':
+        screen = DriverTripInProgressScreen(tripId: tripId, trip: trip, passenger: passenger);
+        break;
+      default:
+        return; // not an active driving state — nothing to resume into
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isDisposed) return;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => screen!)).then((_) {
+        if (mounted && !_isDisposed) {
+          setState(() => currentTrip = null);
+          _checkCurrentTrip();
+        }
+      });
+    });
   }
 
   void _cleanup() {
@@ -1099,8 +1140,6 @@ class _DriverMainScreenState extends State<DriverMainScreen>
     _toggleController.dispose();
     _fadeInController.dispose();
     _bannerController.dispose();
-    mapController?.dispose();
-    mapController = null;
     locationTimer?.cancel();
     statsRefreshTimer?.cancel();
     _keepAliveTimer?.cancel();
@@ -1497,19 +1536,29 @@ class _DriverMainScreenState extends State<DriverMainScreen>
                   const SizedBox(width: 8),
 
                   // Notification bell
-                  Container(
-                    width:  42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color:        Colors.white.withOpacity(0.07),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.1)),
-                    ),
-                    child: const Icon(
-                      Icons.notifications_outlined,
-                      color: Colors.white54,
-                      size:  20,
+                  NotificationBadge(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationScreen(),
+                        ),
+                      ).then((_) => NotificationBadge.refresh());
+                    },
+                    child: Container(
+                      width:  42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color:        Colors.white.withOpacity(0.07),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white54,
+                        size:  20,
+                      ),
                     ),
                   ),
                 ],
@@ -2184,10 +2233,10 @@ class _DriverMainScreenState extends State<DriverMainScreen>
 
           _statusRow(
             icon: Icons.wifi_rounded,
-            iconColor: SocketService.instance.isConnected
+            iconColor: _isSocketConnected
                 ? AppColors.success
                 : AppColors.error,
-            label: SocketService.instance.isConnected
+            label: _isSocketConnected
                 ? 'Connected to server'
                 : 'Disconnected',
           ),
