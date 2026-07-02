@@ -1035,8 +1035,6 @@ class _RideMapScreenState extends State<RideMapScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PromoBanner(),
-          const SizedBox(height: 20),
           Text('Planifiez votre course', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary)),
           const SizedBox(height: 20),
           Row(
@@ -1658,24 +1656,6 @@ class _DestinationMarker extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════════════
 // STATELESS SUB-WIDGETS
 // ═══════════════════════════════════════════════════════════════════════════
-
-class _PromoBanner extends StatelessWidget {
-  const _PromoBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
-      child: Row(children: [
-        const Icon(Icons.local_offer_rounded, color: AppColors.textPrimary, size: 16),
-        const SizedBox(width: 8),
-        Expanded(child: Text('Promo -50% • Réduction maximale de 5 000 XAF par course', style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w700))),
-      ]),
-    );
-  }
-}
 
 class _ReferralCard extends StatelessWidget {
   const _ReferralCard();
