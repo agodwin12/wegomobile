@@ -174,7 +174,8 @@ class _PassengerDashboardState extends State<PassengerDashboard>
           'https://api.mapbox.com/geocoding/v5/mapbox.places/'
           '${pos.longitude},${pos.latitude}.json'
           '?access_token=$token'
-          '&types=address,neighborhood,locality,place'
+          '&country=cm&language=fr'
+          '&types=address,neighborhood,locality,place,poi'
           '&limit=1',
         );
         final response =

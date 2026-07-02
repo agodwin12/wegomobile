@@ -395,7 +395,8 @@ class _RideMapScreenState extends State<RideMapScreen>
       }
       final url = Uri.parse(
         'https://api.mapbox.com/geocoding/v5/mapbox.places/$lng,$lat.json'
-            '?access_token=$token&language=fr&types=address,locality,place&limit=1',
+            '?access_token=$token&country=cm&language=fr'
+            '&types=address,neighborhood,locality,place,poi&limit=1',
       );
       final res = await http.get(url).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {

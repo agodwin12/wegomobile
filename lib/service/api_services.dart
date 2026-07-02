@@ -164,37 +164,48 @@ class ApiService {
     print('Response Body: ${response.body}');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
+    final code = response.statusCode;
+
+    if (code >= 200 && code < 300) {
       try {
         return json.decode(response.body);
       } catch (e) {
-        print('❌ [PARSE ERROR] Failed to parse response: $e');
-        throw Exception('Failed to parse response: $e');
+        throw Exception("We couldn't read the server's response. Please try again.");
       }
-    } else if (response.statusCode == 400) {
-      final error = json.decode(response.body);
-      print('❌ [BAD REQUEST] ${error['message']}');
-      throw Exception(error['message'] ?? 'Bad request');
-    } else if (response.statusCode == 401) {
-      print('❌ [UNAUTHORIZED] Authentication required');
-      throw Exception('Unauthorized. Please login again.');
-    } else if (response.statusCode == 403) {
-      print('❌ [FORBIDDEN] Access denied');
-      throw Exception('Access denied');
-    } else if (response.statusCode == 404) {
-      print('❌ [NOT FOUND] Resource not found');
-      throw Exception('Resource not found');
-    } else if (response.statusCode == 409) {
-      final error = json.decode(response.body);
-      print('❌ [CONFLICT] ${error['message']}');
-      throw Exception(error['message'] ?? 'Conflict');
-    } else if (response.statusCode == 500) {
-      print('❌ [SERVER ERROR] Internal server error');
-      throw Exception('Server error. Please try again later.');
-    } else {
-      print('❌ [HTTP ERROR] Status: ${response.statusCode}');
-      throw Exception('Request failed with status: ${response.statusCode}');
     }
+
+    // Always prefer the backend's human-readable message (e.g. "You already have
+    // an active trip"). Fall back to a friendly, plain-language message per
+    // status — users should never see raw "401"/"403"/"status code" text.
+    String? serverMsg;
+    try {
+      final body = json.decode(response.body);
+      serverMsg = (body is Map ? body['message'] : null)?.toString();
+    } catch (_) {}
+
+    final isRawCode = serverMsg == null ||
+        serverMsg.trim().isEmpty ||
+        serverMsg.toLowerCase().contains('status code');
+
+    if (!isRawCode) throw Exception(serverMsg);
+
+    String friendly;
+    switch (code) {
+      case 400: friendly = 'Some details are missing or invalid. Please check and try again.'; break;
+      case 401: friendly = 'Your session has expired. Please log in again.'; break;
+      case 403: friendly = "You don't have permission to do that."; break;
+      case 404: friendly = "We couldn't find what you were looking for."; break;
+      case 408: friendly = 'The request took too long. Please try again.'; break;
+      case 409: friendly = 'That conflicts with something that already exists.'; break;
+      case 422: friendly = 'Please double-check the information you entered.'; break;
+      case 429: friendly = 'Too many attempts. Please wait a moment and try again.'; break;
+      case 500:
+      case 502:
+      case 503:
+      case 504: friendly = 'Our servers are having trouble right now. Please try again shortly.'; break;
+      default:  friendly = 'Something went wrong. Please try again.';
+    }
+    throw Exception(friendly);
   }
 
   // ==================== AUTHENTICATION ====================

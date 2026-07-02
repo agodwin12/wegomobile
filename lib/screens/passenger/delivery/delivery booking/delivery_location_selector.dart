@@ -176,7 +176,8 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
         'https://api.mapbox.com/geocoding/v5/mapbox.places/'
         '$lng,$lat.json'
         '?access_token=$token'
-        '&types=address,neighborhood,locality,place'
+        '&country=cm&language=fr'
+        '&types=address,neighborhood,locality,place,poi'
         '&limit=1',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
