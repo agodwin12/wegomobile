@@ -735,7 +735,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'PICKUP',
           style: TextStyle(
             fontFamily: 'Poppins',
@@ -808,7 +808,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                     _pickupAddressCtrl.text,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize: 12,
                       color: AppColors.textSecondary,
@@ -895,7 +895,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'DROPOFF',
           style: TextStyle(
             fontFamily: 'Poppins',
@@ -955,7 +955,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                         _dropoffAddress ?? _dropoffSearchCtrl.text,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Roboto',
                           fontSize: 12,
                           color: AppColors.textSecondary,
@@ -981,7 +981,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                       border: Border.all(
                           color: AppColors.borderLight),
                     ),
-                    child: const Icon(Icons.edit_rounded,
+                    child: Icon(Icons.edit_rounded,
                         size: 14, color: AppColors.textSecondary),
                   ),
                 ),
@@ -1139,7 +1139,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                     children: [
                       Text(
                         s.mainText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -1152,7 +1152,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                           s.secondaryText,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Roboto',
                             fontSize: 11,
                             color: AppColors.textSecondary,
@@ -1162,7 +1162,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
+                Icon(Icons.chevron_right_rounded,
                     size: 16, color: AppColors.textLight),
               ],
             ),
@@ -1205,7 +1205,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                       fontWeight: FontWeight.w600,
                       color: textColor)),
               Text(subtext,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize: 11,
                       color: AppColors.textLight)),

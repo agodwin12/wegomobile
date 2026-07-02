@@ -138,7 +138,7 @@ class _RatingScreenState extends State<RatingScreen> with TickerProviderStateMix
                 gradient: AppColors.primaryGradient,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.check,
                 color: AppColors.textPrimary,
                 size: 40,
@@ -243,7 +243,7 @@ class _RatingScreenState extends State<RatingScreen> with TickerProviderStateMix
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.close, color: AppColors.textPrimary),
+          icon: Icon(Icons.close, color: AppColors.textPrimary),
         ),
         title: Text(
           'Rate Your Trip',

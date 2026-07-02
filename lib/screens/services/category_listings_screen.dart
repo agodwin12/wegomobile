@@ -20,13 +20,13 @@ const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryDark  = AppColors.primaryGoldDark;
 const _kPrimaryLight = Color(0xFFFFFDE7);
 const _kPrimaryMid   = Color(0xFFFFECB3);
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 const _kError        = AppColors.error;
 
 const double _rLg   = 16.0;
@@ -465,7 +465,7 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.wifi_off_rounded,
+                  Icon(Icons.wifi_off_rounded,
                       size: 48, color: _kTextLight),
                   const SizedBox(height: 12),
                   Text(
@@ -499,10 +499,10 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.shopping_bag_outlined,
+                  Icon(Icons.shopping_bag_outlined,
                       size: 56, color: _kTextLight),
                   const SizedBox(height: 16),
-                  const Text('Aucun service ici',
+                  Text('Aucun service ici',
                       style: AppTypography.titleLarge),
                   const SizedBox(height: 8),
                   Text(
@@ -741,7 +741,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.65,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _kSurface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(_rXl)),
       ),
@@ -781,7 +781,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
             ),
           ),
 
-          const Divider(height: 1, color: _kBorder),
+          Divider(height: 1, color: _kBorder),
 
           Expanded(
             child: SingleChildScrollView(
@@ -830,7 +830,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // FIX: Flexible prevents label from pushing value off-screen
-                      const Flexible(
+                      Flexible(
                         child: Text(
                           'Fourchette de prix (XAF)',
                           style: AppTypography.titleMedium,

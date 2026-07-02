@@ -318,7 +318,7 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
             // ── LIGHT SCROLLABLE BODY ──────────────────────────
             Expanded(
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.backgroundLight,
                   borderRadius:
                   BorderRadius.vertical(top: Radius.circular(32)),

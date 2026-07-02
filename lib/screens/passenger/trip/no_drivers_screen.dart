@@ -63,7 +63,7 @@ class NoDriversScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Réessayer',
                     style: TextStyle(
                       color: AppColors.textPrimary,

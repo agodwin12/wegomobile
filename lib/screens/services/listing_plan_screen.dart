@@ -19,17 +19,17 @@ const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryDark  = AppColors.primaryGoldDark;
 const _kPrimaryLight = Color(0xFFFFFDE7);
 const _kPrimaryMid   = Color(0xFFFFECB3);
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 const _kError        = AppColors.error;
-const _kErrorLight   = AppColors.errorLight;
+Color get _kErrorLight => AppColors.errorLight;
 const _kSuccess      = AppColors.success;
-const _kSuccessLight = AppColors.successLight;
+Color get _kSuccessLight => AppColors.successLight;
 
 const double _rLg   = 16.0;
 const double _rXl   = 24.0;
@@ -198,7 +198,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                   color: _kSuccessLight, shape: BoxShape.circle),
               child: const Icon(Icons.check_circle_rounded,
                   size: 56, color: _kSuccess),
@@ -293,7 +293,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back_rounded,
+            child: Icon(Icons.arrow_back_rounded,
                 color: _kTextPrimary, size: 24),
           ),
           const SizedBox(width: 16),
@@ -320,7 +320,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
   // ── Body ──────────────────────────────────────────────────────────────────
   Widget _buildBody() {
     if (_loadingPlans) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -339,7 +339,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.layers_outlined, size: 48, color: _kTextLight),
+              Icon(Icons.layers_outlined, size: 48, color: _kTextLight),
               const SizedBox(height: 16),
               Text('Aucun plan disponible', style: AppTypography.titleLarge),
               const SizedBox(height: 8),
@@ -416,7 +416,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(
           16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _kSurface,
         boxShadow: _kBottomShadow,
       ),
@@ -551,7 +551,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
             child: Container(
               padding: EdgeInsets.fromLTRB(
                   20, 20, 20, MediaQuery.of(context).padding.bottom + 20),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _kSurface,
                 borderRadius: BorderRadius.vertical(
                     top: Radius.circular(_rXl)),
@@ -609,7 +609,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
                         Flexible(
                           child: Text(
                             '${_selected?.priceXaf ?? 0} XAF',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
@@ -643,7 +643,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 14),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             border: Border(
                               right: BorderSide(color: _kBorder),
                             ),
@@ -736,7 +736,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
                             borderRadius: BorderRadius.circular(_rLg)),
                       ),
                       icon: _initiating
-                          ? const SizedBox(
+                          ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
@@ -832,7 +832,7 @@ class _PlanCard extends StatelessWidget {
                       color: selected ? _kPrimary : Colors.transparent,
                     ),
                     child: selected
-                        ? const Icon(Icons.check_rounded,
+                        ? Icon(Icons.check_rounded,
                         // FIX: dark check on gold (correct contrast)
                         size: 13, color: AppColors.textPrimary)
                         : null,
@@ -921,7 +921,7 @@ class _PlanCard extends StatelessWidget {
               ),
             ),
 
-            const Divider(height: 1, color: _kBorder),
+            Divider(height: 1, color: _kBorder),
 
             // ── Feature chips ─────────────────────────────────────────────
             Padding(

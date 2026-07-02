@@ -175,11 +175,11 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Tracking your delivery',
+            Text('Tracking your delivery',
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 16,
                     fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             Text(widget.delivery['deliveryCode'] as String? ?? '',
-                style: const TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
                     color: AppColors.textSecondary)),
           ],
         ),
@@ -361,7 +361,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
                 if (isActive) ...[
                   const SizedBox(height: 3),
                   Text(stage.$4,
-                      style: const TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                      style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
                           color: AppColors.textSecondary)),
                 ],
               ],
@@ -403,11 +403,11 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
       children: [
         SizedBox(
           width: 80,
-          child: Text(label, style: const TextStyle(
+          child: Text(label, style: TextStyle(
               fontFamily: 'Roboto', fontSize: 12, color: AppColors.textSecondary)),
         ),
         Expanded(
-          child: Text(value, style: const TextStyle(
+          child: Text(value, style: TextStyle(
               fontFamily: 'Roboto', fontSize: 12, fontWeight: FontWeight.w600,
               color: AppColors.textPrimary)),
         ),

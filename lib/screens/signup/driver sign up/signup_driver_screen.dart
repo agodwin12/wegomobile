@@ -873,7 +873,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
+            colorScheme: ColorScheme.light(
               primary: AppColors.primaryGold,
               onPrimary: AppColors.textPrimary,
               surface: AppColors.backgroundWhite,
@@ -926,7 +926,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
                 const Spacer(),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close,
                     color: AppColors.textSecondary,
                   ),
@@ -1088,7 +1088,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
       ),
       child: Center(
         child: isCompleted
-            ? const Icon(
+            ? Icon(
           Icons.check,
           color: AppColors.textPrimary,
           size: 16,
@@ -1196,7 +1196,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
                           fit: BoxFit.cover,
                         ),
                       )
-                          : const Icon(
+                          : Icon(
                         Icons.person_outline,
                         color: AppColors.textPrimary,
                         size: 50,
@@ -1217,7 +1217,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
                           width: 3,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.camera_alt,
                         color: AppColors.textPrimary,
                         size: 18,
@@ -1349,7 +1349,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
                   ),
                   child: DropdownButtonFormField<String>(
                     value: vehicleTypeCtrl.text,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       prefixIcon: Icon(
                         Icons.category_outlined,
                         color: AppColors.textSecondary,
@@ -1745,7 +1745,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.mark_email_read_outlined,
                 color: AppColors.textPrimary,
                 size: 40,
@@ -2028,7 +2028,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
                         style: const TextStyle(fontSize: 24),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(
+                      Icon(
                         Icons.keyboard_arrow_down,
                         color: AppColors.textSecondary,
                         size: 20,
@@ -2197,7 +2197,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
           ),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
           width: 24,
           height: 24,
           child: CircularProgressIndicator(

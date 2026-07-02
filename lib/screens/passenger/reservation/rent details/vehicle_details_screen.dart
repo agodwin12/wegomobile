@@ -167,7 +167,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
       lastDate: now.add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
+          colorScheme: ColorScheme.light(
             primary: AppColors.primaryGold,
             onPrimary: AppColors.primaryDark,
             surface: AppColors.backgroundWhite,
@@ -343,7 +343,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
             ),
             const SizedBox(height: 18),
             Text(msg,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary),
@@ -382,7 +382,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                       color: AppColors.primaryDark, size: 22),
                 ),
                 const SizedBox(width: 14),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Booking Summary',
@@ -399,7 +399,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
               ]),
 
               const SizedBox(height: 22),
-              const Divider(color: AppColors.borderLight, height: 1),
+              Divider(color: AppColors.borderLight, height: 1),
               const SizedBox(height: 18),
 
               _confirmRow(Icons.directions_car_rounded, 'Vehicle',
@@ -452,7 +452,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                   color: AppColors.backgroundLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Row(children: [
+                child: Row(children: [
                   Icon(Icons.info_outline_rounded,
                       size: 16, color: AppColors.textLight),
                   SizedBox(width: 8),
@@ -474,12 +474,12 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                     style: OutlinedButton.styleFrom(
                       padding:
                       const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(
+                      side: BorderSide(
                           color: AppColors.borderLight, width: 1.5),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Text('Cancel',
+                    child: Text('Cancel',
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -530,12 +530,12 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
         ),
         const SizedBox(width: 12),
         Text('$label  ',
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 13, color: AppColors.textSecondary)),
         Expanded(
           child: Text(value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary),
@@ -571,14 +571,14 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
             ),
             const SizedBox(height: 20),
             Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary),
                 textAlign: TextAlign.center),
             const SizedBox(height: 10),
             Text(message,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                     height: 1.6),
@@ -630,14 +630,14 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
             ),
             const SizedBox(height: 20),
             Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary),
                 textAlign: TextAlign.center),
             const SizedBox(height: 10),
             Text(message,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                     height: 1.6),
@@ -1021,7 +1021,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                   letterSpacing: -0.5,
                 ),
               ),
-              const Text('/day',
+              Text('/day',
                   style:
                   TextStyle(fontSize: 11, color: AppColors.textLight)),
             ]),
@@ -1047,7 +1047,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
               const SizedBox(width: 4),
               Text(
                 widget.vehicle['region'] ?? 'Douala',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w600),
@@ -1064,7 +1064,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
               border:
               Border.all(color: AppColors.borderLight, width: 1),
             ),
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.star_rounded,
                   size: 13, color: AppColors.primaryGold),
               SizedBox(width: 4),
@@ -1135,11 +1135,11 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
               ),
               const SizedBox(height: 8),
               Text(s['label'] as String,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 11, color: AppColors.textLight)),
               const SizedBox(height: 2),
               Text(s['value'] as String,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary),
@@ -1298,21 +1298,21 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
       onTap: () => _pickDate(isStart),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 11,
                 color: AppColors.textLight,
                 fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
         Text(
           DateFormat('MMM dd').format(date),
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary),
         ),
         Text(
           DateFormat('yyyy · EEE').format(date),
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 11, color: AppColors.textSecondary),
         ),
       ]),
@@ -1424,7 +1424,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                               : AppColors.textSecondary)),
                   const SizedBox(height: 2),
                   Text(subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 11, color: AppColors.textLight)),
                 ]),
           ),
@@ -1613,7 +1613,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                 ),
                 Text(
                   '$_durationDays ${_durationDays == 1 ? "day" : "days"} · ${_rentalTypes[_selectedRentalType]}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 11, color: AppColors.textLight),
                 ),
               ]),

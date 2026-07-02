@@ -236,7 +236,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                       width: 3,
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.check,
                     color: AppColors.backgroundWhite,
                     size: 16,
@@ -250,7 +250,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
           // Name
           Text(
             '$firstName $lastName',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
               color: AppColors.backgroundWhite,
@@ -277,7 +277,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                 const SizedBox(width: 8),
                 Text(
                   email,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     color: AppColors.backgroundWhite,
                     fontWeight: FontWeight.w500,
@@ -306,7 +306,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                 const SizedBox(width: 8),
                 Text(
                   phone,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     color: AppColors.backgroundWhite,
                     fontWeight: FontWeight.w500,
@@ -378,7 +378,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
           const SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
@@ -387,7 +387,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
@@ -412,7 +412,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Quick Actions',
             style: TextStyle(
               fontSize: 18,
@@ -492,7 +492,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
             const SizedBox(height: 12),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -517,7 +517,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Account',
             style: TextStyle(
               fontSize: 18,
@@ -570,7 +570,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Settings',
             style: TextStyle(
               fontSize: 18,
@@ -690,7 +690,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -699,7 +699,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
@@ -707,7 +707,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios_rounded,
               color: AppColors.textLight,
               size: 16,
@@ -770,7 +770,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
   }
 
   Widget _buildMenuDivider() {
-    return const Divider(height: 1, color: AppColors.borderLight);
+    return Divider(height: 1, color: AppColors.borderLight);
   }
 
   Widget _buildVersionInfo() {
@@ -790,7 +790,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
           ),
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'WEGO',
           style: TextStyle(
             fontSize: 20,
@@ -844,7 +844,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Logout',
               style: TextStyle(
                 fontSize: 22,
@@ -853,7 +853,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Are you sure you want to logout from your account?',
               style: TextStyle(
                 fontSize: 15,
@@ -872,10 +872,10 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: AppColors.borderLight),
+                        side: BorderSide(color: AppColors.borderLight),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 15,
@@ -951,7 +951,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'This action cannot be undone. All your data will be permanently deleted.',
               style: TextStyle(
                 fontSize: 15,
@@ -970,10 +970,10 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: AppColors.borderLight),
+                        side: BorderSide(color: AppColors.borderLight),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 15,

@@ -1468,7 +1468,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         const SizedBox(height: 3),
         Text(label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
                 fontFamily: 'Roboto',
                 fontSize:   9,
                 color:      AppColors.textSecondary,
@@ -1485,7 +1485,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Quick actions',
+        Text('Quick actions',
             style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize:   14,
@@ -1550,7 +1550,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
           Icon(icon, color: AppColors.primaryDark, size: 24),
           const SizedBox(height: 6),
           Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize:   10,
                   fontWeight: FontWeight.w600,
@@ -1800,7 +1800,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                                     fontWeight:    FontWeight.w800,
                                     color:         AppColors.success,
                                     letterSpacing: -0.5)),
-                            const Text('Your payout',
+                            Text('Your payout',
                                 style: TextStyle(
                                     fontFamily: 'Roboto',
                                     fontSize:   11,
@@ -1816,7 +1816,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                                     fontSize:   15,
                                     fontWeight: FontWeight.w700,
                                     color:      AppColors.warning)),
-                            const Text('Commission',
+                            Text('Commission',
                                 style: TextStyle(
                                     fontFamily: 'Roboto',
                                     fontSize:   11,
@@ -1844,7 +1844,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         ),
                       ),
                       Text('${distance.toStringAsFixed(1)} km',
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize:   13,
                               fontWeight: FontWeight.w700,
@@ -1883,7 +1883,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         onPressed: _acceptingOffer ? null : _declineOffer,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textSecondary,
-                          side: const BorderSide(color: AppColors.borderMedium),
+                          side: BorderSide(color: AppColors.borderMedium),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
@@ -1964,7 +1964,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               Text(pickup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize:   12,
                       color:      AppColors.textPrimary)),
@@ -1972,7 +1972,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               Text(dropoff,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize:   12,
                       color:      AppColors.textPrimary)),

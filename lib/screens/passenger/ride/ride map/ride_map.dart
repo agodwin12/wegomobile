@@ -1211,9 +1211,9 @@ class _RideMapScreenState extends State<RideMapScreen>
               onPressed: _selectedVehicle != null && !_requesting && !_loadingPrices ? _requestRide : null,
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGold, disabledBackgroundColor: AppColors.darkSurfaceHigh, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
               child: _requesting
-                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.textPrimary)))
+                  ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.textPrimary)))
                   : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Icon(Icons.local_taxi_rounded, color: AppColors.textPrimary, size: 20),
+                Icon(Icons.local_taxi_rounded, color: AppColors.textPrimary, size: 20),
                 const SizedBox(width: 10),
                 Text('Commander', style: AppTypography.buttonLarge.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w800)),
               ]),
@@ -1372,7 +1372,7 @@ class _RideMapScreenState extends State<RideMapScreen>
               else Text('N/D', style: AppTypography.bodyMedium.copyWith(color: AppColors.darkTextTertiary)),
               if (hasPrice) Text('XAF', style: AppTypography.caption.copyWith(color: AppColors.darkTextSecondary)),
             ])),
-            if (isSelected) ...[const SizedBox(width: 6), Container(width: 20, height: 20, decoration: const BoxDecoration(color: AppColors.primaryGold, shape: BoxShape.circle), child: const Icon(Icons.check, size: 13, color: AppColors.textPrimary))],
+            if (isSelected) ...[const SizedBox(width: 6), Container(width: 20, height: 20, decoration: const BoxDecoration(color: AppColors.primaryGold, shape: BoxShape.circle), child: Icon(Icons.check, size: 13, color: AppColors.textPrimary))],
           ])),
         ]),
       ),
@@ -1549,7 +1549,7 @@ class _PulsingPickupMarkerState extends State<_PulsingPickupMarker> with SingleT
   }
 
   Widget _initial(String initial) => Center(
-    child: Text(initial, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
+    child: Text(initial, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
   );
 }
 
@@ -1669,7 +1669,7 @@ class _ReferralCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(11),
           decoration: BoxDecoration(color: AppColors.textPrimary.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
-          child: const Icon(Icons.card_giftcard_rounded, color: AppColors.textPrimary, size: 24),
+          child: Icon(Icons.card_giftcard_rounded, color: AppColors.textPrimary, size: 24),
         ),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

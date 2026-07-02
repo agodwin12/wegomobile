@@ -302,7 +302,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios_rounded,
+                    Icon(Icons.arrow_forward_ios_rounded,
                         size: 14, color: AppColors.textLight),
                   ],
                 ),

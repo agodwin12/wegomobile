@@ -480,7 +480,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                                 style: TextStyle(fontSize: 13)),
                             const SizedBox(width: 5),
                             Text('$_nearbyCount nearby',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontFamily:  'Roboto',
                                     fontSize:    12,
                                     fontWeight:  FontWeight.w600,

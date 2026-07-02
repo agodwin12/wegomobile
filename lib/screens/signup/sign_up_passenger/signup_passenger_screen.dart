@@ -460,7 +460,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
                       color: AppColors.backgroundLight,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.close,
+                    child: Icon(Icons.close,
                         color: AppColors.textSecondary, size: 20),
                   ),
                 ),
@@ -582,7 +582,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
                   ),
                 ],
               ),
-              child: const Icon(Icons.arrow_back_ios_new,
+              child: Icon(Icons.arrow_back_ios_new,
                   color: AppColors.textPrimary, size: 18),
             ),
           ),
@@ -636,7 +636,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
       ),
       child: Center(
         child: isCompleted
-            ? const Icon(Icons.check, color: AppColors.textPrimary, size: 18)
+            ? Icon(Icons.check, color: AppColors.textPrimary, size: 18)
             : Text(
           label,
           style: AppTypography.titleMedium.copyWith(
@@ -747,7 +747,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
                               gradient: AppColors.primaryGradient,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.error_outline,
+                            child: Icon(Icons.error_outline,
                                 color: AppColors.textPrimary, size: 40),
                           ),
                           frameBuilder: (_, child, frame,
@@ -763,7 +763,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
                           },
                         ),
                       )
-                          : const Icon(Icons.person_outline,
+                          : Icon(Icons.person_outline,
                           color: AppColors.textPrimary, size: 50),
                     ),
                   ),
@@ -788,7 +788,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.camera_alt,
+                        child: Icon(Icons.camera_alt,
                             color: AppColors.textPrimary, size: 18),
                       ),
                     ),
@@ -1167,7 +1167,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
                       Text(selectedCountryFlag,
                           style: const TextStyle(fontSize: 24)),
                       const SizedBox(width: 8),
-                      const Icon(Icons.keyboard_arrow_down,
+                      Icon(Icons.keyboard_arrow_down,
                           color: AppColors.textSecondary, size: 20),
                     ],
                   ),
@@ -1222,7 +1222,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
               borderRadius: BorderRadius.circular(14)),
         ),
         child: _isLoading
-            ? const SizedBox(
+            ? SizedBox(
           width: 24,
           height: 24,
           child: CircularProgressIndicator(

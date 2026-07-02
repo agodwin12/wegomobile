@@ -20,13 +20,13 @@ const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryLight = Color(0xFFFFFDE7);
 const _kPrimaryMid   = Color(0xFFFFECB3);
 const _kPrimaryDark  = AppColors.primaryGoldDark;
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 const _kError        = AppColors.error;
 
 const double _rMd   = 12.0;
@@ -198,7 +198,7 @@ class _ServiceSearchScreenState extends State<ServiceSearchScreen> {
           // Back button — fixed size, never in Expanded
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back_rounded,
+            child: Icon(Icons.arrow_back_rounded,
                 color: _kTextPrimary, size: 24),
           ),
 
@@ -223,14 +223,14 @@ class _ServiceSearchScreenState extends State<ServiceSearchScreen> {
                   hintText: 'Rechercher un service…',
                   hintStyle: AppTypography.bodyMedium
                       .copyWith(color: _kTextLight),
-                  prefixIcon: const Icon(Icons.search_rounded,
+                  prefixIcon: Icon(Icons.search_rounded,
                       color: _kTextLight, size: 20),
                   // FIX: suffixIcon tap area wrapped in SizedBox to avoid
                   // the icon being clipped by the 48 px container height
                   suffixIcon: _controller.text.isNotEmpty
                       ? GestureDetector(
                     onTap: _clearSearch,
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 40,
                       child: Icon(Icons.close_rounded,
                           color: _kTextLight, size: 18),
@@ -336,7 +336,7 @@ class _ServiceSearchScreenState extends State<ServiceSearchScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // FIX: Flexible so the title never pushes "Tout effacer" off-screen
-                  const Flexible(
+                  Flexible(
                     child: Text(
                       'Recherches récentes',
                       style: AppTypography.titleMedium,
@@ -426,7 +426,7 @@ class _ServiceSearchScreenState extends State<ServiceSearchScreen> {
             ],
 
             // Popular searches
-            const Text(
+            Text(
               'Recherches populaires',
               style: AppTypography.titleMedium,
             ),
@@ -468,7 +468,7 @@ class _ServiceSearchScreenState extends State<ServiceSearchScreen> {
   // ── Search results ────────────────────────────────────────────────────────
   Widget _buildResults() {
     if (_isSearching) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -491,7 +491,7 @@ class _ServiceSearchScreenState extends State<ServiceSearchScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.wifi_off_rounded,
+                  Icon(Icons.wifi_off_rounded,
                       size: 48, color: _kTextLight),
                   const SizedBox(height: 12),
                   Text(
@@ -527,10 +527,10 @@ class _ServiceSearchScreenState extends State<ServiceSearchScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.search_off_rounded,
+                  Icon(Icons.search_off_rounded,
                       size: 56, color: _kTextLight),
                   const SizedBox(height: 16),
-                  const Text('Aucun résultat',
+                  Text('Aucun résultat',
                       style: AppTypography.titleLarge),
                   const SizedBox(height: 8),
                   Text(
@@ -708,7 +708,7 @@ class _RecentTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.history_rounded,
+            Icon(Icons.history_rounded,
                 size: 18, color: _kTextLight),
             const SizedBox(width: 12),
             // FIX: Expanded so long queries wrap/ellipsis instead of
@@ -725,7 +725,7 @@ class _RecentTile extends StatelessWidget {
             GestureDetector(
               onTap: onRemove,
               // FIX: explicit tap-target size so the small × is easy to hit
-              child: const SizedBox(
+              child: SizedBox(
                 width: 32,
                 height: 32,
                 child: Icon(Icons.close_rounded,
@@ -796,7 +796,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.68,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _kSurface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(_rXl)),
       ),
@@ -835,7 +835,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
             ),
           ),
 
-          const Divider(height: 1, color: _kBorder),
+          Divider(height: 1, color: _kBorder),
 
           Expanded(
             child: SingleChildScrollView(
@@ -887,7 +887,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // FIX: Flexible prevents label overflowing on narrow phones
-                      const Flexible(
+                      Flexible(
                         child: Text(
                           'Fourchette de prix (XAF)',
                           style: AppTypography.titleMedium,

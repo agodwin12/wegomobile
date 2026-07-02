@@ -22,17 +22,17 @@ const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryLight = Color(0xFFFFFDE7);
 const _kPrimaryMid   = Color(0xFFFFECB3);
 const _kPrimaryDark  = AppColors.primaryGoldDark;
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 const _kError        = AppColors.error;
-const _kErrorLight   = AppColors.errorLight;
+Color get _kErrorLight => AppColors.errorLight;
 const _kSuccess      = AppColors.success;
-const _kSuccessLight = AppColors.successLight;
+Color get _kSuccessLight => AppColors.successLight;
 
 const double _rSm   = 6.0;
 const double _rMd   = 12.0;
@@ -391,7 +391,7 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
         children: [
           GestureDetector(
             onTap: _back,
-            child: const Icon(Icons.arrow_back_rounded,
+            child: Icon(Icons.arrow_back_rounded,
                 color: _kTextPrimary, size: 24),
           ),
           const SizedBox(width: 16),
@@ -1095,7 +1095,7 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
 
     return Container(
       padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPad + 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _kSurface,
         boxShadow: _kBottomShadow,
       ),
@@ -1107,7 +1107,7 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
               onPressed: _back,
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kTextSecond,
-                side: const BorderSide(color: _kBorder),
+                side: BorderSide(color: _kBorder),
                 minimumSize: const Size(50, 50),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 shape: RoundedRectangleBorder(
@@ -1133,7 +1133,7 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
                       borderRadius: BorderRadius.circular(_rLg)),
                 ),
                 icon: _isSubmitting
-                    ? const SizedBox(
+                    ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
@@ -1241,7 +1241,7 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
             .toList(),
         onChanged: onChanged,
         dropdownColor: _kSurface,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+        icon: Icon(Icons.keyboard_arrow_down_rounded,
             color: _kTextSecond),
       ),
     );

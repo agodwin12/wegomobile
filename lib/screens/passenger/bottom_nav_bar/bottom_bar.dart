@@ -1,6 +1,7 @@
 // lib/presentation/widgets/passenger_bottom_navbar.dart
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_typography.dart';
 
@@ -17,9 +18,9 @@ class PassengerBottomNavbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final navItems = [
-      {'icon': Icons.home_rounded, 'label': 'Home', 'index': 0},
-      {'icon': Icons.receipt_long_rounded, 'label': 'Activity', 'index': 1},
-      {'icon': Icons.person_rounded, 'label': 'Account', 'index': 2},
+      {'icon': Icons.home_rounded, 'label': tr('nav.home'), 'index': 0},
+      {'icon': Icons.receipt_long_rounded, 'label': tr('nav.activity'), 'index': 1},
+      {'icon': Icons.person_rounded, 'label': tr('nav.account'), 'index': 2},
     ];
 
     return Container(

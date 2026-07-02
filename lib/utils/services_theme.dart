@@ -35,23 +35,23 @@ class SvcColors {
   static const Color inputBg        = Color(0xFFF1F3F4);
 
   // ── Text (re-export for convenience so screens only import SvcColors) ─────
-  static const Color textPrimary    = AppColors.textPrimary;
-  static const Color textSecondary  = AppColors.textSecondary;
-  static const Color textLight      = AppColors.textLight;
+  static Color get textPrimary => AppColors.textPrimary;
+  static Color get textSecondary => AppColors.textSecondary;
+  static Color get textLight => AppColors.textLight;
 
   // ── Border ────────────────────────────────────────────────────────────────
-  static const Color border         = AppColors.borderLight;
+  static Color get border => AppColors.borderLight;
   static const Color borderFocus    = primary;
 
   // ── Status — pass-through from AppColors ─────────────────────────────────
   static const Color success        = AppColors.success;
-  static const Color successLight   = AppColors.successLight;
+  static Color get successLight => AppColors.successLight;
   static const Color error          = AppColors.error;
-  static const Color errorLight     = AppColors.errorLight;
+  static Color get errorLight => AppColors.errorLight;
   static const Color warning        = AppColors.warning;
-  static const Color warningLight   = AppColors.warningLight;
+  static Color get warningLight => AppColors.warningLight;
   static const Color info           = AppColors.info;
-  static const Color infoLight      = AppColors.infoLight;
+  static Color get infoLight => AppColors.infoLight;
 
   // ── Shadows (constants so they can be used in const constructors) ─────────
   static const Color shadowColor    = Color(0x0D000000);  // 5 % black
@@ -420,7 +420,7 @@ class SvcWidgets {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 56, color: SvcColors.textLight),
+            Icon(Icons.wifi_off_rounded, size: 56, color: SvcColors.textLight),
             const SizedBox(height: 16),
             Text(message,
                 style: SvcText.body(color: SvcColors.textSecondary),

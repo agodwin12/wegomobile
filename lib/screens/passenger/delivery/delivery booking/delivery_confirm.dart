@@ -295,7 +295,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
           children: [
             Container(
               width: 64, height: 64,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                   color: AppColors.successLight, shape: BoxShape.circle),
               child: const Icon(Icons.check_rounded,
                   color: AppColors.success, size: 32),
@@ -306,10 +306,10 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             Text('Code: ${delivery['deliveryCode']}',
-                style: const TextStyle(fontFamily: 'Roboto', fontSize: 14,
+                style: TextStyle(fontFamily: 'Roboto', fontSize: 14,
                     color: AppColors.textSecondary)),
             const SizedBox(height: 8),
-            const Text('Searching for a driver...',
+            Text('Searching for a driver...',
                 style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
                     color: AppColors.textSecondary)),
           ],
@@ -521,7 +521,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                     if (widget.description.isNotEmpty)
                       Text(widget.description,
                           maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                          style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
                               color: AppColors.textSecondary)),
                   ],
                 ),
@@ -565,7 +565,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         const SizedBox(height: 4),
         Text(address,
             maxLines: 2, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Roboto', fontSize: 12,
+            style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
                 color: AppColors.textPrimary)),
       ],
     );
@@ -589,7 +589,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: AppColors.primaryDark)),
             const SizedBox(width: 12),
-            const Text('Calculating fare...',
+            Text('Calculating fare...',
                 style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
                     color: AppColors.textSecondary)),
           ],

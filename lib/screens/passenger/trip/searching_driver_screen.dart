@@ -645,7 +645,7 @@ class _RadarAnimation extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [BoxShadow(color: AppColors.primaryGold.withOpacity(0.45), blurRadius: 20, spreadRadius: 4)],
                   ),
-                  child: const Center(child: Icon(Icons.local_taxi_rounded, size: 30, color: AppColors.textPrimary)),
+                  child: Center(child: Icon(Icons.local_taxi_rounded, size: 30, color: AppColors.textPrimary)),
                 ),
               );
             },

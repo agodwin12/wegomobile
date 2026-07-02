@@ -492,7 +492,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
         if (_packagePhoto != null) const SizedBox(width: 12),
         const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 22),
         const SizedBox(width: 8),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -509,7 +509,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
           onPressed: () => setState(() {
             _packagePhoto = null; _packagePhotoUrl = null;
           }),
-          child: const Text('Retake',
+          child: Text('Retake',
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         ),
       ],
@@ -528,7 +528,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
           border: Border.all(color: AppColors.borderMedium),
         ),
         child: _uploadingPhoto
-            ? const Column(
+            ? Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(width: 22, height: 22,
@@ -541,7 +541,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
             : Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.camera_alt_outlined,
+              Icon(Icons.camera_alt_outlined,
                   size: 30, color: AppColors.textLight),
               const SizedBox(height: 8),
               Text('Tap to add package photo',
@@ -705,7 +705,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14,
+          Text(title, style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
               fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           if (subtitle != null) ...[
             const SizedBox(height: 3),

@@ -247,7 +247,7 @@ class ServiceListCard extends StatelessWidget {
             ),
 
             // Arrow
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(right: 12),
               child: Icon(
                 Icons.chevron_right_rounded,
@@ -486,7 +486,7 @@ Widget _imagePlaceholder(double width, double height) {
     width: width,
     height: height,
     color: SvcColors.inputBg,
-    child: const Center(
+    child: Center(
       child: Icon(
         Icons.image_outlined,
         color: SvcColors.textLight,
@@ -500,7 +500,7 @@ Widget _imageShimmer(double width, double height) {
   return Container(
     width: width,
     height: height,
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.centerLeft,
         end: Alignment.centerRight,

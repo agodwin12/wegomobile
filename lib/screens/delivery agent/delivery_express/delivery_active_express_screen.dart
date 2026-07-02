@@ -578,7 +578,7 @@ class _DeliveryActiveExpressScreenState
                 Text(
                   'Ask ${widget.delivery.recipientName} for the 4-digit PIN.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                  style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
                       color: AppColors.textSecondary, height: 1.4),
                 ),
                 const SizedBox(height: 20),
@@ -593,7 +593,7 @@ class _DeliveryActiveExpressScreenState
                   decoration: InputDecoration(
                     counterText: '',
                     hintText:    '••••',
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                         color: AppColors.borderMedium,
                         fontSize: 32, letterSpacing: 12),
                     filled:    true,
@@ -612,7 +612,7 @@ class _DeliveryActiveExpressScreenState
                           _verifyingPin ? null : () => Navigator.pop(ctx),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
-                        side: const BorderSide(
+                        side: BorderSide(
                             color: AppColors.borderMedium),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
@@ -709,7 +709,7 @@ class _DeliveryActiveExpressScreenState
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 16,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'You will lose the commission fee as a cancellation penalty.',
                   style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
                       color: AppColors.textSecondary, height: 1.5),
@@ -739,13 +739,13 @@ class _DeliveryActiveExpressScreenState
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
+                        side: BorderSide(
                             color: AppColors.borderMedium),
                         padding:
                             const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14))),
-                    child: const Text('Keep delivery',
+                    child: Text('Keep delivery',
                         style: TextStyle(fontFamily: 'Poppins',
                             fontWeight: FontWeight.w600,
                             color:      AppColors.textSecondary)),
@@ -1201,7 +1201,7 @@ class _DeliveryActiveExpressScreenState
           if (widget.delivery.packageDescription != null)
             Text(widget.delivery.packageDescription!,
                 maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
                     color: AppColors.textSecondary)),
         ]),
       ),
@@ -1232,7 +1232,7 @@ class _DeliveryActiveExpressScreenState
               style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
                   fontWeight: FontWeight.w600)),
           Text(widget.delivery.recipientPhone,
-              style: const TextStyle(fontFamily: 'Roboto', fontSize: 11,
+              style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
                   color: AppColors.textSecondary)),
         ]),
       ),
@@ -1272,7 +1272,7 @@ class _DeliveryActiveExpressScreenState
           maxLines: 1, overflow: TextOverflow.ellipsis),
       const SizedBox(height: 2),
       Text(label,
-          style: const TextStyle(fontFamily: 'Roboto', fontSize: 9,
+          style: TextStyle(fontFamily: 'Roboto', fontSize: 9,
               color: AppColors.textSecondary)),
     ]),
   );
@@ -1312,7 +1312,7 @@ class _DeliveryActiveExpressScreenState
                       color:        AppColors.backgroundLight,
                       borderRadius: BorderRadius.circular(10),
                       border:       Border.all(color: AppColors.borderMedium)),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.camera_alt_rounded,
@@ -1379,7 +1379,7 @@ class _DeliveryActiveExpressScreenState
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             Text(widget.delivery.deliveryCode,
-                style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
+                style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
                     color: AppColors.textSecondary, letterSpacing: 1)),
             const SizedBox(height: 24),
             Container(
@@ -1496,7 +1496,7 @@ class _DeliveryActiveExpressScreenState
   Widget _completionStat(String label, String value, Color color) =>
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text(label,
-            style: const TextStyle(fontFamily: 'Roboto', fontSize: 12,
+            style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
                 color: AppColors.textSecondary)),
         Text(value,
             style: TextStyle(fontFamily: 'Poppins', fontSize: 13,
@@ -1528,7 +1528,7 @@ class _DeliveryActiveExpressScreenState
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 20,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'This express delivery was cancelled. '
                 'Your commission has been released.',
                 textAlign: TextAlign.center,

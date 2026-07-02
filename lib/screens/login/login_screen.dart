@@ -997,7 +997,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         : [BoxShadow(color: Colors.black.withOpacity(0.035), blurRadius: 6, offset: const Offset(0, 2))],
   );
 
-  TextStyle get _inputTextStyle => const TextStyle(
+  TextStyle get _inputTextStyle => TextStyle(
     fontFamily: AppTypography.secondaryFont,
     fontSize: 15,
     fontWeight: FontWeight.w500,
@@ -1014,7 +1014,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     padding: const EdgeInsets.only(left: 2),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: AppTypography.secondaryFont,
         fontSize: 11,
         fontWeight: FontWeight.w600,
@@ -1086,7 +1086,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       const SizedBox(width: 5),
                       Text(
                         selectedCountryCode,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: AppTypography.secondaryFont,
                           fontSize: 14, fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -1518,7 +1518,7 @@ class _OutlinedActionButtonState extends State<_OutlinedActionButton> {
             const SizedBox(width: 10),
             Text(
               widget.label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: AppTypography.primaryFont,
                 fontSize: 14, fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,

@@ -413,7 +413,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
           child: ElevatedButton(
             onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGold, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            child: Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           ),
         )],
       ),
@@ -937,7 +937,7 @@ class _PeekSection extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(color: AppColors.primaryGold, borderRadius: BorderRadius.circular(8)),
         child: Text(vehicleInfo['plate'] ?? '--',
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 2)),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 2)),
       ),
     ]);
   }

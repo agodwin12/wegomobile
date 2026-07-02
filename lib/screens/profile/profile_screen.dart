@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../main.dart';
+import '../../core/app_settings.dart';
+import '../../l10n/tr.dart';
 import '../../providers/profile_provider.dart';
 import '../../models/user_profile_model.dart';
 import '../../providers/services.dart';
@@ -663,20 +665,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       _buildModernMenuItem(
         icon: Icons.language_outlined,
-        title: 'Language',
-        subtitle: 'Français 🇫🇷',
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Language selection coming soon'),
-              backgroundColor: AppColors.primaryGold,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
+        title: tr('profile.language'),
+        subtitle: AppSettings.instance.isFr ? 'Français 🇫🇷' : 'English 🇬🇧',
+        onTap: _showLanguagePicker,
+      ),
+      _buildModernMenuItem(
+        icon: AppSettings.instance.isDark
+            ? Icons.dark_mode_outlined
+            : Icons.light_mode_outlined,
+        title: tr('profile.darkMode'),
+        subtitle: tr('profile.darkMode.subtitle'),
+        trailing: Switch(
+          value: AppSettings.instance.isDark,
+          activeColor: AppColors.primaryGold,
+          onChanged: (v) => _applyThemeChange(v),
+        ),
+        onTap: () => _applyThemeChange(!AppSettings.instance.isDark),
         showDivider: false,
       ),
     ];
+  }
+
+  // ── Language & theme handling ───────────────────────────────────────────────
+
+  void _showLanguagePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 14),
+            Text(tr('profile.language'),
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary)),
+            const SizedBox(height: 6),
+            _langTile(ctx, 'fr', 'Français', '🇫🇷'),
+            _langTile(ctx, 'en', 'English', '🇬🇧'),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _langTile(BuildContext ctx, String code, String label, String flag) {
+    final selected = AppSettings.instance.lang == code;
+    return ListTile(
+      leading: Text(flag, style: const TextStyle(fontSize: 22)),
+      title: Text(label,
+          style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+      trailing: selected
+          ? const Icon(Icons.check_circle, color: AppColors.primaryGold)
+          : null,
+      onTap: () async {
+        Navigator.pop(ctx);
+        if (AppSettings.instance.lang == code) return;
+        await AppSettings.instance.setLang(code);
+        if (!mounted) return;
+        RestartWidget.restartApp(context); // repaint the whole app in the new language
+      },
+    );
+  }
+
+  Future<void> _applyThemeChange(bool dark) async {
+    await AppSettings.instance.setDark(dark);
+    if (!mounted) return;
+    RestartWidget.restartApp(context); // repaint every screen with the new palette
   }
 
   List<Widget> _buildSupportItems() {
@@ -709,6 +772,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String subtitle,
     required VoidCallback onTap,
     bool showDivider = true,
+    Widget? trailing,
   }) {
     return Column(
       children: [
@@ -754,11 +818,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: AppColors.textLight,
-                    size: 24,
-                  ),
+                  trailing ??
+                      Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textLight,
+                        size: 24,
+                      ),
                 ],
               ),
             ),
@@ -1027,7 +1092,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: AppColors.textSecondary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.logout,
                 color: AppColors.textSecondary,
               ),

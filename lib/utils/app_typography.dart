@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 /// App Typography - Based on Cahier de Charge
+///
+/// Styles that carry a theme-aware color (text/label/caption/input) are
+/// GETTERS so they re-read [AppColors] after a light/dark switch. Styles with
+/// fixed brand colors stay const.
 class AppTypography {
   // Font Family
   static const String primaryFont = 'Poppins';
   static const String secondaryFont = 'Roboto';
 
   // Display Text Styles
-  static const TextStyle displayLarge = TextStyle(
+  static TextStyle get displayLarge => TextStyle(
     fontFamily: primaryFont,
     fontSize: 32,
     fontWeight: FontWeight.w700,
@@ -16,7 +20,7 @@ class AppTypography {
     height: 1.2,
   );
 
-  static const TextStyle displayMedium = TextStyle(
+  static TextStyle get displayMedium => TextStyle(
     fontFamily: primaryFont,
     fontSize: 28,
     fontWeight: FontWeight.w700,
@@ -24,7 +28,7 @@ class AppTypography {
     height: 1.2,
   );
 
-  static const TextStyle displaySmall = TextStyle(
+  static TextStyle get displaySmall => TextStyle(
     fontFamily: primaryFont,
     fontSize: 24,
     fontWeight: FontWeight.w700,
@@ -33,7 +37,7 @@ class AppTypography {
   );
 
   // Headline Text Styles
-  static const TextStyle headlineLarge = TextStyle(
+  static TextStyle get headlineLarge => TextStyle(
     fontFamily: primaryFont,
     fontSize: 22,
     fontWeight: FontWeight.w600,
@@ -41,7 +45,7 @@ class AppTypography {
     height: 1.3,
   );
 
-  static const TextStyle headlineMedium = TextStyle(
+  static TextStyle get headlineMedium => TextStyle(
     fontFamily: primaryFont,
     fontSize: 20,
     fontWeight: FontWeight.w600,
@@ -49,7 +53,7 @@ class AppTypography {
     height: 1.3,
   );
 
-  static const TextStyle headlineSmall = TextStyle(
+  static TextStyle get headlineSmall => TextStyle(
     fontFamily: primaryFont,
     fontSize: 18,
     fontWeight: FontWeight.w600,
@@ -58,7 +62,7 @@ class AppTypography {
   );
 
   // Title Text Styles
-  static const TextStyle titleLarge = TextStyle(
+  static TextStyle get titleLarge => TextStyle(
     fontFamily: primaryFont,
     fontSize: 16,
     fontWeight: FontWeight.w600,
@@ -66,7 +70,7 @@ class AppTypography {
     height: 1.4,
   );
 
-  static const TextStyle titleMedium = TextStyle(
+  static TextStyle get titleMedium => TextStyle(
     fontFamily: primaryFont,
     fontSize: 14,
     fontWeight: FontWeight.w600,
@@ -74,7 +78,7 @@ class AppTypography {
     height: 1.4,
   );
 
-  static const TextStyle titleSmall = TextStyle(
+  static TextStyle get titleSmall => TextStyle(
     fontFamily: primaryFont,
     fontSize: 12,
     fontWeight: FontWeight.w600,
@@ -83,7 +87,7 @@ class AppTypography {
   );
 
   // Body Text Styles
-  static const TextStyle bodyLarge = TextStyle(
+  static TextStyle get bodyLarge => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 16,
     fontWeight: FontWeight.w400,
@@ -91,7 +95,7 @@ class AppTypography {
     height: 1.5,
   );
 
-  static const TextStyle bodyMedium = TextStyle(
+  static TextStyle get bodyMedium => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 14,
     fontWeight: FontWeight.w400,
@@ -99,7 +103,7 @@ class AppTypography {
     height: 1.5,
   );
 
-  static const TextStyle bodySmall = TextStyle(
+  static TextStyle get bodySmall => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 12,
     fontWeight: FontWeight.w400,
@@ -108,7 +112,7 @@ class AppTypography {
   );
 
   // Label Text Styles
-  static const TextStyle labelLarge = TextStyle(
+  static TextStyle get labelLarge => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 14,
     fontWeight: FontWeight.w500,
@@ -116,7 +120,7 @@ class AppTypography {
     height: 1.4,
   );
 
-  static const TextStyle labelMedium = TextStyle(
+  static TextStyle get labelMedium => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 12,
     fontWeight: FontWeight.w500,
@@ -124,7 +128,7 @@ class AppTypography {
     height: 1.4,
   );
 
-  static const TextStyle labelSmall = TextStyle(
+  static TextStyle get labelSmall => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 10,
     fontWeight: FontWeight.w500,
@@ -132,7 +136,7 @@ class AppTypography {
     height: 1.4,
   );
 
-  // Button Text Styles
+  // Button Text Styles (fixed brand colors)
   static const TextStyle buttonLarge = TextStyle(
     fontFamily: primaryFont,
     fontSize: 16,
@@ -158,7 +162,7 @@ class AppTypography {
   );
 
   // Caption Text Styles
-  static const TextStyle caption = TextStyle(
+  static TextStyle get caption => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 12,
     fontWeight: FontWeight.w400,
@@ -166,7 +170,7 @@ class AppTypography {
     height: 1.4,
   );
 
-  static const TextStyle captionBold = TextStyle(
+  static TextStyle get captionBold => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 12,
     fontWeight: FontWeight.w600,
@@ -175,7 +179,7 @@ class AppTypography {
   );
 
   // Overline Text Styles
-  static const TextStyle overline = TextStyle(
+  static TextStyle get overline => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 10,
     fontWeight: FontWeight.w500,
@@ -185,7 +189,7 @@ class AppTypography {
   );
 
   // Input Text Styles
-  static const TextStyle inputText = TextStyle(
+  static TextStyle get inputText => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 16,
     fontWeight: FontWeight.w400,
@@ -193,7 +197,7 @@ class AppTypography {
     height: 1.5,
   );
 
-  static const TextStyle inputLabel = TextStyle(
+  static TextStyle get inputLabel => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 14,
     fontWeight: FontWeight.w500,
@@ -201,7 +205,7 @@ class AppTypography {
     height: 1.4,
   );
 
-  static const TextStyle inputHint = TextStyle(
+  static TextStyle get inputHint => TextStyle(
     fontFamily: secondaryFont,
     fontSize: 16,
     fontWeight: FontWeight.w400,

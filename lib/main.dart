@@ -19,7 +19,9 @@ import 'package:wego_v1/service/notification_service.dart';
 // ═══════════════════════════════════════════════════════════════════════
 // SCREENS - AUTHENTICATION
 // ═══════════════════════════════════════════════════════════════════════
+import 'core/app_settings.dart';
 import 'firebase_options.dart';
+import 'utils/app_colors.dart';
 import 'models/services/service_listing_model.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/signup/sign_up_passenger/signup_passenger_screen.dart';
@@ -141,6 +143,7 @@ Future<void> main() async {
   // ═══════════════════════════════════════════════════════════════
   // SET SYSTEM UI OVERLAY STYLE
   // ═══════════════════════════════════════════════════════════════
+  // (Re-applied theme-aware after settings load, below.)
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -158,7 +161,54 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(const WegoApp());
+  // ═══════════════════════════════════════════════════════════════
+  // LOAD USER SETTINGS (language + dark mode) BEFORE FIRST FRAME
+  // Applies the palette so the very first frame is themed correctly.
+  // ═══════════════════════════════════════════════════════════════
+  await AppSettings.instance.load();
+  debugPrint("🎨 [STARTUP] Theme: ${AppSettings.instance.isDark ? 'dark' : 'light'} | Lang: ${AppSettings.instance.lang}");
+
+  // Theme-aware status/navigation bars.
+  final dark = AppSettings.instance.isDark;
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor: dark ? const Color(0xFF1A1A1D) : Colors.white,
+      systemNavigationBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+    ),
+  );
+
+  runApp(const RestartWidget(child: WegoApp()));
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RESTART WIDGET
+// Remounts the entire tree (new Key) when settings change so every screen
+// repaints with the new AppColors palette / language. The splash screen's
+// persistent-session logic then routes straight back into the app.
+// ═══════════════════════════════════════════════════════════════════════
+
+class RestartWidget extends StatefulWidget {
+  final Widget child;
+  const RestartWidget({super.key, required this.child});
+
+  static void restartApp(BuildContext context) {
+    context.findAncestorStateOfType<_RestartWidgetState>()?.restart();
+  }
+
+  @override
+  State<RestartWidget> createState() => _RestartWidgetState();
+}
+
+class _RestartWidgetState extends State<RestartWidget> {
+  Key _key = UniqueKey();
+
+  void restart() => setState(() => _key = UniqueKey());
+
+  @override
+  Widget build(BuildContext context) =>
+      KeyedSubtree(key: _key, child: widget.child);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -282,21 +332,23 @@ class _WegoAppState extends State<WegoApp> {
         // ════════════════════════════════════════════════════════
         theme: ThemeData(
           useMaterial3: true,
+          brightness: AppSettings.instance.isDark ? Brightness.dark : Brightness.light,
           colorScheme: ColorScheme.fromSeed(
             seedColor:  const Color(0xFFFFDC71),
             primary:    const Color(0xFFFFDC71),
             secondary:  const Color(0xFFF5C844),
-            surface:    Colors.white,
-            background: const Color(0xFFF5F5F5),
+            surface:    AppColors.surface,
+            background: AppColors.background,
+            brightness: AppSettings.instance.isDark ? Brightness.dark : Brightness.light,
           ),
-          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-          appBarTheme: const AppBarTheme(
+          scaffoldBackgroundColor: AppColors.background,
+          appBarTheme: AppBarTheme(
             centerTitle: true,
             elevation: 0,
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.textPrimary,
             titleTextStyle: TextStyle(
-              color: Colors.black87,
+              color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w600,
             ),

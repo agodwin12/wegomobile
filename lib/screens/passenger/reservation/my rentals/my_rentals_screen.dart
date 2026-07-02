@@ -178,7 +178,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                       color: AppColors.error, size: 26),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Cancel Rental?',
                     style: TextStyle(
@@ -191,7 +191,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               ],
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Please provide a reason for cancellation:',
               style: TextStyle(
                   fontSize: 13,
@@ -206,24 +206,24 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               decoration: InputDecoration(
                 hintText: 'e.g., Travel plans changed...',
                 hintStyle:
-                const TextStyle(color: AppColors.textLight, fontSize: 14),
+                TextStyle(color: AppColors.textLight, fontSize: 14),
                 filled: true,
                 fillColor: AppColors.backgroundLight,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide:
-                    const BorderSide(color: AppColors.borderLight)),
+                    BorderSide(color: AppColors.borderLight)),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide:
-                    const BorderSide(color: AppColors.borderLight)),
+                    BorderSide(color: AppColors.borderLight)),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(
                         color: AppColors.primaryGold, width: 2)),
                 contentPadding: const EdgeInsets.all(14),
               ),
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14, color: AppColors.textPrimary),
             ),
           ],
@@ -231,7 +231,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Keep Rental',
+            child: Text('Keep Rental',
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -359,11 +359,11 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.borderLight, width: 1.5),
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
+              child: Icon(Icons.arrow_back_ios_new_rounded,
                   color: AppColors.textPrimary, size: 20),
             ),
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
                 'My Rentals',
@@ -387,7 +387,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.borderLight, width: 1.5),
               ),
-              child: const Icon(Icons.refresh_rounded,
+              child: Icon(Icons.refresh_rounded,
                   color: AppColors.textPrimary, size: 20),
             ),
           ),
@@ -474,7 +474,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Loading your rentals...',
             style: TextStyle(
                 fontSize: 16,
@@ -516,13 +516,13 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                     offset: const Offset(0, 4))
               ],
             ),
-            child: const Icon(Icons.event_busy_rounded,
+            child: Icon(Icons.event_busy_rounded,
                 size: 50, color: AppColors.textLight),
           ),
           const SizedBox(height: 24),
           Text(
             isActive ? 'No Active Rentals' : 'No Past Rentals',
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary),
@@ -532,7 +532,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
             isActive
                 ? 'Book a car to see your active rentals here'
                 : 'Your completed and cancelled rentals will appear here',
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 14, color: AppColors.textSecondary, height: 1.5),
             textAlign: TextAlign.center,
           ),
@@ -669,7 +669,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                         vehicle['makeModel'] ??
                             vehicle['make_model'] ??
                             'Unknown Vehicle',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
@@ -841,7 +841,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                             'cancellationReason',
                             'cancellation_reason'
                           ]),
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
                               height: 1.4),
@@ -854,7 +854,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                 // Cancel button
                 if (canCancel) ...[
                   const SizedBox(height: 16),
-                  const Divider(
+                  Divider(
                       color: AppColors.borderLight, height: 1),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -901,7 +901,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
             Icon(icon, size: 12, color: AppColors.textLight),
             const SizedBox(width: 4),
             Text(label,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 10,
                     color: AppColors.textLight,
                     fontWeight: FontWeight.w600,
@@ -911,7 +911,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         const SizedBox(height: 3),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary),
@@ -1108,7 +1108,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                 ),
                 child: Text(
                   name.split(' ').first,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary),
@@ -1149,7 +1149,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
             ),
             const SizedBox(height: 20),
             Text(message,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary),
@@ -1186,14 +1186,14 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
             ),
             const SizedBox(height: 20),
             Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary),
                 textAlign: TextAlign.center),
             const SizedBox(height: 10),
             Text(message,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
                     height: 1.5),
@@ -1248,14 +1248,14 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
             ),
             const SizedBox(height: 20),
             Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary),
                 textAlign: TextAlign.center),
             const SizedBox(height: 10),
             Text(message,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
                     height: 1.5),

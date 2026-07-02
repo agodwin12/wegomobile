@@ -18,13 +18,13 @@ const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryDark  = AppColors.primaryGoldDark;
 const _kPrimaryLight = Color(0xFFFFFDE7);
 const _kPrimaryMid   = Color(0xFFFFECB3);
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 
 const double _rLg   = 16.0;
 const double _rPill = 999.0;
@@ -95,7 +95,7 @@ class _AllCategoriesScreenState extends State<AllCategoriesScreen> {
       centerTitle: true,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
+        icon: Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
       ),
       title: Text('Catégories', style: AppTypography.titleLarge),
     );
@@ -119,7 +119,7 @@ class _AllCategoriesScreenState extends State<AllCategoriesScreen> {
           decoration: InputDecoration(
             hintText: 'Rechercher une catégorie…',
             hintStyle: AppTypography.bodyMedium.copyWith(color: _kTextLight),
-            prefixIcon: const Icon(Icons.search_rounded,
+            prefixIcon: Icon(Icons.search_rounded,
                 color: _kTextLight, size: 20),
             // FIX: explicit SizedBox tap target for the clear icon
             suffixIcon: _query.isNotEmpty
@@ -128,7 +128,7 @@ class _AllCategoriesScreenState extends State<AllCategoriesScreen> {
                 _searchController.clear();
                 setState(() => _query = '');
               },
-              child: const SizedBox(
+              child: SizedBox(
                 width: 40,
                 child: Icon(Icons.close_rounded,
                     color: _kTextLight, size: 18),
@@ -151,7 +151,7 @@ class _AllCategoriesScreenState extends State<AllCategoriesScreen> {
       builder: (_, provider, __) {
         // Loading
         if (provider.categoriesLoading && provider.parentCategories.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -173,7 +173,7 @@ class _AllCategoriesScreenState extends State<AllCategoriesScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.wifi_off_rounded,
+                  Icon(Icons.wifi_off_rounded,
                       size: 48, color: _kTextLight),
                   const SizedBox(height: 12),
                   Text(
@@ -218,7 +218,7 @@ class _AllCategoriesScreenState extends State<AllCategoriesScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.category_outlined,
+                  Icon(Icons.category_outlined,
                       size: 48, color: _kTextLight),
                   const SizedBox(height: 16),
                   Text(

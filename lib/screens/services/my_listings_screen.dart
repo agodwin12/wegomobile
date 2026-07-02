@@ -18,19 +18,19 @@ import '../../utils/app_typography.dart';
 const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryDark  = AppColors.primaryGoldDark;
 const _kPrimaryLight = Color(0xFFFFFDE7);
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 const _kError        = AppColors.error;
-const _kErrorLight   = AppColors.errorLight;
+Color get _kErrorLight => AppColors.errorLight;
 const _kSuccess      = AppColors.success;
-const _kSuccessLight = AppColors.successLight;
+Color get _kSuccessLight => AppColors.successLight;
 const _kWarning      = AppColors.warning;
-const _kWarningLight = AppColors.warningLight;
+Color get _kWarningLight => AppColors.warningLight;
 const _kInfo         = AppColors.info;
 
 const double _rSm   = 6.0;
@@ -150,7 +150,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
+        icon: Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
       ),
       title: Text('Mes annonces', style: AppTypography.titleLarge),
       centerTitle: true,
@@ -321,7 +321,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.work_outline_rounded,
+            Icon(Icons.work_outline_rounded,
                 size: 56, color: _kTextLight),
             const SizedBox(height: 16),
             Text(
@@ -381,7 +381,7 @@ class _ListingCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(),
-          const Divider(height: 1, color: _kBorder),
+          Divider(height: 1, color: _kBorder),
           _buildBody(),
           _buildFooter(context),
         ],
@@ -430,7 +430,7 @@ class _ListingCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.category_outlined,
+                    Icon(Icons.category_outlined,
                         size: 12, color: _kTextLight),
                     const SizedBox(width: 4),
                     // FIX: Expanded so long category name doesn't push
@@ -465,7 +465,7 @@ class _ListingCard extends StatelessWidget {
         color: _kInputBg,
         borderRadius: BorderRadius.circular(_rMd),
       ),
-      child: const Icon(Icons.work_outline_rounded,
+      child: Icon(Icons.work_outline_rounded,
           color: _kTextLight, size: 28),
     );
   }
@@ -498,7 +498,7 @@ class _ListingCard extends StatelessWidget {
               const SizedBox(width: 8),
 
               // Location — Flexible so it never pushes the date off-screen
-              const Icon(Icons.location_on_outlined,
+              Icon(Icons.location_on_outlined,
                   size: 13, color: _kTextLight),
               const SizedBox(width: 3),
               Flexible(

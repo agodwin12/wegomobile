@@ -406,7 +406,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                           boxShadow: [BoxShadow(
                               color: Colors.black.withOpacity(0.1),
                               blurRadius: 8)]),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
+                      child: Icon(Icons.arrow_back_ios_new_rounded,
                           size: 18, color: AppColors.textPrimary),
                     ),
                   ),
@@ -613,7 +613,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
             children: [
               Container(
                 width: 80, height: 80,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                     color: AppColors.errorLight, shape: BoxShape.circle),
                 child: const Icon(Icons.cancel_rounded,
                     color: AppColors.error, size: 40),

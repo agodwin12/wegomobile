@@ -187,7 +187,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
         ),
         title: Row(
           children: [
@@ -269,7 +269,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               gradient: AppColors.primaryGradient,
               shape: BoxShape.circle,
             ),
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.all(12),
               child: CircularProgressIndicator(
                 color: AppColors.textPrimary,
@@ -301,7 +301,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               color: AppColors.backgroundLight,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.chat_bubble_outline,
               size: 40,
               color: AppColors.textSecondary,
@@ -559,7 +559,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       onPressed: () {
                         // Attach file
                       },
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.attach_file,
                         color: AppColors.textSecondary,
                         size: 22,
@@ -595,7 +595,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     valueColor: AlwaysStoppedAnimation(AppColors.textPrimary),
                   ),
                 )
-                    : const Icon(
+                    : Icon(
                   Icons.send,
                   color: AppColors.textPrimary,
                   size: 22,

@@ -13,7 +13,7 @@ import '../../utils/app_typography.dart';
 const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryDark  = AppColors.primaryGoldDark;
 const _kPrimaryMid   = Color(0xFFFFECB3);
-const _kTextPrimary  = AppColors.textPrimary;
+Color get _kTextPrimary => AppColors.textPrimary;
 
 const double _rMd   = 12.0;
 const double _rXl   = 24.0;
@@ -33,8 +33,11 @@ class PromoBanner {
   final String? imageUrl;
   final String? emoji;
   final Color bgColor;
-  final Color textColor;
+  final Color? _textColor;
   final VoidCallback? onTap;
+
+  /// Theme-aware default: falls back to the current palette's primary text.
+  Color get textColor => _textColor ?? AppColors.textPrimary;
 
   const PromoBanner({
     required this.title,
@@ -43,15 +46,15 @@ class PromoBanner {
     this.imageUrl,
     this.emoji,
     required this.bgColor,
-    this.textColor = AppColors.textPrimary,
+    Color? textColor,
     this.onTap,
-  });
+  }) : _textColor = textColor;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT STATIC BANNERS
 // ─────────────────────────────────────────────────────────────────────────────
-final List<PromoBanner> _defaultBanners = [
+List<PromoBanner> get _defaultBanners => [
   PromoBanner(
     title: 'Jusqu\'à 30% de réduction !',
     subtitle: 'Profitez de nos offres chaque jour',
@@ -342,7 +345,7 @@ class _CtaButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Poppins',
             fontSize: 11,
             fontWeight: FontWeight.w700,

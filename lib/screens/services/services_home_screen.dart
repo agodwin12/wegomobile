@@ -22,13 +22,13 @@ import '../../widgets/services/service_card_widget.dart';
 const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryLight = Color(0xFFFFFDE7); // soft yellow tint
 const _kPrimaryMid   = Color(0xFFFFECB3); // medium yellow tint
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 const _kError        = AppColors.error;
 const _kShadow       = Color(0x14000000); // ~8 % black
 
@@ -246,7 +246,7 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(Icons.keyboard_arrow_down_rounded,
+                    Icon(Icons.keyboard_arrow_down_rounded,
                         size: 16, color: _kTextPrimary),
                   ],
                 ),
@@ -278,7 +278,7 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
                 child: Row(
                   children: [
                     const SizedBox(width: 14),
-                    const Icon(Icons.search_rounded,
+                    Icon(Icons.search_rounded,
                         color: _kTextLight, size: 22),
                     const SizedBox(width: 10),
                     // FIX: Flexible prevents text from overflowing the row
@@ -306,7 +306,7 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
                 color: _kPrimary,
                 borderRadius: BorderRadius.circular(_rLg),
               ),
-              child: const Icon(Icons.tune_rounded,
+              child: Icon(Icons.tune_rounded,
                   color: _kTextPrimary, size: 22),
             ),
           ),
@@ -653,7 +653,7 @@ class _NotificationBell extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.notifications_outlined,
+            Icon(Icons.notifications_outlined,
                 color: _kTextPrimary, size: 22),
             Positioned(
               right: 8,
@@ -931,7 +931,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                     children: [
                       // FIX: Flexible prevents this row from overflowing on
                       // narrow screens when the price label is long
-                      const Flexible(
+                      Flexible(
                         child: Text(
                           'Fourchette de prix (XAF)',
                           style: AppTypography.titleMedium,

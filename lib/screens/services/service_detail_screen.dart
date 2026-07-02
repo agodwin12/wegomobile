@@ -22,13 +22,13 @@ const _kPrimary      = AppColors.primaryGold;       // #FFD700
 const _kPrimaryLight = Color(0xFFFFFDE7);
 const _kPrimaryMid   = Color(0xFFFFECB3);
 const _kPrimaryDark  = AppColors.primaryGoldDark;   // #FFC107
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 const _kError        = AppColors.error;
 const _kWarning      = AppColors.warning;           // star colour
 
@@ -165,7 +165,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         backgroundColor: _kSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
+          icon: Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Détails', style: AppTypography.titleLarge),
@@ -176,7 +176,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.search_off_rounded,
+              Icon(Icons.search_off_rounded,
                   size: 56, color: _kTextLight),
               const SizedBox(height: 16),
               Text('Service introuvable',
@@ -281,7 +281,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     return Container(
       height: 300,
       color: _kInputBg,
-      child: const Center(
+      child: Center(
         child: Icon(Icons.image_outlined, size: 64, color: _kTextLight),
       ),
     );
@@ -294,7 +294,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         listing.averageRating != null && listing.averageRating! > 0;
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _kSurface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(_rXl)),
       ),
@@ -336,7 +336,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   style: AppTypography.labelMedium,
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right_rounded,
+                Icon(Icons.chevron_right_rounded,
                     size: 16, color: _kTextLight),
               ],
             ),
@@ -348,7 +348,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           ),
 
           const SizedBox(height: 20),
-          const Divider(color: _kBorder, height: 1),
+          Divider(color: _kBorder, height: 1),
           const SizedBox(height: 20),
 
           // Product Details header
@@ -356,7 +356,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // FIX: Flexible so the title shrinks when "Read more" is next to it
-              const Flexible(
+              Flexible(
                 child: Text(
                   'Détails du service',
                   style: AppTypography.titleLarge,
@@ -607,7 +607,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
 
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _kSurface,
         boxShadow: _kBottomShadow,
       ),
@@ -668,7 +668,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
       maxChildSize: 0.92,
       expand: false,
       builder: (_, controller) => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: _kSurface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(_rXl)),
         ),
@@ -694,14 +694,14 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                   Text('Avis', style: AppTypography.headlineSmall),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close_rounded,
+                    child: Icon(Icons.close_rounded,
                         color: _kTextSecond),
                   ),
                 ],
               ),
             ),
 
-            const Divider(height: 1, color: _kBorder),
+            Divider(height: 1, color: _kBorder),
 
             Expanded(
               child: _loading
@@ -719,7 +719,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.star_border_rounded,
+                            Icon(Icons.star_border_rounded,
                                 size: 48, color: _kTextLight),
                             const SizedBox(height: 12),
                             Text('Pas encore d\'avis',
@@ -741,7 +741,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                     padding: const EdgeInsets.all(20),
                     itemCount: ratings.length,
                     separatorBuilder: (_, __) =>
-                    const Divider(height: 24, color: _kBorder),
+                    Divider(height: 24, color: _kBorder),
                     itemBuilder: (_, i) =>
                         _ReviewTile(rating: ratings[i]),
                   );
@@ -849,7 +849,7 @@ class _CircleButton extends StatelessWidget {
       child: Container(
         width: 38,
         height: 38,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: _kSurface,
           shape: BoxShape.circle,
           boxShadow: _kCardShadow,

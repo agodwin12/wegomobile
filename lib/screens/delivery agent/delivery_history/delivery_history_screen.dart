@@ -700,7 +700,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                 children: [
                   Container(
                     width: 40, height: 40,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                         color: AppColors.backgroundLight,
                         shape: BoxShape.circle),
                     child: Center(
@@ -779,7 +779,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
               _routeRow(d.pickupAddress, d.dropoffAddress, d.distanceKm),
             ),
             const SizedBox(height: 10),
-            const Divider(height: 1, color: AppColors.borderLight),
+            Divider(height: 1, color: AppColors.borderLight),
 
             // ── Footer ───────────────────────────────────────────────────
             Padding(
@@ -959,7 +959,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                         Navigator.pop(context);
                       },
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.borderLight),
+                        side: BorderSide(color: AppColors.borderLight),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1108,7 +1108,7 @@ class _DetailState extends State<_DetailSheet> {
       minChildSize:     0.4,
       maxChildSize:     0.95,
       builder: (_, ctrl) => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.backgroundWhite,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -1160,7 +1160,7 @@ class _DetailState extends State<_DetailSheet> {
                 ],
               ),
             ),
-            const Divider(height: 1, color: AppColors.borderLight),
+            Divider(height: 1, color: AppColors.borderLight),
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -1197,7 +1197,7 @@ class _DetailState extends State<_DetailSheet> {
                     label: Text('Copy ${d.deliveryCode}'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.secondaryGrey,
-                      side: const BorderSide(
+                      side: BorderSide(
                           color: AppColors.borderLight),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),

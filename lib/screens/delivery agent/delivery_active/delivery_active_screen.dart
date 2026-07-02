@@ -498,7 +498,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   Text(
                     'Ask ${_delivery.recipientName} for the 4-digit PIN sent to their phone.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontFamily: 'Roboto',
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -539,7 +539,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         onPressed: _verifyingPin ? null : () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textSecondary,
-                          side: const BorderSide(color: AppColors.borderMedium),
+                          side: BorderSide(color: AppColors.borderMedium),
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
@@ -683,7 +683,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       fontWeight: FontWeight.w800,
                       color: AppColors.darkTextPrimary)),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'You will lose the commission fee as a penalty for cancelling an accepted delivery.',
                 style: TextStyle(
                     fontFamily: 'Roboto',
@@ -719,7 +719,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.borderMedium),
+                    side: BorderSide(color: AppColors.borderMedium),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
@@ -1068,7 +1068,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(children: [
+          Row(children: [
             Icon(Icons.route_rounded, size: 14, color: AppColors.textSecondary),
             SizedBox(width: 6),
             Text('Route',
@@ -1273,7 +1273,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(children: [
+          Row(children: [
             Icon(Icons.person_outline_rounded,
                 size: 14, color: AppColors.textSecondary),
             SizedBox(width: 6),
@@ -1534,7 +1534,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     color: AppColors.borderMedium,
                     style: BorderStyle.solid),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.camera_alt_rounded,
@@ -1884,7 +1884,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         fontWeight: FontWeight.w800,
                         color: AppColors.darkTextPrimary)),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'This delivery was cancelled. Your commission fee has been released.',
                   textAlign: TextAlign.center,
                   style: TextStyle(

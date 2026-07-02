@@ -21,19 +21,19 @@ const _kPrimary      = AppColors.primaryGold;
 const _kPrimaryDark  = AppColors.primaryGoldDark;
 const _kPrimaryLight = Color(0xFFFFFDE7);
 const _kPrimaryMid   = Color(0xFFFFECB3);
-const _kSurface      = AppColors.backgroundWhite;
-const _kPageBg       = AppColors.backgroundLight;
-const _kInputBg      = AppColors.inputBackground;
-const _kBorder       = AppColors.borderLight;
-const _kTextPrimary  = AppColors.textPrimary;
-const _kTextSecond   = AppColors.textSecondary;
-const _kTextLight    = AppColors.textLight;
+Color get _kSurface => AppColors.backgroundWhite;
+Color get _kPageBg => AppColors.backgroundLight;
+Color get _kInputBg => AppColors.inputBackground;
+Color get _kBorder => AppColors.borderLight;
+Color get _kTextPrimary => AppColors.textPrimary;
+Color get _kTextSecond => AppColors.textSecondary;
+Color get _kTextLight => AppColors.textLight;
 const _kError        = AppColors.error;
-const _kErrorLight   = AppColors.errorLight;
+Color get _kErrorLight => AppColors.errorLight;
 const _kSuccess      = AppColors.success;
-const _kSuccessLight = AppColors.successLight;
+Color get _kSuccessLight => AppColors.successLight;
 const _kWarning      = AppColors.warning;
-const _kWarningLight = AppColors.warningLight;
+Color get _kWarningLight => AppColors.warningLight;
 
 const double _rSm   = 4.0;
 const double _rMd   = 12.0;
@@ -380,7 +380,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
+        icon: Icon(Icons.arrow_back_rounded, color: _kTextPrimary),
       ),
       title: Text('Modifier l\'annonce', style: AppTypography.titleLarge),
       centerTitle: true,
@@ -660,7 +660,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
           }
         },
         dropdownColor: _kSurface,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+        icon: Icon(Icons.keyboard_arrow_down_rounded,
             color: _kTextSecond),
       ),
     );
@@ -868,7 +868,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
               borderRadius: BorderRadius.circular(_rLg)),
         ),
         icon: _isSubmitting
-            ? const SizedBox(
+            ? SizedBox(
           width: 18,
           height: 18,
           child: CircularProgressIndicator(
@@ -947,7 +947,7 @@ class _NetworkPhotoTile extends StatelessWidget {
               width: 96,
               height: 96,
               color: _kInputBg,
-              child: const Icon(Icons.image_not_supported,
+              child: Icon(Icons.image_not_supported,
                   color: _kTextLight),
             ),
           ),
