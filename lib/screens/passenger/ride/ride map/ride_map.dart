@@ -903,10 +903,9 @@ class _RideMapScreenState extends State<RideMapScreen>
   List<Marker> _buildMapMarkers() {
     final markers = <Marker>[];
 
-    // Nearby cars render beneath pickup/dropoff.
-    for (final car in _nearbyCars) {
-      markers.add(Marker(point: car.position, width: 52, height: 52, child: _NearbyCarMarker(heading: car.heading)));
-    }
+    // During destination planning we do NOT show the little cars — just the
+    // passenger's own position (photo-in-a-gold-ring) and the destination pin.
+    // Simulated cars only appear on the "searching for a driver" screen.
     if (_pickup != null) {
       markers.add(Marker(point: _pickup!, width: 96, height: 96, child: _PulsingPickupMarker(userData: _userData)));
     }
@@ -1580,12 +1579,13 @@ class _NearbyCarMarkerState extends State<_NearbyCarMarker> with SingleTickerPro
     return AnimatedBuilder(
       animation: _c,
       builder: (_, __) {
-        final forward = -1.5 + _c.value * 3.0; // ±1.5px along heading
+        final forward = -1.5 + _c.value * 3.0; // subtle idle creep
         return Transform.rotate(
           angle: widget.heading * math.pi / 180,
           child: Transform.translate(
             offset: Offset(0, forward),
-            child: CustomPaint(size: const Size(22, 38), painter: _CarPainter()),
+            child: Image.asset('assets/images/carmarker.png',
+                width: 34, height: 34, fit: BoxFit.contain),
           ),
         );
       },

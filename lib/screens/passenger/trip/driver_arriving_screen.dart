@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../providers/trip_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/car_marker_painter.dart';
+import '../../../service/voice_guide.dart';
 import '../../../utils/map_style.dart';
 import '../../../widgets/map_style_button.dart';
 import '../../chat/trip_chat_screen.dart';
@@ -110,6 +111,9 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
     _startFreeCancelTimer();
     loadMapStylePref().then((s) { if (mounted) setState(() => _mapStyle = s); });
 
+    // Announce that the driver accepted and is on the way.
+    VoiceGuide.instance.driverFound(_getDriverName());
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       _tripProvider = Provider.of<TripProvider>(context, listen: false);
@@ -197,9 +201,13 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
       ),
     ];
     if (_animatedDriverLocation != null) {
+      final name = _getDriverName();
       markers.add(Marker(
-        point: _animatedDriverLocation!, width: 60, height: 60,
-        child: CarMarkerWidget(heading: _driverBearing, color: AppColors.primaryGold),
+        point: _animatedDriverLocation!, width: 66, height: 66,
+        child: _MovingPhotoMarker(
+          photoUrl: _getDriverAvatarUrl(),
+          initial:  name.isNotEmpty ? name[0].toUpperCase() : 'C',
+        ),
       ));
     }
     return markers;
@@ -310,6 +318,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
         if (!_driverArrivedShown) {
           _driverArrivedShown = true;
           HapticFeedback.mediumImpact();
+          VoiceGuide.instance.driverArrived();
           setState(() => _driverHasArrived = true);
           _pulseCtrl?.stop();
           _arrivedBannerCtrl?.forward();
@@ -320,6 +329,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
         }
         break;
       case TripStatus.inProgress:
+        VoiceGuide.instance.tripStarted();
         _navigateToTripInProgress();
         break;
       case TripStatus.canceled:
@@ -1129,4 +1139,70 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
       builder: (_, __) => Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.white.withOpacity(_a.value), shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.white.withOpacity(_a.value * 0.5), blurRadius: 6, spreadRadius: 2)])),
     );
   }
+}
+
+// ── Moving driver marker: the driver's profile photo in a gold ring, with a
+//    soft pulse so it reads as "in motion" toward the passenger. ─────────────
+class _MovingPhotoMarker extends StatefulWidget {
+  final String? photoUrl;
+  final String  initial;
+  const _MovingPhotoMarker({this.photoUrl, required this.initial});
+  @override
+  State<_MovingPhotoMarker> createState() => _MovingPhotoMarkerState();
+}
+
+class _MovingPhotoMarkerState extends State<_MovingPhotoMarker>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat();
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) {
+        final t = _c.value;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 40 + t * 24, height: 40 + t * 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primaryGold.withOpacity((1 - t) * 0.18),
+                border: Border.all(color: AppColors.primaryGold.withOpacity((1 - t) * 0.6), width: 1.5),
+              ),
+            ),
+            Container(
+              width: 46, height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.primaryGold, width: 3),
+                boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 4))],
+              ),
+              child: ClipOval(
+                child: (widget.photoUrl != null && widget.photoUrl!.isNotEmpty)
+                    ? CachedNetworkImage(
+                        imageUrl: widget.photoUrl!, fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => _fallback())
+                    : _fallback(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _fallback() => Container(
+        color: AppColors.darkSurfaceHigh,
+        child: Center(
+          child: Text(widget.initial,
+              style: const TextStyle(
+                  color: AppColors.primaryGold, fontWeight: FontWeight.w800, fontSize: 20)),
+        ),
+      );
 }

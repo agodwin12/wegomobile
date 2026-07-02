@@ -558,7 +558,8 @@ class _SearchingCarMarkerState extends State<_SearchingCarMarker> with SingleTic
           angle: widget.heading * math.pi / 180,
           child: Transform.translate(
             offset: Offset(0, forward),
-            child: CustomPaint(size: const Size(18, 30), painter: _CarPainter()),
+            child: Image.asset('assets/images/carmarker.png',
+                width: 30, height: 30, fit: BoxFit.contain),
           ),
         );
       },
