@@ -53,9 +53,12 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon.jpg"
+  # Full icon (white bg + black 3-bar mark, enlarged) — iOS & legacy Android.
+  image_path: "assets/icon_full.png"
+  # Adaptive icon: white background + transparent black-bars foreground sized
+  # for the 66% safe zone, so no launcher shape crops it.
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/icon.jpg"
+  adaptive_icon_foreground: "assets/icon_fg.png"
   remove_alpha_ios: true
 
 flutter:
