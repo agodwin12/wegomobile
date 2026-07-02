@@ -88,13 +88,12 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Must match the platform's ride tiers (fare estimation + DriverProfile):
+  // Economy / Comfort / Luxury. Other labels used to 500 at OTP verification.
   final List<String> vehicleTypes = [
     'Economy',
     'Comfort',
-    'Business',
-    'Premium',
-    'SUV',
-    'Van',
+    'Luxury',
   ];
 
   final List<Map<String, String>> countries = [
@@ -589,19 +588,29 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
 
           final otpDelivery = data['otp_delivery'];
 
+          // ─────────────────────────────────────────────────────────
+          // MIRROR BACKEND PRIORITY (same as passenger signup):
+          //   SMS is the REQUIRED channel — always prefer it when it
+          //   was actually SENT. Email is best-effort and may be
+          //   absent or FAILED; never wait on a code that wasn't sent.
+          // ─────────────────────────────────────────────────────────
           if (otpDelivery is Map) {
-            if (otpDelivery['email'] != null) {
-              channel = 'EMAIL';
-              purpose = 'EMAIL_VERIFY';
-              identifier = email;
+            bool wasSent(dynamic d) =>
+                d is Map && (d['delivery']?.toString() ?? '') == 'SENT';
 
-              debugPrint('📧 [OTP] Will verify via EMAIL: $identifier');
-            } else if (otpDelivery['phone'] != null) {
+            final phoneD = otpDelivery['phone'];
+            final emailD = otpDelivery['email'];
+
+            if (wasSent(phoneD) || (phoneD != null && !wasSent(emailD))) {
               channel = 'SMS';
               purpose = 'PHONE_VERIFY';
               identifier = fullPhone;
-
               debugPrint('📱 [OTP] Will verify via SMS: $identifier');
+            } else if (emailD != null) {
+              channel = 'EMAIL';
+              purpose = 'EMAIL_VERIFY';
+              identifier = email;
+              debugPrint('📧 [OTP] Will verify via EMAIL: $identifier');
             }
           }
         }
