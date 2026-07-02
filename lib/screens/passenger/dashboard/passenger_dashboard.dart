@@ -369,9 +369,6 @@ class _PassengerDashboardState extends State<PassengerDashboard>
         Navigator.push(context, _route(const ActivityScreen()));
         break;
       case 2:
-        _showComingSoon('Offers');
-        break;
-      case 3:
         Navigator.push(context, _route(const ProfileScreen())).then((_) {
           _refreshUserData();
           setState(() => _selectedIndex = 0);

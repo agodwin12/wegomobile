@@ -19,8 +19,7 @@ class PassengerBottomNavbar extends StatelessWidget {
     final navItems = [
       {'icon': Icons.home_rounded, 'label': 'Home', 'index': 0},
       {'icon': Icons.receipt_long_rounded, 'label': 'Activity', 'index': 1},
-      {'icon': Icons.local_offer_rounded, 'label': 'Offers', 'index': 2},
-      {'icon': Icons.person_rounded, 'label': 'Account', 'index': 3},
+      {'icon': Icons.person_rounded, 'label': 'Account', 'index': 2},
     ];
 
     return Container(

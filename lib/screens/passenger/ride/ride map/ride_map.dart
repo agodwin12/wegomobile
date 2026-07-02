@@ -609,13 +609,17 @@ class _RideMapScreenState extends State<RideMapScreen>
       final token = _mapboxToken;
       if (token.isEmpty || token.startsWith('pk.YOUR')) { setState(() => _searching = false); return; }
 
-      // Bias toward the user's current position, but allow results from any country.
-      String prox = '';
-      if (_pickup != null) prox = '&proximity=${_pickup!.longitude},${_pickup!.latitude}';
+      // Restrict to Cameroon and bias to the user's position (default: Douala
+      // centre) so local neighbourhoods like "Ndokoti" surface instead of being
+      // buried under global matches. autocomplete=true improves partial typing.
+      final proxLng = _pickup?.longitude ?? 9.7679; // Douala
+      final proxLat = _pickup?.latitude  ?? 4.0511;
 
       final url = Uri.parse(
         'https://api.mapbox.com/geocoding/v5/mapbox.places/${Uri.encodeComponent(query)}.json'
-            '?access_token=$token&language=fr&types=address,poi,place,locality,region&limit=8$prox',
+            '?access_token=$token&country=cm&language=fr&autocomplete=true'
+            '&types=address,poi,place,locality,neighborhood,region'
+            '&proximity=$proxLng,$proxLat&limit=8',
       );
       final res = await http.get(url).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
