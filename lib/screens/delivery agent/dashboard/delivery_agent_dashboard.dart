@@ -15,6 +15,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import '../../../authentication service/api_services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -471,6 +472,40 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   // ONLINE / OFFLINE TOGGLE
   // ─────────────────────────────────────────────────────────────────────────
 
+  // ── Authenticated POST with automatic token refresh-and-retry ──────────────
+  // Handles 401 { shouldRefresh: true } (e.g. account status changed right
+  // after admin approval) by refreshing the token and retrying once.
+  Future<http.Response> _authedPost(String url,
+      {Map<String, dynamic>? body,
+      Duration timeout = const Duration(seconds: 12)}) async {
+    Future<http.Response> doPost(String token) => http.post(
+          Uri.parse(url),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: body != null ? jsonEncode(body) : null,
+        ).timeout(timeout);
+
+    var res = await doPost(_accessToken);
+    if (res.statusCode == 401) {
+      try {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map && decoded['shouldRefresh'] == true) {
+          final auth = AuthService();
+          if (await auth.refreshAccessToken()) {
+            final fresh = await auth.getAccessToken();
+            if (fresh != null && fresh.isNotEmpty) {
+              _accessToken = fresh;
+              res = await doPost(fresh);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    return res;
+  }
+
   Future<void> _toggleStatus() async {
     if (_togglingStatus) return;
 
@@ -518,18 +553,14 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         }
 
         // ── Go online ──────────────────────────────────────────────────────
-        final onlineRes = await http.post(
-          Uri.parse('${AppConfig.apiBaseUrl}/driver/online'),
-          headers: {
-            'Authorization': 'Bearer $_accessToken',
-            'Content-Type':  'application/json',
-          },
-          body: jsonEncode({
+        final onlineRes = await _authedPost(
+          '${AppConfig.apiBaseUrl}/driver/online',
+          body: {
             'lat':     pos.latitude,
             'lng':     pos.longitude,
             'heading': pos.heading,
-          }),
-        ).timeout(const Duration(seconds: 12));
+          },
+        );
 
         if (onlineRes.statusCode != 200) {
           _showSnack(_parseMessage(onlineRes.body, 'Failed to go online'),
@@ -539,17 +570,11 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         }
 
         // ── Set delivery mode (best-effort) ────────────────────────────────
-        await http
-            .post(
-          Uri.parse('${AppConfig.apiBaseUrl}/deliveries/driver/mode'),
-          headers: {
-            'Authorization': 'Bearer $_accessToken',
-            'Content-Type':  'application/json',
-          },
-          body: jsonEncode({'mode': 'delivery'}),
-        )
-            .timeout(const Duration(seconds: 8))
-            .catchError((_) => http.Response('{}', 200));
+        await _authedPost(
+          '${AppConfig.apiBaseUrl}/deliveries/driver/mode',
+          body: {'mode': 'delivery'},
+          timeout: const Duration(seconds: 8),
+        ).catchError((_) => http.Response('{}', 200));
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_online', true);
@@ -564,10 +589,10 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
 
       } else {
         // ── Go offline ─────────────────────────────────────────────────────
-        final offlineRes = await http.post(
-          Uri.parse('${AppConfig.apiBaseUrl}/driver/offline'),
-          headers: {'Authorization': 'Bearer $_accessToken'},
-        ).timeout(const Duration(seconds: 10));
+        final offlineRes = await _authedPost(
+          '${AppConfig.apiBaseUrl}/driver/offline',
+          timeout: const Duration(seconds: 10),
+        );
 
         if (offlineRes.statusCode == 200) {
           _gpsTimer?.cancel();

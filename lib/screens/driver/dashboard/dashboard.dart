@@ -12,6 +12,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:wego_v1/main.dart';
 import 'package:wego_v1/utils/app_colors.dart';
 import 'package:wego_v1/utils/app_typography.dart';
+import '../../../authentication service/api_services.dart';
 import '../../../service/socket_service.dart';
 import '../../../widgets/mode_switch_sheet.dart';           // ← NEW
 import '../../notification/notification_badge.dart';
@@ -765,6 +766,49 @@ class _DriverMainScreenState extends State<DriverMainScreen>
   // ONLINE / OFFLINE TOGGLE
   // ════════════════════════════════════════════════════════════════
 
+  // ── Authenticated POST with automatic token refresh-and-retry ──────────────
+  // The backend returns 401 { shouldRefresh: true } when the account status
+  // changed (e.g. admin just approved the driver). Refresh + retry once so the
+  // driver never has to log out/in to go online.
+  Future<http.Response> _authedPost(String path, {Map<String, dynamic>? body}) async {
+    Future<http.Response> doPost(String token) => http.post(
+      Uri.parse('$apiBaseUrl$path'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: body != null ? json.encode(body) : null,
+    ).timeout(const Duration(seconds: 15));
+
+    var res = await doPost(accessToken ?? '');
+    if (res.statusCode == 401) {
+      try {
+        final decoded = json.decode(res.body);
+        if (decoded is Map && decoded['shouldRefresh'] == true) {
+          final auth = AuthService();
+          if (await auth.refreshAccessToken()) {
+            final fresh = await auth.getAccessToken();
+            if (fresh != null && fresh.isNotEmpty) {
+              accessToken = fresh;
+              res = await doPost(fresh);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  // Prefer the backend's human-readable message over a generic one.
+  String _serverMessage(http.Response res, String fallback) {
+    try {
+      final b = json.decode(res.body);
+      final m = (b is Map ? b['message'] : null)?.toString();
+      if (m != null && m.isNotEmpty) return m;
+    } catch (_) {}
+    return fallback;
+  }
+
   Future<void> _toggleOnlineStatus() async {
     if (isLoading || _isDisposed || !_isAppActive) return;
     if (mounted) setState(() => isLoading = true);
@@ -777,18 +821,11 @@ class _DriverMainScreenState extends State<DriverMainScreen>
           throw Exception('Unable to get location');
         if (_isDisposed || !mounted) return;
 
-        final response = await http.post(
-          Uri.parse('$apiBaseUrl/driver/online'),
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json',
-          },
-          body: json.encode({
-            'lat':     currentPosition!.latitude,
-            'lng':     currentPosition!.longitude,
-            'heading': currentPosition!.heading,
-          }),
-        ).timeout(const Duration(seconds: 15));
+        final response = await _authedPost('/driver/online', body: {
+          'lat':     currentPosition!.latitude,
+          'lng':     currentPosition!.longitude,
+          'heading': currentPosition!.heading,
+        });
 
         if (_isDisposed || !mounted) return;
 
@@ -820,16 +857,15 @@ class _DriverMainScreenState extends State<DriverMainScreen>
                 'You are now online!', SnackBarType.success);
           }
         } else {
-          throw Exception('Failed: ${response.statusCode}');
+          // Show the backend's real reason (e.g. "pending admin approval",
+          // "wallet balance too low") instead of a generic failure.
+          _showSnackBar(
+              _serverMessage(response, 'Failed to go online. Please try again.'),
+              SnackBarType.error);
+          return;
         }
       } else {
-        final response = await http.post(
-          Uri.parse('$apiBaseUrl/driver/offline'),
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json',
-          },
-        ).timeout(const Duration(seconds: 15));
+        final response = await _authedPost('/driver/offline');
 
         if (_isDisposed || !mounted) return;
 
@@ -850,16 +886,24 @@ class _DriverMainScreenState extends State<DriverMainScreen>
           _showSnackBar(
               'You are now offline.', SnackBarType.info);
         } else {
-          throw Exception('Failed: ${response.statusCode}');
+          _showSnackBar(
+              _serverMessage(response, 'Failed to go offline. Please try again.'),
+              SnackBarType.error);
+          return;
         }
       }
     } on TimeoutException {
       if (mounted)
-        _showSnackBar('Request timeout.', SnackBarType.error);
+        _showSnackBar('Request timeout. Check your connection.', SnackBarType.error);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '');
         _showSnackBar(
-            'Failed to update status', SnackBarType.error);
+            msg.isNotEmpty && !msg.contains('SocketException')
+                ? msg
+                : 'Network error. Please try again.',
+            SnackBarType.error);
+      }
     } finally {
       if (mounted && !_isDisposed)
         setState(() => isLoading = false);
