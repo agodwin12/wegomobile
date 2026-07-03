@@ -368,16 +368,38 @@ class _WegoAppState extends State<WegoApp> {
               ),
             ),
           ),
+          // ── Global text defaults ──────────────────────────────────────
+          // TextFields WITHOUT an explicit style: inherit textTheme.bodyLarge.
+          // The fill below was hardcoded white while the text color followed
+          // brightness — in dark mode that meant WHITE text on a WHITE fill
+          // (invisible typing). Explicit colors fix all ~50 unstyled fields
+          // at once, in both modes.
+          textTheme: TextTheme(
+            bodyLarge:   TextStyle(color: AppColors.textPrimary),
+            bodyMedium:  TextStyle(color: AppColors.textPrimary),
+            bodySmall:   TextStyle(color: AppColors.textSecondary),
+            titleLarge:  TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+            titleMedium: TextStyle(color: AppColors.textPrimary),
+            titleSmall:  TextStyle(color: AppColors.textPrimary),
+            labelLarge:  TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+          ),
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: AppColors.textPrimary,
+            selectionColor: const Color(0xFFFFDC71).withOpacity(0.35),
+            selectionHandleColor: const Color(0xFFFFC107),
+          ),
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: AppColors.inputBackground,
+            hintStyle: TextStyle(color: AppColors.textHint),
+            labelStyle: TextStyle(color: AppColors.textSecondary),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              borderSide: BorderSide(color: AppColors.inputBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              borderSide: BorderSide(color: AppColors.inputBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
