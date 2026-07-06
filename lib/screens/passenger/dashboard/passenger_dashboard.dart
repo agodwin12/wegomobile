@@ -169,28 +169,27 @@ class _PassengerDashboardState extends State<PassengerDashboard>
       String label =
           '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}';
       try {
-        final token = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
-        final url   = Uri.parse(
-          'https://api.mapbox.com/geocoding/v5/mapbox.places/'
-          '${pos.longitude},${pos.latitude}.json'
-          '?access_token=$token'
-          '&country=cm&language=fr'
-          '&types=address,neighborhood,locality,place,poi'
-          '&limit=1',
+        // LocationIQ reverse (OSM) — accurate Cameroon place names.
+        final key = dotenv.env['LOCATIONIQ_KEY'] ?? '';
+        final url = Uri.parse(
+          'https://us1.locationiq.com/v1/reverse'
+          '?key=$key&lat=${pos.latitude}&lon=${pos.longitude}'
+          '&format=json&normalizeaddress=1',
         );
         final response =
-            await http.get(url).timeout(const Duration(seconds: 5));
+            await http.get(url).timeout(const Duration(seconds: 6));
         if (response.statusCode == 200) {
-          final data     = json.decode(response.body);
-          final features = data['features'] as List?;
-          if (features != null && features.isNotEmpty) {
-            final name  = features[0]['place_name']?.toString() ?? '';
-            final parts = name
-                .split(',')
-                .take(2)
-                .map((s) => s.trim())
-                .where((s) => s.isNotEmpty)
-                .join(', ');
+          final data = json.decode(response.body) as Map<String, dynamic>;
+          final addr = data['address'] as Map<String, dynamic>? ?? {};
+          final main = (addr['name'] ?? addr['road'] ?? addr['neighbourhood'] ??
+                        addr['suburb'] ?? addr['quarter'] ?? '').toString();
+          final area = (addr['suburb'] ?? addr['city_district'] ?? addr['city'] ?? '').toString();
+          final name = [main, area].where((s) => s.isNotEmpty).toSet().take(2).join(', ');
+          if (name.isNotEmpty) {
+            label = name;
+          } else {
+            final dn = data['display_name']?.toString() ?? '';
+            final parts = dn.split(',').take(2).map((s) => s.trim()).where((s) => s.isNotEmpty).join(', ');
             if (parts.isNotEmpty) label = parts;
           }
         }

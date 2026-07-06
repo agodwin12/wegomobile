@@ -21,6 +21,8 @@ class AppConfig {
   // MAPBOX
   // ═══════════════════════════════════════════════════════════════
   static String get mapboxToken => dotenv.get('MAPBOX_ACCESS_TOKEN', fallback: '');
+  // LocationIQ (OpenStreetMap geocoding) — accurate Cameroon place names.
+  static String get locationIqKey => dotenv.get('LOCATIONIQ_KEY', fallback: '');
 
   // ═══════════════════════════════════════════════════════════════
   // FIREBASE

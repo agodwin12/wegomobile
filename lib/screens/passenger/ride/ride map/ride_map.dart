@@ -102,6 +102,29 @@ class PlacePrediction {
       lng:  (coords != null && coords.length >= 2) ? (coords[0] as num).toDouble() : 0,
     );
   }
+
+  // LocationIQ (OSM) — accurate Cameroon place names. The /autocomplete and
+  // /search endpoints return: display_place, display_address, display_name,
+  // lat, lon (strings). Falls back to splitting display_name when the
+  // display_place/address helper fields aren't present.
+  factory PlacePrediction.fromLocationIQ(Map<String, dynamic> json) {
+    final full  = json['display_name']?.toString() ?? '';
+    String main = json['display_place']?.toString() ?? '';
+    String sec  = json['display_address']?.toString() ?? '';
+    if (main.isEmpty) {
+      final parts = full.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+      main = parts.isNotEmpty ? parts.first : full;
+      sec  = parts.length > 1 ? parts.skip(1).take(2).join(', ') : '';
+    }
+    return PlacePrediction(
+      id:            json['place_id']?.toString() ?? full,
+      description:   full,
+      mainText:      main.isNotEmpty ? main : full,
+      secondaryText: sec.isNotEmpty ? sec : null,
+      lat:  double.tryParse(json['lat']?.toString() ?? '') ?? 0,
+      lng:  double.tryParse(json['lon']?.toString() ?? '') ?? 0,
+    );
+  }
 }
 
 class _NearbyCar {
@@ -388,29 +411,29 @@ class _RideMapScreenState extends State<RideMapScreen>
 
   Future<void> _updateLocationName(double lat, double lng) async {
     try {
-      final token = _mapboxToken;
-      if (token.isEmpty || token.startsWith('pk.YOUR')) {
+      final key = dotenv.env['LOCATIONIQ_KEY'] ?? '';
+      if (key.isEmpty) {
         if (mounted) setState(() => _pickupCtrl.text = 'Position actuelle');
         return;
       }
+      // LocationIQ reverse (OSM) — accurate Cameroon addresses.
       final url = Uri.parse(
-        'https://api.mapbox.com/geocoding/v5/mapbox.places/$lng,$lat.json'
-            '?access_token=$token&country=cm&language=fr'
-            '&types=address,neighborhood,locality,place,poi&limit=1',
+        'https://us1.locationiq.com/v1/reverse'
+            '?key=$key&lat=$lat&lon=$lng&format=json&normalizeaddress=1',
       );
-      final res = await http.get(url).timeout(const Duration(seconds: 5));
+      final res = await http.get(url).timeout(const Duration(seconds: 6));
       if (res.statusCode == 200) {
-        final data     = json.decode(res.body);
-        final features = data['features'] as List? ?? [];
-        if (features.isNotEmpty) {
-          final place = features[0];
-          final text  = place['text']?.toString() ?? '';
-          final context = place['context'] as List? ?? [];
-          final locality = context.isNotEmpty ? context[0]['text']?.toString() ?? '' : '';
-          final name = [text, locality].where((s) => s.isNotEmpty).take(2).join(', ');
-          if (mounted) setState(() => _pickupCtrl.text = name.isNotEmpty ? name : 'Position actuelle');
-          return;
-        }
+        final data = json.decode(res.body) as Map<String, dynamic>;
+        final addr = data['address'] as Map<String, dynamic>? ?? {};
+        final main = (addr['name'] ?? addr['road'] ?? addr['neighbourhood'] ??
+                      addr['suburb'] ?? addr['quarter'] ?? '').toString();
+        final area = (addr['suburb'] ?? addr['city_district'] ?? addr['city'] ?? '').toString();
+        final name = [main, area].where((s) => s.isNotEmpty).toSet().take(2).join(', ');
+        final display = name.isNotEmpty
+            ? name
+            : (data['display_name']?.toString().split(',').take(2).join(',') ?? '');
+        if (mounted) setState(() => _pickupCtrl.text = display.isNotEmpty ? display : 'Position actuelle');
+        return;
       }
     } catch (_) {}
     if (mounted) setState(() => _pickupCtrl.text = 'Position actuelle');
@@ -607,26 +630,28 @@ class _RideMapScreenState extends State<RideMapScreen>
     setState(() { _searching = true; _searchingPickup = forPickup; });
 
     try {
-      final token = _mapboxToken;
-      if (token.isEmpty || token.startsWith('pk.YOUR')) { setState(() => _searching = false); return; }
+      final key = dotenv.env['LOCATIONIQ_KEY'] ?? '';
+      if (key.isEmpty) { setState(() => _searching = false); return; }
 
-      // Restrict to Cameroon and bias to the user's position (default: Douala
-      // centre) so local neighbourhoods like "Ndokoti" surface instead of being
-      // buried under global matches. autocomplete=true improves partial typing.
+      // LocationIQ autocomplete (OpenStreetMap) — accurate Cameroon place
+      // names (Ndokoti, Bonamoussadi, …). Restricted to Cameroon and biased
+      // to a viewbox around the user's position (default: Douala).
       final proxLng = _pickup?.longitude ?? 9.7679; // Douala
       final proxLat = _pickup?.latitude  ?? 4.0511;
 
       final url = Uri.parse(
-        'https://api.mapbox.com/geocoding/v5/mapbox.places/${Uri.encodeComponent(query)}.json'
-            '?access_token=$token&country=cm&language=fr&autocomplete=true'
-            '&types=address,poi,place,locality,neighborhood,region'
-            '&proximity=$proxLng,$proxLat&limit=8',
+        'https://api.locationiq.com/v1/autocomplete'
+            '?key=$key&q=${Uri.encodeComponent(query)}'
+            '&countrycodes=cm&limit=8&dedupe=1&normalizeaddress=1'
+            '&viewbox=${proxLng - 0.6},${proxLat + 0.6},${proxLng + 0.6},${proxLat - 0.6}',
       );
-      final res = await http.get(url).timeout(const Duration(seconds: 5));
+      final res = await http.get(url).timeout(const Duration(seconds: 6));
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         setState(() {
-          _suggestions = (data['features'] as List? ?? []).map((f) => PlacePrediction.fromMapbox(f)).toList();
+          _suggestions = (data as List? ?? [])
+              .map((f) => PlacePrediction.fromLocationIQ(f as Map<String, dynamic>))
+              .toList();
         });
       }
     } catch (e) {

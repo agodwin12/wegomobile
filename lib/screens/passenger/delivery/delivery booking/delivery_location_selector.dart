@@ -171,22 +171,22 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
 
   Future<String?> _reverseGeocode(double lat, double lng) async {
     try {
-      final token = AppConfig.mapboxToken;
+      // LocationIQ reverse (OSM) — accurate Cameroon addresses.
+      final key = AppConfig.locationIqKey;
       final uri = Uri.parse(
-        'https://api.mapbox.com/geocoding/v5/mapbox.places/'
-        '$lng,$lat.json'
-        '?access_token=$token'
-        '&country=cm&language=fr'
-        '&types=address,neighborhood,locality,place,poi'
-        '&limit=1',
+        'https://us1.locationiq.com/v1/reverse'
+        '?key=$key&lat=$lat&lon=$lng&format=json&normalizeaddress=1',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
-        final features =
-            jsonDecode(res.body)['features'] as List<dynamic>?;
-        if (features != null && features.isNotEmpty) {
-          return features[0]['place_name'] as String?;
-        }
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final addr = data['address'] as Map<String, dynamic>? ?? {};
+        final main = (addr['name'] ?? addr['road'] ?? addr['neighbourhood'] ??
+                      addr['suburb'] ?? addr['quarter'] ?? '').toString();
+        final area = (addr['suburb'] ?? addr['city_district'] ?? addr['city'] ?? '').toString();
+        final name = [main, area].where((s) => s.isNotEmpty).toSet().take(2).join(', ');
+        if (name.isNotEmpty) return name;
+        return data['display_name'] as String?;
       }
     } catch (_) {}
     return null;
@@ -208,36 +208,37 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
   Future<void> _fetchSuggestions(String input) async {
     setState(() { _loadingSuggest = true; });
     try {
-      final token   = AppConfig.mapboxToken;
+      // LocationIQ autocomplete (OSM) — accurate Cameroon place names.
+      final key     = AppConfig.locationIqKey;
       final biasLat = _pickupLat ?? 4.0280;
       final biasLng = _pickupLng ?? 9.7445;
       final encoded = Uri.encodeComponent(input);
       final uri = Uri.parse(
-        'https://api.mapbox.com/geocoding/v5/mapbox.places/'
-        '$encoded.json'
-        '?access_token=$token'
-        '&country=CM'
-        '&language=fr'
-        '&proximity=$biasLng,$biasLat'
-        '&limit=5',
+        'https://api.locationiq.com/v1/autocomplete'
+        '?key=$key&q=$encoded'
+        '&countrycodes=cm&limit=6&dedupe=1&normalizeaddress=1'
+        '&viewbox=${biasLng - 0.6},${biasLat + 0.6},${biasLng + 0.6},${biasLat - 0.6}',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final features =
-            jsonDecode(res.body)['features'] as List<dynamic>? ?? [];
+            jsonDecode(res.body) as List<dynamic>? ?? [];
         if (features.isNotEmpty) {
           final suggestions = features.map((f) {
-            final coords = f['geometry']?['coordinates'] as List<dynamic>?;
-            final lat = coords != null ? (coords[1] as num).toDouble() : null;
-            final lng = coords != null ? (coords[0] as num).toDouble() : null;
-            final placeName = f['place_name'] as String? ?? '';
-            final parts     = placeName.split(',');
+            final lat = double.tryParse(f['lat']?.toString() ?? '');
+            final lng = double.tryParse(f['lon']?.toString() ?? '');
+            final full = f['display_name']?.toString() ?? '';
+            final main = f['display_place']?.toString();
+            final sec  = f['display_address']?.toString();
+            final parts = full.split(',');
             return _PlaceSuggestion(
-              placeId:       f['id'] as String? ?? placeName,
-              mainText:      parts.isNotEmpty ? parts[0].trim() : placeName,
-              secondaryText: parts.length > 1
-                  ? parts.sublist(1).join(',').trim()
-                  : '',
+              placeId:       f['place_id']?.toString() ?? full,
+              mainText:      (main != null && main.isNotEmpty)
+                  ? main
+                  : (parts.isNotEmpty ? parts[0].trim() : full),
+              secondaryText: (sec != null && sec.isNotEmpty)
+                  ? sec
+                  : (parts.length > 1 ? parts.sublist(1).join(',').trim() : ''),
               lat: lat,
               lng: lng,
             );
