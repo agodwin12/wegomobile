@@ -69,6 +69,13 @@ const Map<String, String> _fr = {
   'ride.promoRemove': 'Retirer',
   'ride.orderRide': 'Commander',
 
+  // ── Home service picker ──
+  'home.ride': 'Course',
+  'home.rental': 'Location',
+  'home.delivery': 'Livraison',
+  'home.services': 'Services',
+  'home.rideNow': 'Commander une course',
+
   // ── Wallet / Payments ──
   'wallet.title': 'Portefeuille',
   'wallet.balance': 'Solde',
@@ -133,6 +140,13 @@ const Map<String, String> _en = {
   'ride.promoApply': 'Apply',
   'ride.promoRemove': 'Remove',
   'ride.orderRide': 'Order',
+
+  // ── Home service picker ──
+  'home.ride': 'Ride',
+  'home.rental': 'Rental',
+  'home.delivery': 'Delivery',
+  'home.services': 'Services',
+  'home.rideNow': 'Order a ride',
 
   // ── Wallet / Payments ──
   'wallet.title': 'Wallet',

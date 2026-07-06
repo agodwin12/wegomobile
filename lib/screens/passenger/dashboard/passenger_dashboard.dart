@@ -9,6 +9,7 @@
 //   ✅ Service cards: images only (no icon overlay)
 //   ✅ Service cards evenly spaced across full width (no horizontal scroll)
 
+import '../../../l10n/tr.dart';
 import 'dart:convert';
 import 'dart:ui';
 
@@ -1006,25 +1007,25 @@ class _PassengerDashboardState extends State<PassengerDashboard>
   Widget _buildQuickActions() {
     final actions = [
       {
-        'label':   'Ride',
+        'label':   tr('home.ride'),
         'image':   'assets/images/ride.png',
         'action':  'Ride Now',
         'primary': true,
       },
       {
-        'label':   'Rental',
+        'label':   tr('home.rental'),
         'image':   'assets/images/rental_service.png',
         'action':  'Rental',
         'primary': false,
       },
       {
-        'label':   'Delivery',
+        'label':   tr('home.delivery'),
         'image':   'assets/images/delivery.png',
         'action':  'Delivery',
         'primary': false,
       },
       {
-        'label':   'Services',
+        'label':   tr('home.services'),
         'image':   'assets/images/services.jpg',
         'action':  'Services',
         'primary': false,
