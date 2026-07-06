@@ -390,6 +390,46 @@ class ServicesApiService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════
+  // PROVIDER SUBSCRIPTION (buy a plan once, then post under its quota)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// GET /api/services/subscription/mine
+  Future<Map<String, dynamic>> getMySubscription() async {
+    try {
+      final uri = Uri.parse('$_baseUrl/services/subscription/mine');
+      final response = await http
+          .get(uri, headers: await _getHeaders())
+          .timeout(Duration(milliseconds: _timeout));
+      return _handleResponse(response);
+    } catch (e) { _handleError(e, 'getMySubscription'); rethrow; }
+  }
+
+  /// POST /api/services/subscription/activate-free
+  Future<Map<String, dynamic>> activateFreeSubscription() async {
+    try {
+      final uri = Uri.parse('$_baseUrl/services/subscription/activate-free');
+      final response = await http
+          .post(uri, headers: await _getHeaders())
+          .timeout(Duration(milliseconds: _timeout));
+      return _handleResponse(response);
+    } catch (e) { _handleError(e, 'activateFreeSubscription'); rethrow; }
+  }
+
+  /// POST /api/services/subscription/initiate-payment  body: { plan_id, phone }
+  Future<Map<String, dynamic>> initiateSubscriptionPayment({
+    required int    planId,
+    required String phone,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/services/subscription/initiate-payment');
+      final response = await http
+          .post(uri, headers: await _getHeaders(), body: json.encode({'plan_id': planId, 'phone': phone}))
+          .timeout(Duration(milliseconds: _timeout));
+      return _handleResponse(response);
+    } catch (e) { _handleError(e, 'initiateSubscriptionPayment'); rethrow; }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
   // SERVICE REQUESTS
   // ═══════════════════════════════════════════════════════════════════════
 

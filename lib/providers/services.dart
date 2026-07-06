@@ -622,6 +622,44 @@ class ServicesProvider with ChangeNotifier {
     return null;
   }
 
+  // ── Provider subscription (buy a plan once, then post) ───────────────────
+
+  /// GET /api/services/subscription/mine → the provider's active plan (or null).
+  Future<Map<String, dynamic>?> getMySubscription() async {
+    try {
+      final response = await _apiService.getMySubscription();
+      if (response['success'] == true) return response['data'] as Map<String, dynamic>?;
+    } catch (e) {
+      debugPrint('❌ [PROVIDER] getMySubscription: $e');
+    }
+    return null;
+  }
+
+  /// POST /api/services/subscription/activate-free → instant free plan.
+  Future<bool> activateFreeSubscription() async {
+    try {
+      final response = await _apiService.activateFreeSubscription();
+      return response['success'] == true;
+    } catch (e) {
+      debugPrint('❌ [PROVIDER] activateFreeSubscription: $e');
+      return false;
+    }
+  }
+
+  /// POST /api/services/subscription/initiate-payment → paid plan via CamPay.
+  Future<Map<String, dynamic>?> initiateSubscriptionPayment({
+    required int    planId,
+    required String phone,
+  }) async {
+    try {
+      final response = await _apiService.initiateSubscriptionPayment(planId: planId, phone: phone);
+      if (response['success'] == true) return response;
+    } catch (e) {
+      debugPrint('❌ [PROVIDER] initiateSubscriptionPayment: $e');
+    }
+    return null;
+  }
+
   /// GET /api/services/listings/:id/ad-status
   /// Returns 'active', 'pending_payment', 'cancelled', or null on error.
   Future<String?> checkAdPaymentStatus(int listingId) async {

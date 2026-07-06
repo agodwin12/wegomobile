@@ -113,27 +113,24 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
     }
   }
 
-  Future<void> _goToPostScreen({String? phone}) async {
+  // Subscription is bought FIRST (here). Then the post form just creates the
+  // listing under the plan's quota. Called for the free plan directly, and for
+  // a paid plan only after its CamPay payment is confirmed.
+  Future<void> _goToPostScreen() async {
     final result = await Navigator.pushNamed(
       context,
       '/services/post',
-      arguments: <String, dynamic>{
-        'plan':  _selected,
-        if (phone != null) 'phone': phone,
-      },
+      arguments: <String, dynamic>{ 'plan': _selected },
     );
 
     if (!mounted) return;
-    if (result is Map && result['listingId'] is int) {
-      final listingId = result['listingId'] as int;
-      if (_selected!.isFree) {
-        _showSuccessDialog(free: true);
-      } else {
-        _startPolling(listingId);
-      }
+    if (result is Map && (result['created'] == true || result['listingId'] is int)) {
+      _showSuccessDialog(free: _selected!.isFree);
     }
   }
 
+  // Paid plan: buy the provider subscription via CamPay, then poll until it is
+  // active, then continue to the post form.
   Future<void> _submitPhone() async {
     final phone = _phone.trim();
     if (phone.length < 9) {
@@ -141,15 +138,25 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
       return;
     }
     setState(() { _initiating = true; _paymentError = null; });
-    await Future.delayed(const Duration(milliseconds: 200));
-    setState(() => _initiating = false);
+
+    final res = await context
+        .read<ServicesProvider>()
+        .initiateSubscriptionPayment(planId: _selected!.id, phone: phone);
+
     if (!mounted) return;
+    setState(() => _initiating = false);
+
+    if (res == null) {
+      setState(() => _paymentError = 'Échec de l\'initiation du paiement. Réessayez.');
+      return;
+    }
     setState(() => _showPaymentSheet = false);
-    await _goToPostScreen(phone: phone);
+    _startSubscriptionPolling();
   }
 
-  void _startPolling(int listingId) {
-    _listingId = listingId;
+  // Poll the provider's subscription until it becomes active (webhook confirms
+  // the CamPay payment), then go create the listing.
+  void _startSubscriptionPolling() {
     _pollCount = 0;
     setState(() { _polling = true; _pollError = null; });
 
@@ -166,22 +173,13 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
         return;
       }
 
-      final status = await context
-          .read<ServicesProvider>()
-          .checkAdPaymentStatus(listingId);
-
+      final sub = await context.read<ServicesProvider>().getMySubscription();
       if (!mounted) return;
 
-      if (status == 'active') {
+      if (sub != null && sub['active'] == true) {
         _pollTimer?.cancel();
         setState(() => _polling = false);
-        _showSuccessDialog(free: false);
-      } else if (status == 'cancelled' || status == 'failed') {
-        _pollTimer?.cancel();
-        setState(() {
-          _polling   = false;
-          _pollError = 'Paiement annulé. Veuillez réessayer.';
-        });
+        await _goToPostScreen();
       }
     });
   }

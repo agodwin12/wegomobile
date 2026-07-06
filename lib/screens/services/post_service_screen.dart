@@ -234,10 +234,26 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
       final args  = ModalRoute.of(context)?.settings.arguments
       as Map<String, dynamic>?;
       final plan  = args?['plan']  as ListingPlan?;
-      final phone = args?['phone'] as String?;
       final isFree = plan == null || plan.isFree;
 
-      // ── 1. Create the listing ─────────────────────────────────────────────
+      // ── SUBSCRIPTION-FIRST ────────────────────────────────────────────────
+      // Posting requires an active plan. A paid plan is purchased (and
+      // confirmed by CamPay) on the plan screen BEFORE we get here. For the
+      // free plan we activate it now (idempotent — a no-op if one already
+      // exists). Then the listing can be created under the plan's quota.
+      if (isFree) {
+        final ok = await provider.activateFreeSubscription();
+        if (!ok && mounted) {
+          // Fall back only if the user genuinely has no active plan.
+          final sub = await provider.getMySubscription();
+          if (sub == null || sub['active'] != true) {
+            _snack('Vous devez d\'abord choisir un plan pour publier.', isError: true);
+            return;
+          }
+        }
+      }
+
+      // ── Create the listing (posting gate checks the active plan above) ────
       final newListingId = await provider.createListing(
         categoryId: (_subcategory ?? _parentCategory)!.id,
         title: _titleCtrl.text.trim(),
@@ -253,31 +269,13 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
 
       if (newListingId == null || !mounted) {
         if (mounted) {
-          _snack(provider.listingsError ?? 'Échec de la création',
-              isError: true);
+          _snack(provider.listingsError ?? 'Échec de la création', isError: true);
         }
         return;
       }
 
-      // ── 2a. Free plan — activate immediately, pop back with listingId ─────
-      // ListingPlanScreen receives { listingId } and shows its success dialog.
-      if (isFree) {
-        await provider.activateFreePlan(newListingId);
-        if (!mounted) return;
-        Navigator.pop(context, {'listingId': newListingId});
-        return;
-      }
-
-      // ── 2b. Paid plan — initiate CamPay USSD push, then hand back ─────────
-      // ListingPlanScreen is already polling checkAdPaymentStatus(listingId)
-      // every 3 s. We just need to trigger the payment and return the id.
-      await provider.initiateListingPayment(
-        listingId: newListingId,
-        planId:    plan!.id,
-        phone:     phone ?? '',
-      );
       if (!mounted) return;
-      Navigator.pop(context, {'listingId': newListingId});
+      Navigator.pop(context, {'listingId': newListingId, 'created': true});
 
     } catch (e) {
       if (mounted) _snack('Erreur : $e', isError: true);
