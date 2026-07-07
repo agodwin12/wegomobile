@@ -74,6 +74,15 @@ class _TopUpApi {
     );
     return json.decode(res.body);
   }
+
+  /// GET /api/payments/:campayRef/status  (poll CamPay top-up status)
+  static Future<Map<String, dynamic>> checkPaymentStatus(String campayRef) async {
+    final res = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/payments/$campayRef/status'),
+      headers: await _headers(),
+    );
+    return json.decode(res.body);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -135,13 +144,6 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
       'emoji':    '🟠',
       'subtitle': 'Instant — sent to your Orange number',
       'needPhone': true,
-    },
-    {
-      'value':    'CASH',
-      'label':    'Cash at Agency',
-      'emoji':    '💵',
-      'subtitle': 'Pay cash at a WeGo partner agency',
-      'needPhone': false,
     },
   ];
 
@@ -261,7 +263,55 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
 
       if (!mounted) return;
 
-      if (res['success'] == true) {
+      if (res['success'] == true && res['pending'] == true) {
+        // New flow: the charge is PENDING on CamPay. Prompt the driver to
+        // confirm on their phone, then poll until it resolves. The wallet is
+        // credited server-side ONLY once the mobile-money charge SUCCEEDS.
+        final campayRef = res['data']?['campayRef'] as String?;
+        if (campayRef == null || campayRef.isEmpty) {
+          setState(() { _error = 'Could not start the payment. Please try again.'; _loading = false; });
+          return;
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Check your phone and enter your Mobile Money PIN to confirm.'),
+            duration: Duration(seconds: 6),
+          ));
+        }
+
+        final confirmed = await _pollTopUpStatus(campayRef);
+        if (!mounted) return;
+
+        if (confirmed) {
+          int newBal = _balance + amount;
+          try {
+            final w = await _TopUpApi.getWallet();
+            final b = (w['data']?['wallet']?['balance'] as num?)?.toInt()
+                ?? (w['data']?['balance'] as num?)?.toInt();
+            if (b != null) newBal = b;
+          } catch (_) {}
+
+          setState(() {
+            _loading       = false;
+            _success       = true;
+            _successAmount = amount;
+            _newBalance    = newBal;
+            _balance       = newBal;
+            _amountCtrl.clear();
+            _phoneCtrl.clear();
+          });
+          _loadHistory(reset: true);
+        } else {
+          setState(() {
+            _loading = false;
+            _error   = 'Payment was not confirmed. If money was deducted it will be '
+                'credited automatically — otherwise please try again.';
+          });
+        }
+
+      } else if (res['success'] == true) {
+        // Fallback for any immediate-credit response (should not occur now).
         final newBal = (res['data']?['wallet']?['balance'] as num?)?.toInt()
             ?? (_balance + amount);
 
@@ -275,7 +325,6 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
           _phoneCtrl.clear();
         });
 
-        // Refresh history so the new entry appears immediately
         _loadHistory(reset: true);
 
       } else {
@@ -295,6 +344,25 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
         setState(() { _error = 'Network error. Please check your connection.'; _loading = false; });
       }
     }
+  }
+
+  // Poll the payment status until CamPay resolves it (or we time out).
+  // Returns true only on SUCCESSFUL.
+  Future<bool> _pollTopUpStatus(String campayRef) async {
+    const maxAttempts = 45; // ~3 minutes at 4s intervals
+    for (int i = 0; i < maxAttempts; i++) {
+      await Future.delayed(const Duration(seconds: 4));
+      if (!mounted) return false;
+      try {
+        final res    = await _TopUpApi.checkPaymentStatus(campayRef);
+        final status = (res['status'] as String? ?? 'PENDING').toUpperCase();
+        if (status == 'SUCCESSFUL') return true;
+        if (status == 'FAILED' || status == 'EXPIRED') return false;
+      } catch (_) {
+        // transient error — keep polling
+      }
+    }
+    return false;
   }
 
   // ═════════════════════════════════════════════════════════════════

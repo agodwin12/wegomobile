@@ -1731,7 +1731,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
             ),
           ),
 
-          if (walletLowBalance && !isFrozen && !isSuspended)
+          if (!isFrozen && !isSuspended)
             GestureDetector(
               onTap: () {
                 Navigator.push(
