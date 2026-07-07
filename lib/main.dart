@@ -101,7 +101,7 @@ Future<void> main() async {
     debugPrint("✅ [STARTUP] .env file loaded successfully");
     debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     debugPrint("📍 API Base URL: ${dotenv.env['API_BASE_URL']}");
-    debugPrint("🗺️  Mapbox Token: ${dotenv.env['MAPBOX_ACCESS_TOKEN']?.substring(0, 10)}...");
+    debugPrint("🗺️  LocationIQ Key: ${dotenv.env['LOCATIONIQ_KEY']?.substring(0, 10)}...");
     debugPrint("🔌 Socket URL: ${dotenv.env['SOCKET_URL']}");
     debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
   } catch (e) {

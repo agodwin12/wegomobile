@@ -114,7 +114,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   bool _isArriving   = false;
 
   // ── Tokens ───────────────────────────────────────────────────
-  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  String get _liqKey => dotenv.env['LOCATIONIQ_KEY'] ?? '';
   MapStyle _mapStyle = MapStyle.navigationDay;
   String get _apiBaseUrl  => dotenv.env['API_BASE_URL']        ?? '';
 
@@ -447,9 +447,9 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
 
     try {
       final url = Uri.parse(
-        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        'https://us1.locationiq.com/v1/directions/driving/'
         '$driverLng,$driverLat;$pickupLng,$pickupLat'
-        '?access_token=$_mapboxToken'
+        '?key=$_liqKey'
         '&geometries=polyline'
         '&overview=full',
       );
@@ -905,7 +905,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
               ),
               children: [
                 TileLayer(
-                  urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                  urlTemplate: _mapStyle.tileUrl(_liqKey),
                   userAgentPackageName: 'com.wego.app',
                   tileProvider: NetworkTileProvider(),
                 ),

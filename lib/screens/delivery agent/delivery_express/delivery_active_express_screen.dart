@@ -187,7 +187,7 @@ class _DeliveryActiveExpressScreenState
 
   static const _mapBottomPadding = 220.0;
 
-  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  String get _liqKey => dotenv.env['LOCATIONIQ_KEY'] ?? '';
   MapStyle _mapStyle = MapStyle.streets;
 
   @override
@@ -353,10 +353,10 @@ class _DeliveryActiveExpressScreenState
 
     try {
       final uri = Uri.parse(
-        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        'https://us1.locationiq.com/v1/directions/driving/'
         '${from.longitude},${from.latitude};'
         '${dest.longitude},${dest.latitude}'
-        '?access_token=$_mapboxToken'
+        '?key=$_liqKey'
         '&geometries=polyline'
         '&overview=full',
       );
@@ -890,7 +890,7 @@ class _DeliveryActiveExpressScreenState
         ),
         children: [
           TileLayer(
-            urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+            urlTemplate: _mapStyle.tileUrl(_liqKey),
             userAgentPackageName: 'com.wego.app',
             tileProvider:         NetworkTileProvider(),
           ),

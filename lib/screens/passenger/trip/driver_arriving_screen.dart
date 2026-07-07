@@ -62,7 +62,7 @@ class DriverArrivingScreen extends StatefulWidget {
 class _DriverArrivingScreenState extends State<DriverArrivingScreen>
     with TickerProviderStateMixin {
 
-  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  String get _liqKey => dotenv.env['LOCATIONIQ_KEY'] ?? '';
   MapStyle _mapStyle = MapStyle.dark;
 
   final MapController _mapCtrl = MapController();
@@ -225,16 +225,16 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
       if (moved < 0.05) return;
     }
 
-    final token = _mapboxToken;
+    final token = _liqKey;
     if (token.isEmpty || token.startsWith('pk.YOUR')) {
       _drawStraightLine(); return;
     }
 
     final url = Uri.parse(
-      'https://api.mapbox.com/directions/v5/mapbox/driving/'
+      'https://us1.locationiq.com/v1/directions/driving/'
           '${_animatedDriverLocation!.longitude},${_animatedDriverLocation!.latitude};'
           '${widget.pickupLocation.longitude},${widget.pickupLocation.latitude}'
-          '?access_token=$token&geometries=polyline&overview=full',
+          '?key=$token&geometries=polyline&overview=full',
     );
 
     try {
@@ -666,7 +666,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
               ),
               children: [
                 TileLayer(
-                  urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                  urlTemplate: _mapStyle.tileUrl(_liqKey),
                   userAgentPackageName: 'com.wego.app',
                   fallbackUrl: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
                 ),

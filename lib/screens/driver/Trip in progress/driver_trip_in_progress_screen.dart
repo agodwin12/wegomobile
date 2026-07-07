@@ -121,7 +121,7 @@ class _DriverTripInProgressScreenState
   VoidCallback? _tripListener;
 
   // ── Tokens ───────────────────────────────────────────────────
-  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  String get _liqKey => dotenv.env['LOCATIONIQ_KEY'] ?? '';
   MapStyle _mapStyle = MapStyle.navigationDay;
   String get _apiBaseUrl  => dotenv.env['API_BASE_URL']        ?? '';
 
@@ -489,9 +489,9 @@ class _DriverTripInProgressScreenState
 
     try {
       final url = Uri.parse(
-        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        'https://us1.locationiq.com/v1/directions/driving/'
         '$originLng,$originLat;$destLng,$destLat'
-        '?access_token=$_mapboxToken'
+        '?key=$_liqKey'
         '&geometries=polyline'
         '&overview=full',
       );
@@ -951,7 +951,7 @@ class _DriverTripInProgressScreenState
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                    urlTemplate: _mapStyle.tileUrl(_liqKey),
                     userAgentPackageName: 'com.wego.app',
                     tileProvider: NetworkTileProvider(),
                   ),

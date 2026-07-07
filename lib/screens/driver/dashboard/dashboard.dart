@@ -518,10 +518,19 @@ class _DriverMainScreenState extends State<DriverMainScreen>
 
   void _handleSocketDisconnection() {
     if (!mounted || _isDisposed) return;
+    // socket_io_client already has built-in reconnection (enableReconnection).
+    // Give it time to restore the SAME socket before we force a full
+    // teardown+reconnect — otherwise the two mechanisms fight and the indicator
+    // flaps connected/disconnected. Only hard-reconnect if the socket is still
+    // down AND the built-in reconnection isn't already in progress.
     if (reconnectAttempts < maxReconnectAttempts) {
       reconnectAttempts++;
-      Future.delayed(Duration(seconds: 2 * reconnectAttempts), () {
-        if (mounted && !_isDisposed && _isAppActive) _reconnectSocket();
+      Future.delayed(Duration(seconds: 5 * reconnectAttempts), () {
+        if (!mounted || _isDisposed || !_isAppActive) return;
+        final s = SocketService.instance;
+        if (s.isConnected) return;      // built-in reconnection already recovered
+        if (s.isReconnecting) return;   // built-in reconnection still trying
+        _reconnectSocket();
       });
     }
   }

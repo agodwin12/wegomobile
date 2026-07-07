@@ -24,19 +24,18 @@ extension MapStyleX on MapStyle {
     MapStyle.outdoors        => 'Outdoors',
   };
 
-  String get _styleId => switch (this) {
-    MapStyle.streets         => 'streets-v12',
-    MapStyle.satellite       => 'satellite-v9',
-    MapStyle.satelliteStreets=> 'satellite-streets-v12',
-    MapStyle.navigationDay   => 'navigation-day-v1',
-    MapStyle.navigationNight => 'navigation-night-v1',
-    MapStyle.light           => 'light-v11',
-    MapStyle.dark            => 'dark-v11',
-    MapStyle.outdoors        => 'outdoors-v12',
+  // LocationIQ (OpenStreetMap) tile styles. LocationIQ offers streets / light /
+  // dark; the Mapbox-only styles (satellite, navigation, outdoors) fall back to
+  // the closest LocationIQ equivalent.
+  String get _liqStyle => switch (this) {
+    MapStyle.dark || MapStyle.navigationNight => 'dark',
+    MapStyle.light || MapStyle.navigationDay  => 'light',
+    _                                          => 'streets',
   };
 
-  String tileUrl(String token) =>
-      'https://api.mapbox.com/styles/v1/mapbox/$_styleId/tiles/{z}/{x}/{y}?access_token=$token';
+  /// LocationIQ raster tiles. `key` is the LocationIQ access token.
+  String tileUrl(String key) =>
+      'https://tiles.locationiq.com/v3/$_liqStyle/r/{z}/{x}/{y}.png?key=$key';
 
   IconData get icon => switch (this) {
     MapStyle.streets         => Icons.map_outlined,

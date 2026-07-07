@@ -51,7 +51,7 @@ class TripInProgressScreen extends StatefulWidget {
 class _TripInProgressScreenState extends State<TripInProgressScreen>
     with TickerProviderStateMixin {
 
-  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  String get _liqKey => dotenv.env['LOCATIONIQ_KEY'] ?? '';
   MapStyle _mapStyle = MapStyle.streets;
 
   final MapController _mapCtrl = MapController();
@@ -193,14 +193,14 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
       if (moved < 0.05) return;
     }
 
-    final token = _mapboxToken;
+    final token = _liqKey;
     if (token.isEmpty || token.startsWith('pk.YOUR')) { _drawStraightLine(); return; }
 
     final url = Uri.parse(
-      'https://api.mapbox.com/directions/v5/mapbox/driving/'
+      'https://us1.locationiq.com/v1/directions/driving/'
       '${_animatedDriverLocation!.longitude},${_animatedDriverLocation!.latitude};'
       '${widget.dropoffLocation.longitude},${widget.dropoffLocation.latitude}'
-      '?access_token=$token&geometries=polyline&overview=full',
+      '?key=$token&geometries=polyline&overview=full',
     );
 
     try {
@@ -497,7 +497,7 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
               ),
               children: [
                 TileLayer(
-                  urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                  urlTemplate: _mapStyle.tileUrl(_liqKey),
                   userAgentPackageName: 'com.wego.app',
                   fallbackUrl: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
                 ),

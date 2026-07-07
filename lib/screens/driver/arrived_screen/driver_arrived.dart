@@ -99,7 +99,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
   late String _dropoffAddress;
 
   // ── Token ────────────────────────────────────────────────────
-  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  String get _liqKey => dotenv.env['LOCATIONIQ_KEY'] ?? '';
   MapStyle _mapStyle = MapStyle.navigationDay;
 
   // ════════════════════════════════════════════════════════════
@@ -661,7 +661,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                    urlTemplate: _mapStyle.tileUrl(_liqKey),
                     userAgentPackageName: 'com.wego.app',
                     tileProvider: NetworkTileProvider(),
                   ),

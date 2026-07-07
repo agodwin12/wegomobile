@@ -18,10 +18,8 @@ class AppConfig {
   static String get accessTokenExpiry => dotenv.get('ACCESS_TOKEN_EXPIRY', fallback: '24h');
 
   // ═══════════════════════════════════════════════════════════════
-  // MAPBOX
+  // MAPS — LocationIQ (tiles + directions + geocoding), OpenStreetMap based
   // ═══════════════════════════════════════════════════════════════
-  static String get mapboxToken => dotenv.get('MAPBOX_ACCESS_TOKEN', fallback: '');
-  // LocationIQ (OpenStreetMap geocoding) — accurate Cameroon place names.
   static String get locationIqKey => dotenv.get('LOCATIONIQ_KEY', fallback: '');
 
   // ═══════════════════════════════════════════════════════════════
@@ -105,7 +103,7 @@ class AppConfig {
     print('🔗 API Base URL: $apiBaseUrl');
     print('⏱️  API Timeout: ${apiTimeout}ms');
     print('🔌 Socket URL: $socketUrl');
-    print('🗺️  Mapbox Token: ${mapboxToken.isNotEmpty ? "Configured ✓" : "Not configured ✗"}');
+    print('🗺️  LocationIQ Key: ${locationIqKey.isNotEmpty ? "Configured ✓" : "Not configured ✗"}');
     print('🔥 Firebase: ${firebaseApiKey.isNotEmpty ? "Configured ✓" : "Not configured ✗"}');
     print('💳 Stripe: ${stripePublishableKey.isNotEmpty ? "Configured ✓" : "Not configured ✗"}');
     print('📧 Support Email: $supportEmail');

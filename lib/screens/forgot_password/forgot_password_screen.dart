@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../utils/utils.dart';
 import '../../widgets/common_widgets.dart';
+import '../../authentication service/api_services.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -30,11 +31,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      // Replace with your actual API call
-      // await ApiService.resetPassword(email: emailCtrl.text.trim());
-
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      await AuthService().forgotPassword(emailCtrl.text.trim());
 
       // Navigate to OTP verification screen
       if (mounted) {
@@ -45,6 +42,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         );
       }
 
+    } on AuthException catch (e) {
+      setState(() {
+        message = e.message;
+      });
     } catch (e) {
       setState(() {
         message = 'Failed to send reset code. Please try again.';
@@ -231,11 +232,7 @@ class _ForgotPasswordOtpScreenState extends State<ForgotPasswordOtpScreen> {
     });
 
     try {
-      // Replace with your actual API call
-      // await ApiService.verifyOtp(email: email, otp: otp);
-
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      await AuthService().verifyResetOtp(email, otp);
 
       // Navigate to set new password screen
       if (mounted) {
@@ -246,6 +243,10 @@ class _ForgotPasswordOtpScreenState extends State<ForgotPasswordOtpScreen> {
         );
       }
 
+    } on AuthException catch (e) {
+      setState(() {
+        message = e.message;
+      });
     } catch (e) {
       setState(() {
         message = 'Invalid code. Please try again.';
@@ -266,11 +267,7 @@ class _ForgotPasswordOtpScreenState extends State<ForgotPasswordOtpScreen> {
     });
 
     try {
-      // Replace with your actual API call
-      // await ApiService.resendOtp(email: email);
-
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      await AuthService().forgotPassword(email);
 
       setState(() {
         message = 'Reset code resent successfully!';
@@ -278,6 +275,10 @@ class _ForgotPasswordOtpScreenState extends State<ForgotPasswordOtpScreen> {
 
       startCountdown();
 
+    } on AuthException catch (e) {
+      setState(() {
+        message = e.message;
+      });
     } catch (e) {
       setState(() {
         message = 'Failed to resend code. Please try again.';
@@ -508,15 +509,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
     });
 
     try {
-      // Replace with your actual API call
-      // await ApiService.setNewPassword(
-      //   email: email,
-      //   otp: otp,
-      //   newPassword: passwordCtrl.text,
-      // );
-
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      await AuthService().resetPassword(email, otp, passwordCtrl.text);
 
       setState(() {
         message = 'Password reset successful!';
@@ -528,6 +521,10 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
         Navigator.popUntil(context, (route) => route.isFirst);
       }
 
+    } on AuthException catch (e) {
+      setState(() {
+        message = e.message;
+      });
     } catch (e) {
       setState(() {
         message = 'Failed to reset password. Please try again.';

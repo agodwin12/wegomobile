@@ -99,7 +99,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
 
   // ── Map style ───────────────────────────────────────────────────
   MapStyle _mapStyle = MapStyle.dark;
-  String get _mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  String get _liqKey => dotenv.env['LOCATIONIQ_KEY'] ?? '';
 
   // ── Service press states ─────────────────────────────────────────
   final Map<String, bool> _servicePressed = {};
@@ -540,7 +540,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
               ),
               children: [
                 TileLayer(
-                  urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                  urlTemplate: _mapStyle.tileUrl(_liqKey),
                   userAgentPackageName: 'com.yourapp.passenger',
                 ),
                 if (_currentLatLng != null)

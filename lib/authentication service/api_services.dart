@@ -515,6 +515,47 @@ class AuthService {
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // FORGOT / RESET PASSWORD
+  // ═══════════════════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> _postAuth(String path, Map<String, dynamic> body, String fallbackError) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/$path'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(timeout);
+
+      final data = _decodeJsonResponse(response);
+      if (response.statusCode == 200 && data['success'] == true) return data;
+      throw AuthException(
+        message: data['message']?.toString() ?? fallbackError,
+        statusCode: response.statusCode,
+        errorCode: data['code']?.toString(),
+      );
+    } on SocketException {
+      throw AuthException(message: 'No internet connection', statusCode: 0, errorCode: 'NETWORK_ERROR');
+    } on TimeoutException {
+      throw AuthException(message: 'Request timeout. Please try again.', statusCode: 0, errorCode: 'TIMEOUT');
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException(message: '$fallbackError: ${e.toString()}', statusCode: 0, errorCode: 'UNKNOWN_ERROR');
+    }
+  }
+
+  /// Step 1 — request a reset code by email/SMS.
+  Future<Map<String, dynamic>> forgotPassword(String identifier) =>
+      _postAuth('forgot-password', {'identifier': identifier}, 'Could not send the reset code.');
+
+  /// Step 2 — validate the code without consuming it.
+  Future<Map<String, dynamic>> verifyResetOtp(String identifier, String code) =>
+      _postAuth('reset-password/verify', {'identifier': identifier, 'code': code}, 'Invalid or expired code.');
+
+  /// Step 3 — set the new password.
+  Future<Map<String, dynamic>> resetPassword(String identifier, String code, String newPassword) =>
+      _postAuth('reset-password', {'identifier': identifier, 'code': code, 'newPassword': newPassword}, 'Could not reset your password.');
+
+  // ═══════════════════════════════════════════════════════════════
   // REFRESH TOKEN / RESTORE SESSION
   // ═══════════════════════════════════════════════════════════════
 

@@ -150,7 +150,7 @@ class _RideMapScreenState extends State<RideMapScreen>
     with TickerProviderStateMixin {
 
   String get _baseUrl      => dotenv.env['API_BASE_URL']        ?? '';
-  String get _mapboxToken  => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+  String get _liqKey  => dotenv.env['LOCATIONIQ_KEY'] ?? '';
 
   // Dark map by default to match the ride-hailing aesthetic.
   MapStyle _mapStyle = MapStyle.dark;
@@ -478,17 +478,17 @@ class _RideMapScreenState extends State<RideMapScreen>
   Future<void> _fetchRoute() async {
     if (_pickup == null || _dropoff == null) return;
     try {
-      final token = _mapboxToken;
+      final token = _liqKey;
       if (token.isEmpty || token.startsWith('pk.YOUR')) {
         _applyRoutePolyline([_pickup!, _dropoff!]);
         return;
       }
-      // Mapbox expects lng,lat order
+      // LocationIQ (OSRM) expects lng,lat order
       final url = Uri.parse(
-        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        'https://us1.locationiq.com/v1/directions/driving/'
             '${_pickup!.longitude},${_pickup!.latitude};'
             '${_dropoff!.longitude},${_dropoff!.latitude}'
-            '?access_token=$token&geometries=polyline&overview=full',
+            '?key=$token&geometries=polyline&overview=full',
       );
       final res = await http.get(url).timeout(const Duration(seconds: 7));
       if (res.statusCode == 200) {
@@ -960,7 +960,7 @@ class _RideMapScreenState extends State<RideMapScreen>
               ),
               children: [
                 TileLayer(
-                  urlTemplate: _mapStyle.tileUrl(_mapboxToken),
+                  urlTemplate: _mapStyle.tileUrl(_liqKey),
                   userAgentPackageName: 'com.wego.app',
                   fallbackUrl: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
                 ),

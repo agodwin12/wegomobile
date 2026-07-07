@@ -277,7 +277,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
   ];
 
   // ── Presets ───────────────────────────────────────────────────────────────
-  static const _presets = [1000, 2500, 5000, 10000, 25000, 50000];
+  static const _presets = [25, 100, 500, 1000, 5000, 25000];
 
   // ─────────────────────────────────────────────────────────────────────────
   // INIT / DISPOSE
@@ -1401,7 +1401,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         validator: (v) {
           final n = int.tryParse(v?.trim() ?? '');
           if (n == null || n <= 0) return 'Enter a valid amount';
-          if (n < 500) return 'Minimum top-up is 500 XAF';
+          if (n < 25) return 'Minimum top-up is 25 XAF';
           return null;
         },
       ),

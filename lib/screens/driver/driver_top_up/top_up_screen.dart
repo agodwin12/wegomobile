@@ -20,7 +20,7 @@ const _kGrey   = Color(0xFFA9A9A9);
 const _kWhite  = Colors.white;
 
 // ─── Preset quick-amounts ─────────────────────────────────────────────
-const _presets = [1000, 2000, 5000, 10000, 25000, 50000];
+const _presets = [25, 100, 500, 1000, 5000, 25000];
 
 // ═══════════════════════════════════════════════════════════════════════
 // API
@@ -237,8 +237,8 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
       setState(() => _error = 'Please enter a valid amount.');
       return;
     }
-    if (amount < 500) {
-      setState(() => _error = 'Minimum top-up is 500 XAF.');
+    if (amount < 25) {
+      setState(() => _error = 'Minimum top-up is 25 XAF.');
       return;
     }
     if (amount > 500000) {
@@ -976,7 +976,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
           Expanded(
             child: Text(
               'Your wallet balance must cover the commission on any trip you accept. '
-                  'Minimum balance: 500 XAF. Top-ups are reflected instantly.',
+                  'Minimum top-up: 25 XAF. Top-ups are reflected instantly.',
               style: TextStyle(
                 fontFamily: 'Quicksand',
                 fontSize:   11,
