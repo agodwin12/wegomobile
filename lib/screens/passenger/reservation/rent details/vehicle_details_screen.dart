@@ -37,6 +37,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
   DateTime _startDate = DateTime.now().add(const Duration(days: 1));
   DateTime _endDate = DateTime.now().add(const Duration(days: 2));
   String? _selectedPaymentMethod;
+  final TextEditingController _rentalPhoneController = TextEditingController();
   bool _isFavorite = false;
 
   // ── Animation ──────────────────────────────────────────────────────────────
@@ -70,6 +71,11 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
     super.initState();
     _pageController = PageController();
 
+    // Prefill the Mobile Money number with the account phone (editable — the
+    // payer may want to charge a different MTN/Orange number than the one on file).
+    _rentalPhoneController.text =
+        (widget.user['phone_e164'] as String? ?? '').replaceAll('+', '').replaceAll('237', '');
+
     _fadeController = AnimationController(
         duration: const Duration(milliseconds: 600), vsync: this);
     _fadeAnim =
@@ -96,6 +102,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
     _fadeController.dispose();
     _slideController.dispose();
     _pageController.dispose();
+    _rentalPhoneController.dispose();
     super.dispose();
   }
 
@@ -255,13 +262,14 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
       return;
     }
 
-    final phone =
-    (widget.user['phone_e164'] as String? ?? '').replaceAll('+', '');
-    if (phone.isEmpty) {
+    // Mobile-money number to charge — the number that receives the PIN prompt and
+    // which decides MTN vs Orange (CamPay detects the operator from the number).
+    final phone = _rentalPhoneController.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
+    if (phone.length < 9) {
       _showErrorDialog(
-          title: 'Phone Missing',
+          title: 'Mobile Money Number Required',
           message:
-          'No phone number found on your account. Please update your profile.');
+          'Enter the MTN or Orange number that will receive the payment prompt.');
       return;
     }
 
@@ -1353,6 +1361,57 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
           accent: const Color(0xFF6B7280),
           imagePath: null,
         ),
+
+        // Mobile Money number entry — shown for MTN/Orange. This is the number
+        // the CamPay PIN prompt is sent to; the operator (MTN vs Orange) is
+        // detected automatically from the number, so the selection above is only
+        // a hint. Prefilled from the account but editable.
+        if (_selectedPaymentMethod == 'MTN_MOMO' ||
+            _selectedPaymentMethod == 'ORANGE_MONEY') ...[
+          const SizedBox(height: 16),
+          _sectionLabel('Mobile Money Number'),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.borderLight, width: 1.5),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(children: [
+              const Text('+237',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0D0D1A))),
+              Container(
+                width: 1,
+                height: 22,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: AppColors.borderLight,
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _rentalPhoneController,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600),
+                  decoration: const InputDecoration(
+                    hintText: '6XX XXX XXX',
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'The payment prompt is sent to this number. MTN or Orange is detected automatically.',
+            style: TextStyle(fontSize: 11, color: AppColors.textLight),
+          ),
+        ],
       ]),
     );
   }

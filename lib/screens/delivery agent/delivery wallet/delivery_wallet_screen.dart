@@ -423,6 +423,16 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       } else {
         await _submitCashTopUp();
       }
+    } on TimeoutException {
+      // A slow CamPay collect can exceed the client timeout while the charge is
+      // still being set up server-side — the top-up record already exists. Don't
+      // declare failure; tell the driver to watch for the PIN and refresh history.
+      _showSnack(
+        'Still processing — check your phone for the payment prompt. '
+        'Your top-up will appear in history shortly.',
+        isError: false,
+      );
+      if (mounted) _fetchHistory(reset: true);
     } catch (e) {
       _showSnack('Network error. Please try again.', isError: true);
     }
@@ -444,7 +454,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         'phone':           _phoneCtrl.text.trim(),
         if (_noteCtrl.text.trim().isNotEmpty) 'driver_note': _noteCtrl.text.trim(),
       }),
-    ).timeout(const Duration(seconds: 20));
+    ).timeout(const Duration(seconds: 45)); // > CamPay's 30s collect timeout
 
     final body = jsonDecode(res.body) as Map<String, dynamic>;
 
