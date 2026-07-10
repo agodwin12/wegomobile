@@ -454,7 +454,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         'phone':           _phoneCtrl.text.trim(),
         if (_noteCtrl.text.trim().isNotEmpty) 'driver_note': _noteCtrl.text.trim(),
       }),
-    ).timeout(const Duration(seconds: 45)); // > CamPay's 30s collect timeout
+    ).timeout(const Duration(seconds: 90)); // generous — CamPay collect can be slow
 
     final body = jsonDecode(res.body) as Map<String, dynamic>;
 
@@ -987,7 +987,12 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 border: Border.all(color: color.withOpacity(0.4), width: 2),
               ),
               child: Center(
-                child: Text(emoji, style: const TextStyle(fontSize: 40)),
+                child: Image.asset(
+                  isMtn ? 'assets/images/momo.png' : 'assets/images/om.png',
+                  width: 50, height: 50, fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) =>
+                      Text(emoji, style: const TextStyle(fontSize: 40)),
+                ),
               ),
             ),
           ),
@@ -1302,8 +1307,16 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                       : [],
                 ),
                 child: Column(children: [
-                  Text(ch['emoji']!,
-                      style: const TextStyle(fontSize: 22)),
+                  (ch['value'] == 'mtn_mobile_money' || ch['value'] == 'orange_money')
+                      ? Image.asset(
+                          ch['value'] == 'mtn_mobile_money'
+                              ? 'assets/images/momo.png'
+                              : 'assets/images/om.png',
+                          width: 26, height: 26, fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Text(ch['emoji']!,
+                              style: const TextStyle(fontSize: 22)),
+                        )
+                      : Text(ch['emoji']!, style: const TextStyle(fontSize: 22)),
                   const SizedBox(height: 5),
                   Text(
                     ch['label']!,

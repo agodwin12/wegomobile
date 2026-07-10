@@ -847,7 +847,16 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
         ),
         child: Row(
           children: [
-            Text(m['emoji'] as String, style: const TextStyle(fontSize: 24)),
+            (m['value'] == 'MTN_MOMO' || m['value'] == 'ORANGE_MONEY')
+                ? Image.asset(
+                    m['value'] == 'MTN_MOMO'
+                        ? 'assets/images/momo.png'
+                        : 'assets/images/om.png',
+                    width: 32, height: 32, fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Text(
+                        m['emoji'] as String, style: const TextStyle(fontSize: 24)),
+                  )
+                : Text(m['emoji'] as String, style: const TextStyle(fontSize: 24)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

@@ -538,13 +538,17 @@ class _RentalPaymentWaitingScreenState
                 ],
               ),
               child: Center(
-                child: Text(
-                  _isMtn ? 'MTN' : 'OM',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: _operatorPrimary,
-                    letterSpacing: -0.5,
+                child: Image.asset(
+                  _isMtn ? 'assets/images/momo.png' : 'assets/images/om.png',
+                  width: 54, height: 54, fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Text(
+                    _isMtn ? 'MTN' : 'OM',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: _operatorPrimary,
+                      letterSpacing: -0.5,
+                    ),
                   ),
                 ),
               ),
