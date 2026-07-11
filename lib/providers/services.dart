@@ -173,9 +173,11 @@ class ServicesProvider with ChangeNotifier {
 
   List<ServiceListing> _listings = [];
   List<ServiceListing> _myListings = [];
+  List<ServiceListing> _heroListings = [];
   ServiceListing? _selectedListing;
   bool _listingsLoading = false;
   bool _myListingsLoading = false;
+  bool _heroLoading = false;
   String? _listingsError;
 
   int  _currentPage     = 1;
@@ -184,6 +186,8 @@ class ServicesProvider with ChangeNotifier {
 
   List<ServiceListing> get listings        => _listings;
   List<ServiceListing> get myListings      => _myListings;
+  List<ServiceListing> get heroListings    => _heroListings;
+  bool                 get heroLoading     => _heroLoading;
   ServiceListing?      get selectedListing => _selectedListing;
   bool                 get listingsLoading => _listingsLoading;
   bool                 get myListingsLoading => _myListingsLoading;
@@ -263,6 +267,38 @@ class ServicesProvider with ChangeNotifier {
       debugPrint('❌ [PROVIDER] Listings error: $e');
     } finally {
       _listingsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetch the featured (hero) listings for the carousel. Backend returns only
+  /// currently-featured, non-expired, active listings via ?hero=true.
+  Future<void> fetchHeroListings({ int limit = 10 }) async {
+    _heroLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.getListings(hero: true, limit: limit);
+      if (response['success'] == true) {
+        final list = response['data']?['listings'];
+        if (list is List) {
+          _heroListings = list
+              .map((json) {
+                try { return ServiceListing.fromJson(json); }
+                catch (_) { return null; }
+              })
+              .whereType<ServiceListing>()
+              .toList();
+        } else {
+          _heroListings = [];
+        }
+      } else {
+        _heroListings = [];
+      }
+    } catch (e) {
+      debugPrint('❌ [PROVIDER] Hero listings error: $e');
+      _heroListings = [];
+    } finally {
+      _heroLoading = false;
       notifyListeners();
     }
   }

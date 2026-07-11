@@ -294,6 +294,8 @@ class ServiceListing {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
+  final bool isHero;            // featured in the hero carousel
+  final DateTime? heroExpiresAt;
 
   final dynamic category; // Keep as dynamic to hold raw JSON
   final ServiceProvider? provider;
@@ -336,6 +338,8 @@ class ServiceListing {
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
+    this.isHero = false,
+    this.heroExpiresAt,
     this.category,
     this.provider,
   });
@@ -408,6 +412,8 @@ class ServiceListing {
         createdAt: _parseDateTimeRequired(json['createdAt'] ?? json['created_at']),
         updatedAt: _parseDateTimeRequired(json['updatedAt'] ?? json['updated_at']),
         deletedAt: _parseDateTime(json['deletedAt'] ?? json['deleted_at']),
+        isHero: _parseBool(json['is_hero']),
+        heroExpiresAt: _parseDateTime(json['hero_expires_at']),
         category: json['category'], // Keep raw JSON
         provider: json['provider'] != null
             ? ServiceProvider.fromJson(json['provider'] as Map<String, dynamic>)
@@ -436,6 +442,8 @@ class ServiceListing {
       'hourly_rate': hourlyRate,
       'minimum_charge': minimumCharge,
       'fixed_price': fixedPrice,
+      'is_hero': isHero,
+      'hero_expires_at': heroExpiresAt?.toIso8601String(),
       'city': city,
       'neighborhoods': neighborhoods,
       'service_radius_km': serviceRadiusKm,

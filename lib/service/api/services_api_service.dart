@@ -142,6 +142,7 @@ class ServicesApiService {
     double? maxPrice,
     double? minRating,
     String? search,
+    bool    hero      = false,
     String  sortBy    = 'created_at',
     String  sortOrder = 'desc',
   }) async {
@@ -152,6 +153,7 @@ class ServicesApiService {
         'sort_by':    sortBy,
         'sort_order': sortOrder.toLowerCase(),
       };
+      if (hero) q['hero'] = 'true';
       if (categoryId  != null) q['category_id']  = '$categoryId';
       if (city        != null) q['city']          = city;
       if (pricingType != null) q['pricing_type']  = pricingType;

@@ -4,6 +4,7 @@
 // Overflow-fixed + aligned to AppColors / AppTypography
 // ─────────────────────────────────────────────────────────────────────────────
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../utils/services_post_flow.dart';
 import 'package:flutter/services.dart';
@@ -52,6 +53,11 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  // Hero carousel
+  final PageController _heroController = PageController(viewportFraction: 0.9);
+  Timer? _heroTimer;
+  int _heroPage = 0;
+
   String _userLocation = 'Douala, Cameroun';
   bool _appBarCollapsed = false;
 
@@ -61,6 +67,23 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
     _loadUserData();
     _loadData();
     _scrollController.addListener(_onScroll);
+    _startHeroAutoPlay();
+  }
+
+  // Gently auto-advance the hero carousel every 5s (guarded on list length).
+  void _startHeroAutoPlay() {
+    _heroTimer?.cancel();
+    _heroTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || !_heroController.hasClients) return;
+      final count = context.read<ServicesProvider>().heroListings.length;
+      if (count <= 1) return;
+      final next = (_heroPage + 1) % count;
+      _heroController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -78,6 +101,7 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
     await Future.wait([
       provider.fetchParentCategories(),
       provider.fetchListings(refresh: true),
+      provider.fetchHeroListings(),
     ]);
   }
 
@@ -88,6 +112,8 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
 
   @override
   void dispose() {
+    _heroTimer?.cancel();
+    _heroController.dispose();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -191,6 +217,9 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
                   ),
                 ),
               ),
+
+              // ── Hero carousel (featured / admin-selected) ────────────────
+              SliverToBoxAdapter(child: _buildHeroCarousel()),
 
               // ── Categories ───────────────────────────────────────────────
               SliverToBoxAdapter(child: _buildCategoriesSection()),
@@ -402,6 +431,165 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // ── Hero carousel (featured / admin-selected listings) ─────────────────────
+  Widget _buildHeroCarousel() {
+    return Consumer<ServicesProvider>(
+      builder: (_, provider, __) {
+        final heroes = provider.heroListings;
+        if (heroes.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.star_rounded, color: _kPrimary, size: 20),
+                  const SizedBox(width: 6),
+                  Text('À la une',
+                      style: AppTypography.titleMedium
+                          .copyWith(fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 180,
+              child: PageView.builder(
+                controller: _heroController,
+                itemCount: heroes.length,
+                onPageChanged: (i) => setState(() => _heroPage = i),
+                itemBuilder: (_, i) => _buildHeroCard(heroes[i]),
+              ),
+            ),
+            if (heroes.length > 1) ...[
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(heroes.length, (i) {
+                  final active = i == _heroPage;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: active ? 20 : 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: active ? _kPrimary : _kTextLight.withOpacity(0.35),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHeroCard(ServiceListing listing) {
+    return GestureDetector(
+      onTap: () => _goToDetail(listing),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_rLg),
+          boxShadow: const [
+            BoxShadow(color: _kShadow, blurRadius: 12, offset: Offset(0, 4)),
+          ],
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              listing.mainPhoto,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: _kPrimaryMid,
+                child: const Icon(Icons.image_not_supported_rounded,
+                    color: Colors.white70, size: 40),
+              ),
+            ),
+            // Dark scrim so text is readable
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xCC000000)],
+                  stops: [0.35, 1.0],
+                ),
+              ),
+            ),
+            // Featured badge
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _kPrimary,
+                  borderRadius: BorderRadius.circular(_rPill),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, size: 14, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text('À la une',
+                        style: AppTypography.labelSmall.copyWith(
+                            color: Colors.white, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+            // Title + category + price
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    listing.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.titleMedium.copyWith(
+                        color: Colors.white, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          listing.categoryName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall
+                              .copyWith(color: Colors.white70),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        listing.priceDisplay,
+                        style: AppTypography.titleSmall.copyWith(
+                            color: _kPrimary, fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
