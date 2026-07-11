@@ -495,9 +495,17 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(
-                  color: _kPrimary, strokeWidth: 3),
-              const SizedBox(height: 24),
+              SizedBox(
+                width: 130, height: 130,
+                child: Lottie.asset(
+                  kPaymentPendingLottie,
+                  repeat: true,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const CircularProgressIndicator(
+                      color: _kPrimary, strokeWidth: 3),
+                ),
+              ),
+              const SizedBox(height: 12),
               Text('En attente du paiement',
                   style: AppTypography.titleLarge),
               const SizedBox(height: 10),

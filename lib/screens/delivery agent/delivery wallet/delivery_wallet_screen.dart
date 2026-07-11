@@ -975,31 +975,26 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // Animated phone icon
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.9, end: 1.05),
-            duration: const Duration(milliseconds: 800),
-            builder: (_, v, child) => Transform.scale(scale: v, child: child),
-            child: Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-                border: Border.all(color: color.withOpacity(0.4), width: 2),
-              ),
-              child: Center(
-                child: Image.asset(
-                  isMtn ? 'assets/images/momo.png' : 'assets/images/om.png',
-                  width: 50, height: 50, fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      Text(emoji, style: const TextStyle(fontSize: 40)),
+          // Processing / waiting Lottie (loops until CamPay resolves)
+          SizedBox(
+            width: 150, height: 150,
+            child: Lottie.asset(
+              kPaymentPendingLottie,
+              repeat: true,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Container(
+                width: 88, height: 88,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withOpacity(0.4), width: 2),
                 ),
+                child: Center(child: Text(emoji, style: const TextStyle(fontSize: 40))),
               ),
             ),
           ),
 
-          const SizedBox(height: 22),
+          const SizedBox(height: 14),
           Text('Check Your Phone',
               style: TextStyle(
                   fontFamily: 'Poppins',

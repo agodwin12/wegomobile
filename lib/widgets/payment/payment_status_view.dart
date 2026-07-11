@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
 const String kPaymentSuccessLottie = 'assets/lottie/payment_success.json';
+const String kPaymentPendingLottie = 'assets/lottie/payment_pending.json';
 
 // ═══════════════════════════════════════════════════════════════════════
 // PENDING
@@ -48,30 +49,20 @@ class PaymentPendingView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Pulsing phone + spinner
+            // Processing / waiting Lottie (loops until the payment resolves)
             SizedBox(
-              width: 110, height: 110,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 110, height: 110,
-                    child: CircularProgressIndicator(
-                      color: accent, strokeWidth: 3,
-                    ),
-                  ),
-                  Container(
-                    width: 74, height: 74,
-                    decoration: BoxDecoration(
-                      color: accent.withOpacity(0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.phone_android_rounded, color: accent, size: 34),
-                  ),
-                ],
+              width: 150, height: 150,
+              child: Lottie.asset(
+                kPaymentPendingLottie,
+                repeat: true,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => SizedBox(
+                  width: 90, height: 90,
+                  child: CircularProgressIndicator(color: accent, strokeWidth: 3),
+                ),
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             Text(title, textAlign: TextAlign.center,
               style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 22, fontWeight: FontWeight.w800, color: titleColor)),
             if (amountLabel != null) ...[

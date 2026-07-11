@@ -464,12 +464,12 @@ class _RentalPaymentWaitingScreenState
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer glow
+          // Pulsing glow keeps the premium feel behind the Lottie
           AnimatedBuilder(
             animation: _glowAnim,
             builder: (_, __) => Container(
-              width: 190,
-              height: 190,
+              width: 170,
+              height: 170,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -484,108 +484,28 @@ class _RentalPaymentWaitingScreenState
             ),
           ),
 
-          // Orbit ring 1
-          AnimatedBuilder(
-            animation: _orbitController,
-            builder: (_, __) => Transform.rotate(
-              angle: _orbitController.value * math.pi * 2,
+          // Processing / waiting Lottie (loops until CamPay resolves)
+          Lottie.asset(
+            kPaymentPendingLottie,
+            width: 195,
+            height: 195,
+            repeat: true,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => AnimatedBuilder(
+              animation: _orbitController,
+              builder: (_, child) => Transform.rotate(
+                angle: _orbitController.value * math.pi * 2,
+                child: child,
+              ),
               child: CustomPaint(
-                size: const Size(170, 170),
+                size: const Size(150, 150),
                 painter: _OrbitRingPainter(
-                  color: _operatorPrimary,
-                  strokeWidth: 2,
+                  color: _operatorSecondary,
+                  strokeWidth: 3,
                   dashRatio: 0.25,
                 ),
               ),
             ),
-          ),
-
-          // Orbit ring 2 (counter)
-          AnimatedBuilder(
-            animation: _orbitController,
-            builder: (_, __) => Transform.rotate(
-              angle: -_orbitController.value * math.pi * 2 * 0.6,
-              child: CustomPaint(
-                size: const Size(140, 140),
-                painter: _OrbitRingPainter(
-                  color: _operatorSecondary.withOpacity(0.5),
-                  strokeWidth: 1.5,
-                  dashRatio: 0.15,
-                ),
-              ),
-            ),
-          ),
-
-          // Center circle
-          AnimatedBuilder(
-            animation: _glowAnim,
-            builder: (_, __) => Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF141420),
-                border: Border.all(
-                  color: _operatorPrimary
-                      .withOpacity(0.3 + _glowAnim.value * 0.2),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: _operatorPrimary
-                        .withOpacity(0.15 + _glowAnim.value * 0.1),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Image.asset(
-                  _isMtn ? 'assets/images/momo.png' : 'assets/images/om.png',
-                  width: 54, height: 54, fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Text(
-                    _isMtn ? 'MTN' : 'OM',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: _operatorPrimary,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Orbiting dot
-          AnimatedBuilder(
-            animation: _orbitController,
-            builder: (_, __) {
-              final angle =
-                  _orbitController.value * math.pi * 2 - math.pi / 2;
-              const r = 85.0;
-              return Transform.translate(
-                offset: Offset(
-                  r * math.cos(angle),
-                  r * math.sin(angle),
-                ),
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: _operatorPrimary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: _operatorPrimary.withOpacity(0.8),
-                        blurRadius: 14,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
           ),
         ],
       ),

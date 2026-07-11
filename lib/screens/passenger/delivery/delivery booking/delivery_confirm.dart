@@ -7,10 +7,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:lottie/lottie.dart';
 import '../../../../../utils/app_colors.dart';
 import '../../../../../utils/app_typography.dart';
-import '../../../../../widgets/payment/payment_status_view.dart';
 import '../../../../../core/config.dart';
 import '../driver searching/delivery_searching_screen.dart';
 
@@ -295,17 +293,14 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: 120, height: 120,
-              child: Lottie.asset(
-                kPaymentSuccessLottie,
-                repeat: false,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
-                    Icons.check_rounded, color: AppColors.success, size: 44),
-              ),
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                  color: AppColors.successLight, shape: BoxShape.circle),
+              child: const Icon(Icons.check_rounded,
+                  color: AppColors.success, size: 32),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             const Text('Delivery Booked!',
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 18,
                     fontWeight: FontWeight.w800)),
