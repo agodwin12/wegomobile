@@ -1441,19 +1441,20 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
             const Text('Amount (XAF)', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
             const SizedBox(height: 8),
             Container(
-              decoration: BoxDecoration(color: _kCard, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white.withOpacity(0.08))),
+              decoration: BoxDecoration(color: _kWhite, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE0E0E0))),
               child: Row(
                 children: [
-                  const Padding(padding: EdgeInsets.only(left: 16), child: Text('XAF', style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 16, color: _kGold, fontWeight: FontWeight.w700))),
+                  const Padding(padding: EdgeInsets.only(left: 16), child: Text('XAF', style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 16, color: Color(0xFFC9A227), fontWeight: FontWeight.w700))),
                   Expanded(
                     child: TextField(
                       controller:        _amountController,
                       keyboardType:      TextInputType.number,
                       inputFormatters:   [FilteringTextInputFormatter.digitsOnly],
-                      style:             const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 24, fontWeight: FontWeight.w700, color: _kWhite),
+                      cursorColor:       _kGold,
+                      style:             const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 24, fontWeight: FontWeight.w700, color: _kBlack),
                       decoration: const InputDecoration(
                         hintText:       '0',
-                        hintStyle:      TextStyle(fontFamily: 'LeagueSpartan', fontSize: 24, color: Color(0xFF333333), fontWeight: FontWeight.w700),
+                        hintStyle:      TextStyle(fontFamily: 'LeagueSpartan', fontSize: 24, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w700),
                         border:         InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                       ),
@@ -1510,14 +1511,15 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
             const Text('Note (optional)', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
             const SizedBox(height: 8),
             Container(
-              decoration: BoxDecoration(color: _kCard, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white.withOpacity(0.08))),
+              decoration: BoxDecoration(color: _kWhite, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE0E0E0))),
               child: TextField(
                 controller: _noteController,
                 maxLines:   2,
-                style:      const TextStyle(fontFamily: 'Quicksand', fontSize: 13, color: _kWhite),
+                cursorColor: _kGold,
+                style:      const TextStyle(fontFamily: 'Quicksand', fontSize: 13, color: _kBlack),
                 decoration: const InputDecoration(
                   hintText:       'Any message for the accountant...',
-                  hintStyle:      TextStyle(color: Color(0xFF444444), fontSize: 13),
+                  hintStyle:      TextStyle(color: Color(0xFF9E9E9E), fontSize: 13),
                   border:         InputBorder.none,
                   contentPadding: EdgeInsets.all(14),
                 ),

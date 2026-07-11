@@ -7,8 +7,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
+import 'package:lottie/lottie.dart';
 import '../../../core/config.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/payment/payment_status_view.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODELS
@@ -1113,17 +1115,18 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.1),
-              shape: BoxShape.circle,
+          SizedBox(
+            width: 150,
+            height: 150,
+            child: Lottie.asset(
+              kPaymentSuccessLottie,
+              repeat: false,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(
+                  Icons.check_circle_rounded, color: AppColors.success, size: 70),
             ),
-            child: const Icon(Icons.check_circle_rounded,
-                color: AppColors.success, size: 50),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Text('Wallet Topped Up!',
               style: TextStyle(
                   fontFamily: 'Poppins',

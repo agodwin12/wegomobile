@@ -8,9 +8,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../models/listing_plan_model.dart';
 import '../../providers/services.dart';
+import '../../widgets/payment/payment_status_view.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 
@@ -194,14 +196,17 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                  color: _kSuccessLight, shape: BoxShape.circle),
-              child: const Icon(Icons.check_circle_rounded,
-                  size: 56, color: _kSuccess),
+            SizedBox(
+              width: 130, height: 130,
+              child: Lottie.asset(
+                kPaymentSuccessLottie,
+                repeat: false,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                    Icons.check_circle_rounded, size: 72, color: _kSuccess),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Text(
               free ? 'Annonce soumise !' : 'Paiement confirmé !',
               style: AppTypography.headlineSmall,

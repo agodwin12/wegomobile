@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import '../../../../../service/rental_api_service.dart';
 import '../../../../../utils/app_colors.dart';
+import '../../../../../widgets/payment/payment_status_view.dart';
 import '../my rentals/my_rentals_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -885,15 +887,15 @@ class _RentalPaymentWaitingScreenState
 
   Widget _buildSuccessIcon() {
     return SizedBox(
-      width: 140,
-      height: 140,
+      width: 180,
+      height: 180,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer glow ring
+          // Outer glow ring — keeps the premium feel behind the Lottie
           Container(
-            width: 140,
-            height: 140,
+            width: 150,
+            height: 150,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
@@ -905,35 +907,20 @@ class _RentalPaymentWaitingScreenState
               ],
             ),
           ),
-          // Ring
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: const Color(0xFF00D084).withOpacity(0.25),
-                  width: 1.5),
-            ),
-          ),
-          // Filled circle
-          Container(
-            width: 100,
-            height: 100,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [Color(0xFF00D084), Color(0xFF00A86B)],
+          // Success Lottie
+          Lottie.asset(
+            kPaymentSuccessLottie,
+            width: 180,
+            height: 180,
+            repeat: false,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => AnimatedBuilder(
+              animation: _checkAnim,
+              builder: (_, __) => CustomPaint(
+                size: const Size(44, 44),
+                painter: _CheckPainter(
+                    progress: _checkAnim.value, color: const Color(0xFF00D084)),
               ),
-            ),
-          ),
-          // Checkmark
-          AnimatedBuilder(
-            animation: _checkAnim,
-            builder: (_, __) => CustomPaint(
-              size: const Size(44, 44),
-              painter: _CheckPainter(
-                  progress: _checkAnim.value, color: Colors.white),
             ),
           ),
         ],

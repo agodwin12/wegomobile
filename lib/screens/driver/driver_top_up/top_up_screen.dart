@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config.dart';
+import '../../../widgets/payment/payment_status_view.dart';
 
 // ─── Palette (matches driver earnings screen dark theme) ──────────────
 const _kBlack  = Color(0xFF0A0A0A);
@@ -118,6 +119,10 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
   bool    _success  = false;
   int     _successAmount = 0;
   int     _newBalance    = 0;
+
+  // ─── CamPay pending state ─────────────────────────────────────────
+  String? _pendingRef;      // non-null while the CamPay charge is PENDING
+  int     _pendingAmount = 0;
 
   // ─── History ──────────────────────────────────────────────────────
   List<dynamic> _history      = [];
@@ -264,21 +269,21 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
       if (!mounted) return;
 
       if (res['success'] == true && res['pending'] == true) {
-        // New flow: the charge is PENDING on CamPay. Prompt the driver to
-        // confirm on their phone, then poll until it resolves. The wallet is
-        // credited server-side ONLY once the mobile-money charge SUCCEEDS.
+        // New flow: the charge is PENDING on CamPay. Show the pending screen
+        // and poll until it resolves. The wallet is credited server-side ONLY
+        // once the mobile-money charge SUCCEEDS.
         final campayRef = res['data']?['campayRef'] as String?;
         if (campayRef == null || campayRef.isEmpty) {
           setState(() { _error = 'Could not start the payment. Please try again.'; _loading = false; });
           return;
         }
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Check your phone and enter your Mobile Money PIN to confirm.'),
-            duration: Duration(seconds: 6),
-          ));
-        }
+        // Enter the dedicated pending screen (driver confirms on their phone).
+        setState(() {
+          _loading       = false;
+          _pendingRef    = campayRef;
+          _pendingAmount = amount;
+        });
 
         final confirmed = await _pollTopUpStatus(campayRef);
         if (!mounted) return;
@@ -293,7 +298,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
           } catch (_) {}
 
           setState(() {
-            _loading       = false;
+            _pendingRef    = null;
             _success       = true;
             _successAmount = amount;
             _newBalance    = newBal;
@@ -304,7 +309,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
           _loadHistory(reset: true);
         } else {
           setState(() {
-            _loading = false;
+            _pendingRef = null;
             _error   = 'Payment was not confirmed. If money was deducted it will be '
                 'credited automatically — otherwise please try again.';
           });
@@ -374,24 +379,69 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
     return Scaffold(
       backgroundColor: _kBlack,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildBalanceBanner(),
-            if (widget.requiredAmount != null) _buildRequiredCallout(),
-            _buildTabBar(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabs,
-                children: [
-                  _buildTopUpTab(),
-                  _buildHistoryTab(),
-                ],
-              ),
-            ),
-          ],
-        ),
+        child: _success
+            ? _buildLottieSuccess()
+            : _pendingRef != null
+                ? _buildPendingScreen()
+                : Column(
+                    children: [
+                      _buildHeader(),
+                      _buildBalanceBanner(),
+                      if (widget.requiredAmount != null) _buildRequiredCallout(),
+                      _buildTabBar(),
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabs,
+                          children: [
+                            _buildTopUpTab(),
+                            _buildHistoryTab(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
       ),
+    );
+  }
+
+  // ── CamPay pending screen (driver confirms MoMo PIN on their phone) ──
+
+  Widget _buildPendingScreen() {
+    return PaymentPendingView(
+      title:       'Confirm on your phone',
+      amountLabel: _fmtAmount(_pendingAmount),
+      message:     'Enter your Mobile Money PIN on your phone to confirm. Your '
+                   'wallet is credited the moment the payment succeeds — keep '
+                   'this screen open.',
+      background:  _kBlack,
+      accent:      _kOrange,
+      titleColor:  _kWhite,
+      textColor:   _kGrey,
+    );
+  }
+
+  // ── CamPay success screen (Lottie → next step) ──────────────────────
+
+  Widget _buildLottieSuccess() {
+    return PaymentSuccessView(
+      title:           'Payment Successful',
+      subtitle:        '${_fmtAmount(_successAmount)} added\nNew balance: ${_fmtAmount(_newBalance)}',
+      buttonLabel:     'Done',
+      background:      _kBlack,
+      titleColor:      _kWhite,
+      subtitleColor:   _kGrey,
+      buttonColor:     _kGreen,
+      buttonTextColor: _kBlack,
+      onContinue: () {
+        if (!mounted) return;
+        // Reached from the "insufficient balance" flow → return success so the
+        // caller can continue. Otherwise just go back to the form.
+        if (widget.requiredAmount != null) {
+          Navigator.pop(context, true);
+        } else {
+          setState(() => _success = false);
+        }
+      },
     );
   }
 
@@ -587,12 +637,6 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          // ── Success state ─────────────────────────────────────────
-          if (_success) ...[
-            _buildSuccessBanner(),
-            const SizedBox(height: 24),
-          ],
-
           // ── Amount input ──────────────────────────────────────────
           const Text(
             'Amount',
@@ -667,72 +711,14 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
     );
   }
 
-  // ── Success banner ────────────────────────────────────────────────
-
-  Widget _buildSuccessBanner() {
-    return Container(
-      padding:     const EdgeInsets.all(20),
-      decoration:  BoxDecoration(
-        color:        _kGreen.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: _kGreen.withOpacity(0.4)),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.check_circle_rounded, color: _kGreen, size: 40),
-          const SizedBox(height: 10),
-          Text(
-            '${_fmtAmount(_successAmount)} added!',
-            style: const TextStyle(
-              fontFamily: 'LeagueSpartan',
-              fontSize:   22,
-              fontWeight: FontWeight.w800,
-              color:      _kGreen,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'New balance: ${_fmtAmount(_newBalance)}',
-            style: const TextStyle(
-              fontFamily: 'Quicksand',
-              fontSize:   13,
-              color:      _kGrey,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding:     const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              decoration:  BoxDecoration(
-                color:        _kGreen,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                'Go Back to Dashboard',
-                style: TextStyle(
-                  fontFamily: 'Quicksand',
-                  fontSize:   13,
-                  fontWeight: FontWeight.w700,
-                  color:      _kBlack,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ── Amount input ──────────────────────────────────────────────────
 
   Widget _buildAmountInput() {
     return Container(
       decoration: BoxDecoration(
-        color:        _kCard,
+        color:        _kWhite,
         borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: Colors.white.withOpacity(0.08)),
+        border:       Border.all(color: const Color(0xFFE0E0E0)),
       ),
       child: Row(
         children: [
@@ -753,19 +739,20 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
               controller:       _amountCtrl,
               keyboardType:     TextInputType.number,
               inputFormatters:  [FilteringTextInputFormatter.digitsOnly],
+              cursorColor:      _kOrange,
               onChanged:        (_) { if (_success) setState(() => _success = false); },
               style: const TextStyle(
                 fontFamily: 'LeagueSpartan',
                 fontSize:   28,
                 fontWeight: FontWeight.w800,
-                color:      _kWhite,
+                color:      _kBlack,
               ),
               decoration: const InputDecoration(
                 hintText:       '0',
                 hintStyle:      TextStyle(
                   fontFamily: 'LeagueSpartan',
                   fontSize:   28,
-                  color:      Color(0xFF333333),
+                  color:      Color(0xFF9E9E9E),
                   fontWeight: FontWeight.w800,
                 ),
                 border:         InputBorder.none,
@@ -777,9 +764,9 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
           if (_amountCtrl.text.isNotEmpty)
             GestureDetector(
               onTap: () => setState(() { _amountCtrl.clear(); _success = false; }),
-              child: Padding(
-                padding: const EdgeInsets.only(right: 14),
-                child: Icon(Icons.cancel_rounded, color: _kGrey.withOpacity(0.5), size: 20),
+              child: const Padding(
+                padding: EdgeInsets.only(right: 14),
+                child: Icon(Icons.cancel_rounded, color: Color(0xFF9E9E9E), size: 20),
               ),
             ),
         ],
@@ -908,9 +895,9 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
   Widget _buildPhoneInput() {
     return Container(
       decoration: BoxDecoration(
-        color:        _kCard,
+        color:        _kWhite,
         borderRadius: BorderRadius.circular(14),
-        border:       Border.all(color: Colors.white.withOpacity(0.08)),
+        border:       Border.all(color: const Color(0xFFE0E0E0)),
       ),
       child: Row(
         children: [
@@ -922,29 +909,30 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
                 fontFamily: 'Quicksand',
                 fontSize:   14,
                 fontWeight: FontWeight.w700,
-                color:      _kGrey,
+                color:      Color(0xFF555555),
               ),
             ),
           ),
           Container(
             width: 1, height: 30,
             margin: const EdgeInsets.symmetric(horizontal: 12),
-            color:  Colors.white.withOpacity(0.08),
+            color:  const Color(0xFFE0E0E0),
           ),
           Expanded(
             child: TextField(
               controller:      _phoneCtrl,
               keyboardType:    TextInputType.phone,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              cursorColor:     _kOrange,
               style:           const TextStyle(
                 fontFamily: 'Quicksand',
                 fontSize:   15,
                 fontWeight: FontWeight.w600,
-                color:      _kWhite,
+                color:      _kBlack,
               ),
               decoration: const InputDecoration(
                 hintText:       '6XX XXX XXX',
-                hintStyle:      TextStyle(color: Color(0xFF444444), fontSize: 15),
+                hintStyle:      TextStyle(color: Color(0xFF9E9E9E), fontSize: 15),
                 border:         InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 14),
               ),
