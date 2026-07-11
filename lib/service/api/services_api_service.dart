@@ -404,6 +404,17 @@ class ServicesApiService {
     } catch (e) { _handleError(e, 'getMySubscription'); rethrow; }
   }
 
+  /// GET /api/services/subscription/history — the provider's subscription payments
+  Future<Map<String, dynamic>> getSubscriptionHistory({int page = 1, int limit = 20}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/services/subscription/history?page=$page&limit=$limit');
+      final response = await http
+          .get(uri, headers: await _getHeaders())
+          .timeout(Duration(milliseconds: _timeout));
+      return _handleResponse(response);
+    } catch (e) { _handleError(e, 'getSubscriptionHistory'); rethrow; }
+  }
+
   /// POST /api/services/subscription/activate-free
   Future<Map<String, dynamic>> activateFreeSubscription() async {
     try {

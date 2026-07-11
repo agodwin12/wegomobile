@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import '../../utils/services_post_flow.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -154,6 +155,14 @@ class _MyListingsScreenState extends State<MyListingsScreen>
       ),
       title: Text('Mes annonces', style: AppTypography.titleLarge),
       centerTitle: true,
+      actions: [
+        IconButton(
+          tooltip: 'Mon abonnement',
+          onPressed: () => Navigator.pushNamed(context, '/services/my-subscription')
+              .then((_) => _load()),
+          icon: Icon(Icons.workspace_premium_rounded, color: _kPrimary),
+        ),
+      ],
     );
   }
 
@@ -161,7 +170,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   Widget _buildFab() {
     return FloatingActionButton.extended(
       onPressed: () =>
-          Navigator.pushNamed(context, '/services/listing-plan').then((_) => _load()),
+          startServicePostFlow(context).then((_) => _load()),
       backgroundColor: _kPrimary,
       // FIX: dark foreground on gold (correct contrast)
       foregroundColor: _kTextPrimary,

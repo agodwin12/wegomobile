@@ -62,6 +62,7 @@ import 'screens/services/category_listings_screen.dart';
 import 'screens/services/listing_plan_screen.dart';
 import 'screens/services/my_listings_screen.dart';
 import 'screens/services/post_service_screen.dart';
+import 'screens/services/my_subscription_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 // SERVICES
@@ -542,6 +543,9 @@ class _WegoAppState extends State<WegoApp> {
 
             case '/services/my-listings':
               return MaterialPageRoute(builder: (_) => MyListingsScreen());
+
+            case '/services/my-subscription':
+              return MaterialPageRoute(builder: (_) => const MySubscriptionScreen());
 
             case '/services/categories':
               return MaterialPageRoute(builder: (_) => const AllCategoriesScreen());

@@ -635,6 +635,21 @@ class ServicesProvider with ChangeNotifier {
     return null;
   }
 
+  /// GET /api/services/subscription/history → list of the provider's payments.
+  Future<List<Map<String, dynamic>>> getSubscriptionHistory() async {
+    try {
+      final response = await _apiService.getSubscriptionHistory();
+      if (response['success'] == true && response['data'] is List) {
+        return (response['data'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('❌ [PROVIDER] getSubscriptionHistory: $e');
+    }
+    return [];
+  }
+
   /// POST /api/services/subscription/activate-free → instant free plan.
   Future<bool> activateFreeSubscription() async {
     try {

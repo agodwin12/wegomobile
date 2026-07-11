@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import '../../utils/services_post_flow.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -109,7 +110,8 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
   }
 
   void _goToAllCategories() => Navigator.pushNamed(context, '/services/categories');
-  void _goToPostService()   => Navigator.pushNamed(context, '/services/listing-plan');
+  void _goToPostService()    => startServicePostFlow(context);
+  void _goToMySubscription() => Navigator.pushNamed(context, '/services/my-subscription');
   void _goToMyListings()    => Navigator.pushNamed(context, '/services/my-listings');
 
   // ── Build ───────────────────────────────────────────────────────────────────
@@ -365,24 +367,37 @@ class _ServicesHomeScreenState extends State<ServicesHomeScreen> {
         builder: (context, constraints) {
           // 2 items, 1 gap of 10 px
           final itemWidth = (constraints.maxWidth - 10) / 2;
-          return Row(
+          return Column(
             children: [
-              _QuickActionCard(
-                width: itemWidth,
-                icon: Icons.add_circle_outline_rounded,
-                label: 'Publier une annonce',
-                color: _kPrimary,
-                textColor: _kTextPrimary,
-                onTap: _goToPostService,
+              Row(
+                children: [
+                  _QuickActionCard(
+                    width: itemWidth,
+                    icon: Icons.add_circle_outline_rounded,
+                    label: 'Publier une annonce',
+                    color: _kPrimary,
+                    textColor: _kTextPrimary,
+                    onTap: _goToPostService,
+                  ),
+                  const SizedBox(width: 10),
+                  _QuickActionCard(
+                    width: itemWidth,
+                    icon: Icons.list_alt_rounded,
+                    label: 'Mes annonces',
+                    color: AppColors.info,
+                    textColor: Colors.white,
+                    onTap: _goToMyListings,
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
+              const SizedBox(height: 10),
               _QuickActionCard(
-                width: itemWidth,
-                icon: Icons.list_alt_rounded,
-                label: 'Mes annonces',
-                color: AppColors.info,
-                textColor: Colors.white,
-                onTap: _goToMyListings,
+                width: constraints.maxWidth,
+                icon: Icons.workspace_premium_rounded,
+                label: 'Mon abonnement',
+                color: Colors.white,
+                textColor: _kTextPrimary,
+                onTap: _goToMySubscription,
               ),
             ],
           );

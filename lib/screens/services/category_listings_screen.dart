@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import '../../utils/services_post_flow.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -514,7 +515,7 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: () =>
-                        Navigator.pushNamed(context, '/services/post'),
+                        startServicePostFlow(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kPrimary,
                       foregroundColor: _kTextPrimary,
