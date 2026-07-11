@@ -73,8 +73,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
 
     // Prefill the Mobile Money number with the account phone (editable — the
     // payer may want to charge a different MTN/Orange number than the one on file).
-    _rentalPhoneController.text =
-        (widget.user['phone_e164'] as String? ?? '').replaceAll('+', '').replaceAll('237', '');
+    _rentalPhoneController.text = (widget.user['phone_e164'] as String? ?? '')
+        .replaceAll(RegExp(r'\s'), '')
+        .replaceFirst(RegExp(r'^\+?237'), '')
+        .replaceAll(RegExp(r'[^0-9]'), '');
 
     _fadeController = AnimationController(
         duration: const Duration(milliseconds: 600), vsync: this);
@@ -262,14 +264,33 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
       return;
     }
 
-    // Mobile-money number to charge — the number that receives the PIN prompt and
-    // which decides MTN vs Orange (CamPay detects the operator from the number).
+    // Mobile-money number to charge. CamPay routes to MTN or Orange based on THIS
+    // number, so it must match the operator the user selected — otherwise a number
+    // on a different network would be silently charged there.
     final phone = _rentalPhoneController.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
     if (phone.length < 9) {
       _showErrorDialog(
           title: 'Mobile Money Number Required',
           message:
-          'Enter the MTN or Orange number that will receive the payment prompt.');
+          'Enter the ${_paymentLabel(_selectedPaymentMethod)} number that will receive the payment prompt.');
+      return;
+    }
+    final detectedOp = _momoOperator(phone);
+    if (detectedOp == null) {
+      _showErrorDialog(
+          title: 'Unrecognised Number',
+          message:
+          'That doesn\'t look like a valid MTN or Orange Cameroon number. Please check it and try again.');
+      return;
+    }
+    if (detectedOp != _selectedPaymentMethod) {
+      final want   = _selectedPaymentMethod == 'MTN_MOMO' ? 'MTN' : 'Orange';
+      final actual = detectedOp == 'MTN_MOMO' ? 'MTN' : 'Orange';
+      _showErrorDialog(
+          title: '$actual number, not $want',
+          message:
+          'You selected $want Money, but this number is an $actual number. '
+          'Enter your $want number, or go back and choose $actual Money.');
       return;
     }
 
@@ -715,6 +736,22 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
       case 'MTN_MOMO':     return 'MTN Mobile Money';
       default:             return 'Not selected';
     }
+  }
+
+  /// Detect the Mobile Money operator from a Cameroon number.
+  /// CamPay routes the charge by the NUMBER (not the on-screen selection), so we
+  /// mirror that here to keep the UI honest and block wrong-network charges.
+  /// MTN CM: 67x, 650-654, 680-684.  Orange CM: 69x, 655-659, 685-689.
+  /// Returns 'MTN_MOMO' | 'ORANGE_MONEY' | null (unrecognised).
+  String? _momoOperator(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    final local  = digits.startsWith('237') ? digits.substring(3) : digits;
+    if (local.length < 3) return null;
+    final p2 = local.substring(0, 2);
+    final p3 = int.tryParse(local.substring(0, 3)) ?? 0;
+    if (p2 == '67' || (p3 >= 650 && p3 <= 654) || (p3 >= 680 && p3 <= 684)) return 'MTN_MOMO';
+    if (p2 == '69' || (p3 >= 655 && p3 <= 659) || (p3 >= 685 && p3 <= 689)) return 'ORANGE_MONEY';
+    return null;
   }
 
   // ── BUILD ──────────────────────────────────────────────────────────────────
@@ -1362,55 +1399,85 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
           imagePath: null,
         ),
 
-        // Mobile Money number entry — shown for MTN/Orange. This is the number
-        // the CamPay PIN prompt is sent to; the operator (MTN vs Orange) is
-        // detected automatically from the number, so the selection above is only
-        // a hint. Prefilled from the account but editable.
+        // Mobile Money number entry — shown for MTN/Orange. CamPay sends the PIN
+        // prompt to THIS number and picks MTN/Orange from it, so it must match the
+        // selected operator. Live detection below turns green when it matches and
+        // red when it doesn't, so a wrong-network number can't be charged silently.
         if (_selectedPaymentMethod == 'MTN_MOMO' ||
             _selectedPaymentMethod == 'ORANGE_MONEY') ...[
           const SizedBox(height: 16),
-          _sectionLabel('Mobile Money Number'),
+          _sectionLabel('${_paymentLabel(_selectedPaymentMethod)} Number'),
           const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.backgroundWhite,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.borderLight, width: 1.5),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(children: [
-              const Text('+237',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0D0D1A))),
+          Builder(builder: (_) {
+            final typed    = _rentalPhoneController.text.trim();
+            final detected = _momoOperator(typed);
+            final matches  = detected == _selectedPaymentMethod;
+            final Color okC = Color(0xFF00A85C), badC = Color(0xFFE0344B);
+            final border = typed.isEmpty
+                ? AppColors.borderLight
+                : (matches ? okC : badC);
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Container(
-                width: 1,
-                height: 22,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: AppColors.borderLight,
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _rentalPhoneController,
-                  keyboardType: TextInputType.phone,
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w600),
-                  decoration: const InputDecoration(
-                    hintText: '6XX XXX XXX',
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 14),
-                  ),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundWhite,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: border, width: 1.5),
                 ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(children: [
+                  const Text('+237',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0D0D1A))),
+                  Container(
+                    width: 1,
+                    height: 22,
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    color: AppColors.borderLight,
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _rentalPhoneController,
+                      keyboardType: TextInputType.phone,
+                      onChanged: (_) => setState(() {}),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600),
+                      decoration: const InputDecoration(
+                        hintText: '6XX XXX XXX',
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  if (detected != null)
+                    Image.asset(
+                      detected == 'MTN_MOMO'
+                          ? 'assets/images/momo.png'
+                          : 'assets/images/om.png',
+                      width: 24, height: 24, fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                ]),
               ),
-            ]),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'The payment prompt is sent to this number. MTN or Orange is detected automatically.',
-            style: TextStyle(fontSize: 11, color: AppColors.textLight),
-          ),
+              const SizedBox(height: 6),
+              Text(
+                typed.isEmpty
+                    ? 'Enter the number that will receive the payment prompt.'
+                    : matches
+                        ? 'Looks like a ${detected == 'MTN_MOMO' ? 'MTN' : 'Orange'} number ✓'
+                        : detected == null
+                            ? 'Unrecognised number — check it is a valid MTN or Orange number.'
+                            : 'This is an ${detected == 'MTN_MOMO' ? 'MTN' : 'Orange'} number, but you selected ${_paymentLabel(_selectedPaymentMethod)}.',
+                style: TextStyle(
+                    fontSize: 11,
+                    color: typed.isEmpty
+                        ? AppColors.textLight
+                        : (matches ? okC : badC)),
+              ),
+            ]);
+          }),
         ],
       ]),
     );
