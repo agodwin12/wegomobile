@@ -541,72 +541,34 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     }
   }
 
-  // ─── Google Auth ─────────────────────────────────────────────────────────────
+  // ─── Google Auth — PASSENGERS ONLY ───────────────────────────────────────────
+  // "Continue with Google" signs in an existing passenger OR creates a new
+  // passenger account. Drivers are NEVER signed up or logged in with Google —
+  // they use phone + password, and driver accounts are created by the backoffice.
 
-  Future<void> _loginWithGoogle() async {
+  Future<void> _continueWithGoogle() async {
     if (loading) return;
     HapticFeedback.lightImpact();
     setState(() => loading = true);
 
     try {
-      final resp = await GoogleAuthService.instance.loginWithGoogle();
-      if (!resp.success || resp.data == null) {
-        _showToastMessage(resp.message ?? 'Google login failed.', false);
-        return;
-      }
-      await _handleAuthSuccess(resp.data!);
-    } on SocketException {
-      _showToastMessage('No internet connection', false);
-    } catch (e) {
-      debugPrint('❌ [GOOGLE LOGIN] $e');
-      _showToastMessage('Google login failed. Please try again.', false);
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
-  Future<void> _registerPassengerWithGoogle() async {
-    if (loading) return;
-    setState(() => loading = true);
-
-    try {
+      // user_type PASSENGER → backend logs in an existing passenger, or creates
+      // a passenger account for a new Google user. A non-passenger (driver /
+      // agent / fleet owner) account is rejected by the backend.
       final resp = await GoogleAuthService.instance.registerPassengerWithGoogle();
       if (!resp.success || resp.data == null) {
-        _showToastMessage(resp.message ?? 'Google passenger registration failed.', false);
+        _showToastMessage(
+          resp.message ?? 'Google sign-in is available for passengers only.',
+          false,
+        );
         return;
       }
       await _handleAuthSuccess(resp.data!);
     } on SocketException {
       _showToastMessage('No internet connection', false);
     } catch (e) {
-      debugPrint('❌ [GOOGLE PASSENGER REGISTER] $e');
-      _showToastMessage('Google registration failed. Please try again.', false);
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
-  Future<void> _startDriverSignupWithGoogle() async {
-    if (loading) return;
-    setState(() => loading = true);
-
-    try {
-      // Two-step driver onboarding (the backend's clean path): create the DRIVER
-      // account with Google now and sign in. The driver then completes their
-      // vehicle + documents in-app (authenticated: POST /api/profile/driver/...)
-      // and waits for admin approval before they can go online. This avoids the
-      // password/OTP signup flow, which doesn't apply to Google accounts.
-      final resp = await GoogleAuthService.instance.registerDriverWithGoogle();
-      if (!resp.success || resp.data == null) {
-        _showToastMessage(resp.message ?? 'Google driver sign-up failed.', false);
-        return;
-      }
-      await _handleAuthSuccess(resp.data!);
-    } on SocketException {
-      _showToastMessage('No internet connection', false);
-    } catch (e) {
-      debugPrint('❌ [GOOGLE DRIVER START] $e');
-      _showToastMessage('Google sign-up failed. Please try again.', false);
+      debugPrint('❌ [GOOGLE PASSENGER] $e');
+      _showToastMessage('Google sign-in failed. Please try again.', false);
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -1290,7 +1252,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   Widget _buildGoogleButton() {
     return _OutlinedActionButton(
-      onTap: _loginWithGoogle,
+      onTap: _continueWithGoogle,
       customIcon: const _GoogleIcon(),
       label: 'Continue with Google',
     );
