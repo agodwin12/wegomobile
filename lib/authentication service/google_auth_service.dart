@@ -53,7 +53,7 @@ class GoogleAuthService {
   bool _initialized = false;
 
   static const String _serverClientId =
-      'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
+      '921894252905-p8jghuj68kjqi4os9pcjmp157ro79snk.apps.googleusercontent.com';
 
   Future<void> initialize() async {
     if (_initialized) return;
