@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../../../../../utils/app_colors.dart';
 import '../../../../../utils/app_typography.dart';
 import '../../../../../core/config.dart';
+import '../../../../../widgets/phone/country_code_field.dart';
 import '../driver searching/delivery_searching_screen.dart';
 
 class _Estimate {
@@ -92,8 +93,11 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
 
   // ── Recipient ────────────────────────────────────────────────────────────────
   final _nameCtrl  = TextEditingController();
-  final _phoneCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();      // LOCAL part only
   final _noteCtrl  = TextEditingController();
+  // Country dial code prepended to the recipient number so the SMS PIN is sent
+  // in international format (Techsoft can't deliver a bare local number).
+  DialingCountry _recipientCountry = kFrancophoneAfricaCountries.first; // Cameroun
 
   // ── Coupon ────────────────────────────────────────────────────────────────────
   final _couponCtrl   = TextEditingController();
@@ -229,7 +233,10 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         'dropoff_latitude':  widget.dropoffLat,
         'dropoff_longitude': widget.dropoffLng,
         'recipient_name':    _nameCtrl.text.trim(),
-        'recipient_phone':   _phoneCtrl.text.trim(),
+        // Full international number (e.g. 237690000000) so the PIN SMS is
+        // actually delivered — the backend/SMS provider adds no country code.
+        'recipient_phone':   buildInternationalNumber(
+            _recipientCountry, _phoneCtrl.text),
         'package_size':      widget.packageSize,
         'package_category':  widget.packageCategory,
         'package_photo_url': widget.packagePhotoUrl,
@@ -732,9 +739,24 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
           _input(_nameCtrl,  'Full name *',
               icon: Icons.person_outline_rounded),
           const SizedBox(height: 10),
-          _input(_phoneCtrl, 'Phone number *',
-              icon: Icons.phone_outlined,
-              inputType: TextInputType.phone),
+          CountryCodePhoneField(
+            controller: _phoneCtrl,
+            country: _recipientCountry,
+            hint: 'Phone number *',
+            onCountryChanged: (c) => setState(() => _recipientCountry = c),
+            onChanged: () => setState(() {}), // refresh _canBook
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              'Select the recipient\'s country, then enter the number '
+              'without the country code.',
+              style: TextStyle(
+                  fontFamily: 'Roboto', fontSize: 11,
+                  color: AppColors.textLight),
+            ),
+          ),
           const SizedBox(height: 10),
           _input(_noteCtrl,  'Note (optional)',
               icon: Icons.note_outlined, maxLines: 2),
