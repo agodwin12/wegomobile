@@ -41,6 +41,11 @@ class VehicleType {
   String? distanceText;
   String? durationText;
 
+  // Surge (from the fare estimate breakdown)
+  bool    surgeActive = false;
+  double? surgeMultiplier;
+  String? surgeReason;
+
   VehicleType({
     required this.id,
     required this.name,
@@ -599,6 +604,10 @@ class _RideMapScreenState extends State<RideMapScreen>
               v.fareEstimate = (est['fare_estimate'] as num?)?.toDouble();
               v.distanceText = est['distance_text']?.toString();
               v.durationText = est['duration_text']?.toString();
+              final bd = est['breakdown'] as Map<String, dynamic>?;
+              v.surgeActive     = bd?['surge_active'] == true;
+              v.surgeMultiplier = (bd?['surge_multiplier'] as num?)?.toDouble();
+              v.surgeReason     = bd?['surge_reason']?.toString();
             }
           }
           _selectedVehicle = _vehicleTypes.firstWhere((v) => v.fareEstimate != null, orElse: () => _vehicleTypes[0]);
@@ -1389,6 +1398,30 @@ class _RideMapScreenState extends State<RideMapScreen>
             ]),
             if (vehicle.distanceText != null)
               Padding(padding: const EdgeInsets.only(top: 2), child: Text(vehicle.distanceText!, style: AppTypography.caption.copyWith(color: AppColors.darkTextTertiary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            if (vehicle.surgeActive)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.bolt_rounded, size: 12, color: AppColors.warning),
+                    const SizedBox(width: 2),
+                    Flexible(
+                      child: Text(
+                        vehicle.surgeMultiplier != null
+                            ? 'Tarif majoré ×${vehicle.surgeMultiplier!.toStringAsFixed(1)}${vehicle.surgeReason != null ? ' · ${vehicle.surgeReason}' : ''}'
+                            : 'Tarif majoré',
+                        style: AppTypography.caption.copyWith(color: AppColors.warning, fontWeight: FontWeight.w700),
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
           ])),
           const SizedBox(width: 8),
           SizedBox(width: 76, child: Row(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.center, children: [
