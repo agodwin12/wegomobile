@@ -348,7 +348,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
 
   void _showComingSoon(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:         Text('$feature coming soon'),
+      content:         Text(tr('common.comingSoon', {'feature': feature})),
       backgroundColor: _kDark,
       behavior:        SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -872,7 +872,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text('Getting location…',
+                    Text(tr('home.gettingLocation'),
                         style: TextStyle(
                           fontSize: 12,
                           color:    Colors.white.withOpacity(0.55),
@@ -965,7 +965,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Where to?',
+                  Text(tr('ride.whereTo'),
                       style: TextStyle(
                         fontSize:   16,
                         fontWeight: FontWeight.w800,
@@ -973,7 +973,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                         letterSpacing: -0.3,
                       )),
                   const SizedBox(height: 2),
-                  Text('Enter your destination',
+                  Text(tr('home.enterDestination'),
                       style: TextStyle(
                           fontSize: 12,
                           color:    Colors.grey.shade500)),
@@ -987,7 +987,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                 color:        _kGold,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Go →',
+              child: Text(tr('home.go'),
                   style: TextStyle(
                     fontSize:   13,
                     fontWeight: FontWeight.w800,
@@ -1226,7 +1226,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 22, 16, 12),
-          child: Text('Saved places',
+          child: Text(tr('home.savedPlaces'),
               style: TextStyle(
                 fontSize:   13,
                 fontWeight: FontWeight.w700,
@@ -1291,7 +1291,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Offers',
+              Text(tr('home.offers'),
                   style: TextStyle(
                     fontSize:   18,
                     fontWeight: FontWeight.w800,
@@ -1300,7 +1300,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                   )),
               GestureDetector(
                 onTap: () => _showComingSoon('All offers'),
-                child: const Text('See all',
+                child: Text(tr('common.seeAll'),
                     style: TextStyle(
                       fontSize:   13,
                       fontWeight: FontWeight.w600,
@@ -1440,7 +1440,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                 color:        Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text('Claim',
+              child: Text(tr('home.claim'),
                   style: TextStyle(
                     fontSize:   12,
                     fontWeight: FontWeight.w800,
@@ -1466,7 +1466,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Recent trips',
+              Text(tr('home.recentTrips'),
                   style: TextStyle(
                     fontSize:   18,
                     fontWeight: FontWeight.w800,
@@ -1475,7 +1475,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                   )),
               GestureDetector(
                 onTap: () => _showComingSoon('All trips'),
-                child: const Text('See all',
+                child: Text(tr('common.seeAll'),
                     style: TextStyle(
                       fontSize:   13,
                       fontWeight: FontWeight.w600,
@@ -1559,7 +1559,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                 color:        const Color(0xFFEFFAF0),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: const Text('Completed',
+              child: Text(tr('trip.status.completed'),
                   style: TextStyle(
                     fontSize:   9,
                     fontWeight: FontWeight.w700,
@@ -1618,14 +1618,14 @@ class _PassengerDashboardState extends State<PassengerDashboard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Your Safety Matters',
+                Text(tr('home.safetyTitle'),
                     style: TextStyle(
                       fontSize:   14,
                       fontWeight: FontWeight.w700,
                       color:      _kDark,
                     )),
                 const SizedBox(height: 3),
-                Text('24/7 support · Real-time tracking',
+                Text(tr('home.safetySubtitle'),
                     style: TextStyle(
                         fontSize: 12,
                         color:    Colors.grey.shade500)),

@@ -119,6 +119,20 @@ const Map<String, String> _fr = {
   'auth.err.invalidUserData': 'Données utilisateur invalides reçues du serveur',
   'auth.err.googleFailed': 'La connexion Google a échoué. Veuillez réessayer.',
   'auth.err.googlePassengersOnly': 'La connexion Google est réservée aux passagers.',
+
+  // ── Home / dashboard ──
+  'common.seeAll': 'Tout voir',
+  'common.comingSoon': '{feature} bientôt disponible',
+  'home.gettingLocation': 'Localisation…',
+  'home.enterDestination': 'Saisissez votre destination',
+  'home.go': 'Aller →',
+  'home.savedPlaces': 'Lieux enregistrés',
+  'home.offers': 'Offres',
+  'home.claim': 'Réclamer',
+  'home.recentTrips': 'Courses récentes',
+  'home.safetyTitle': 'Votre sécurité compte',
+  'home.safetySubtitle': 'Assistance 24/7 · Suivi en temps réel',
+  'trip.status.completed': 'Terminé',
 };
 
 const Map<String, String> _en = {
@@ -224,4 +238,18 @@ const Map<String, String> _en = {
   'auth.err.invalidUserData': 'Invalid user data received from server',
   'auth.err.googleFailed': 'Google sign-in failed. Please try again.',
   'auth.err.googlePassengersOnly': 'Google sign-in is available for passengers only.',
+
+  // ── Home / dashboard ──
+  'common.seeAll': 'See all',
+  'common.comingSoon': '{feature} coming soon',
+  'home.gettingLocation': 'Getting location…',
+  'home.enterDestination': 'Enter your destination',
+  'home.go': 'Go →',
+  'home.savedPlaces': 'Saved places',
+  'home.offers': 'Offers',
+  'home.claim': 'Claim',
+  'home.recentTrips': 'Recent trips',
+  'home.safetyTitle': 'Your safety matters',
+  'home.safetySubtitle': '24/7 support · Real-time tracking',
+  'trip.status.completed': 'Completed',
 };
