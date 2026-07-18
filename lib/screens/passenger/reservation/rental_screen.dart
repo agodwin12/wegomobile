@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:wego_v1/screens/passenger/reservation/rent%20details/vehicle_details_screen.dart';
 import 'dart:convert';
@@ -234,7 +235,7 @@ class _RentalScreenState extends State<RentalScreen>
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.error,
                         padding: const EdgeInsets.symmetric(vertical: 13), elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                    child: const Text('Close', style: TextStyle(fontSize: 14,
+                    child: Text(tr('common.close'), style: TextStyle(fontSize: 14,
                         fontWeight: FontWeight.w700, color: Colors.white)))),
           ])),
     ));
@@ -308,11 +309,11 @@ class _RentalScreenState extends State<RentalScreen>
                         boxShadow: [BoxShadow(color: AppColors.primaryGold.withOpacity(0.6), blurRadius: 6)],
                       )),
                   const SizedBox(width: 6),
-                  Text('WeGo Rentals', style: TextStyle(fontSize: 11,
+                  Text(tr('rental.title'), style: TextStyle(fontSize: 11,
                       fontWeight: FontWeight.w700, color: AppColors.primaryGold, letterSpacing: 1.2)),
                 ]),
                 const SizedBox(height: 4),
-                const Text('Rent A Car', style: TextStyle(fontSize: 24,
+                Text(tr('rental.rentCar'), style: TextStyle(fontSize: 24,
                     fontWeight: FontWeight.w900, color: Colors.white,
                     letterSpacing: -0.6, height: 1.1)),
               ]),
@@ -328,10 +329,10 @@ class _RentalScreenState extends State<RentalScreen>
                   boxShadow: [BoxShadow(color: AppColors.primaryGold.withOpacity(0.35),
                       blurRadius: 10, offset: const Offset(0, 3))],
                 ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.receipt_long_rounded, color: AppColors.primaryDark, size: 16),
                   SizedBox(width: 6),
-                  Text('My Rentals', style: TextStyle(fontSize: 12,
+                  Text(tr('rental.myRentals'), style: TextStyle(fontSize: 12,
                       fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
                 ]),
               ),
@@ -371,7 +372,7 @@ class _RentalScreenState extends State<RentalScreen>
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500,
               color: _searchFocused ? AppColors.textPrimary : Colors.white.withOpacity(0.85)),
           decoration: InputDecoration(
-            hintText: 'Search make, model...',
+            hintText: tr('rental.searchHint'),
             hintStyle: TextStyle(fontSize: 14,
                 color: _searchFocused ? AppColors.textLight : Colors.white.withOpacity(0.4)),
             prefixIcon: Icon(Icons.search_rounded, size: 20,
@@ -405,7 +406,7 @@ class _RentalScreenState extends State<RentalScreen>
                   decoration: BoxDecoration(gradient: AppColors.primaryGradient,
                       borderRadius: BorderRadius.circular(2))),
               const SizedBox(width: 8),
-              const Text('Browse by Type', style: TextStyle(fontSize: 15,
+              Text(tr('rental.browseByType'), style: TextStyle(fontSize: 15,
                   fontWeight: FontWeight.w800, color: Color(0xFF0D0D1A), letterSpacing: -0.3)),
             ]),
             if (!_loading)
@@ -420,7 +421,7 @@ class _RentalScreenState extends State<RentalScreen>
             scrollDirection: Axis.horizontal,
             itemCount: _categories.length + 1,
             itemBuilder: (_, i) {
-              if (i == 0) return _chip(label: 'All', icon: Icons.apps_rounded,
+              if (i == 0) return _chip(label: tr('common.all'), icon: Icons.apps_rounded,
                   selected: _selectedCategoryId == 'ALL',
                   onTap: () => setState(() => _selectedCategoryId = 'ALL'));
               final cat = _categories[i - 1];
@@ -618,7 +619,7 @@ class _RentalScreenState extends State<RentalScreen>
                       Text('XAF ${_formatPrice(price)}',
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900,
                               color: AppColors.primaryGold, letterSpacing: -0.3)),
-                      const Text('per day', style: TextStyle(fontSize: 9,
+                      Text(tr('rental.perDay'), style: TextStyle(fontSize: 9,
                           color: Colors.white70, fontWeight: FontWeight.w500)),
                     ],
                   ),
@@ -677,7 +678,7 @@ class _RentalScreenState extends State<RentalScreen>
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: const Text('View Details',
+                        child: Text(tr('rental.viewDetails'),
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
                                 color: Colors.white, letterSpacing: 0.2)),
                       ),
@@ -753,10 +754,10 @@ class _RentalScreenState extends State<RentalScreen>
                         blurRadius: 20, offset: const Offset(0, 6))]),
                 child: Icon(Icons.car_rental_rounded, size: 44, color: AppColors.textLight)),
             const SizedBox(height: 24),
-            const Text('No vehicles found', style: TextStyle(fontSize: 20,
+            Text(tr('rental.noVehicles'), style: TextStyle(fontSize: 20,
                 fontWeight: FontWeight.w800, color: Color(0xFF0D0D1A))),
             const SizedBox(height: 8),
-            Text('Try adjusting your filters',
+            Text(tr('rental.adjustFilters'),
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             const SizedBox(height: 28),
             GestureDetector(
@@ -768,10 +769,10 @@ class _RentalScreenState extends State<RentalScreen>
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [BoxShadow(color: AppColors.primaryGold.withOpacity(0.3),
                         blurRadius: 12, offset: const Offset(0, 4))]),
-                child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.refresh_rounded, color: AppColors.primaryDark, size: 18),
                   SizedBox(width: 8),
-                  Text('Clear Filters', style: TextStyle(fontSize: 13,
+                  Text(tr('rental.clearFilters'), style: TextStyle(fontSize: 13,
                       fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
                 ]),
               ),

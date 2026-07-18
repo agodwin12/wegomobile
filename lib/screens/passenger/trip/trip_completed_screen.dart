@@ -9,6 +9,7 @@
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
@@ -164,9 +165,9 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
   String get _rateLabel => _vehicleInfo['type'] ?? 'Standard Rate';
 
   String get _pickupAddress  =>
-      _field(widget.tripDetails, ['pickup_address', 'pickupAddress', 'pickup'])   ?? 'Pickup';
+      _field(widget.tripDetails, ['pickup_address', 'pickupAddress', 'pickup'])   ?? tr('ride.pickup');
   String get _dropoffAddress =>
-      _field(widget.tripDetails, ['dropoff_address', 'dropoffAddress', 'dropoff']) ?? 'Dropoff';
+      _field(widget.tripDetails, ['dropoff_address', 'dropoffAddress', 'dropoff']) ?? tr('ride.destination');
 
   int get _baseFare {
     final f = widget.tripDetails['fare_estimate'] ?? widget.tripDetails['fareEstimate'] ??
@@ -268,10 +269,10 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
                   color: AppColors.primaryGold, size: 48),
             ),
             const SizedBox(height: 20),
-            const Text('Thank you!',
+            Text(tr('trip.thankYou'),
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
             const SizedBox(height: 8),
-            Text('Your feedback has been saved.',
+            Text(tr('trip.feedbackSaved'),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.5))),
             const SizedBox(height: 28),
@@ -288,7 +289,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
-                child: const Text('Done',
+                child: Text(tr('common.done'),
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
@@ -447,12 +448,12 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
                 ),
               ),
               const SizedBox(height: 24),
-              const Text('Trip Complete',
+              Text(tr('trip.complete'),
                   style: TextStyle(
                       fontSize: 28, fontWeight: FontWeight.w900,
                       color: Colors.white, letterSpacing: -0.4)),
               const SizedBox(height: 6),
-              Text('Thanks for riding with WEGO',
+              Text(tr('trip.thanksRiding'),
                   style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.45))),
               const SizedBox(height: 28),
               // Stats row
@@ -460,14 +461,14 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
                 children: [
                   Expanded(child: _StatPill(
                     icon: Icons.payments_rounded,
-                    label: 'Total paid',
+                    label: tr('trip.totalPaid'),
                     value: '$_baseFare XAF',
                     valueColor: AppColors.primaryGold,
                   )),
                   const SizedBox(width: 12),
                   Expanded(child: _StatPill(
                     icon: Icons.route_rounded,
-                    label: 'Distance',
+                    label: tr('common.distance'),
                     value: '$_distanceKm km',
                     valueColor: Colors.white,
                   )),
@@ -604,10 +605,10 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
           ]),
           const SizedBox(width: 16),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _AddrRow(label: 'Pickup',  address: _pickupAddress),
+            _AddrRow(label: tr('ride.pickup'),  address: _pickupAddress),
             Padding(padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Divider(height: 1, color: Colors.grey.shade100)),
-            _AddrRow(label: 'Dropoff', address: _dropoffAddress),
+            _AddrRow(label: tr('ride.destination'), address: _dropoffAddress),
           ])),
         ],
       ),
@@ -633,7 +634,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
       ),
       child: Column(
         children: [
-          Text('How was your ride?',
+          Text(tr('trip.howWasRide'),
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))),
           const SizedBox(height: 4),
           Text(_rateLabel,
@@ -701,7 +702,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
             maxLines: 3, maxLength: 500,
             style: const TextStyle(fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Leave a comment (optional)',
+              hintText: tr('trip.leaveComment'),
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
               filled: true, fillColor: Colors.grey.shade50, counterText: '',
               border: OutlineInputBorder(
@@ -735,7 +736,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Would you like to leave a tip?',
+          Text(tr('trip.leaveTip'),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
           const SizedBox(height: 14),
           // Tip buttons
@@ -789,7 +790,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
                   HapticFeedback.selectionClick();
                   setState(() => _selectedTipIdx = 0);
                 },
-                child: const Text('Remove',
+                child: Text(tr('common.remove'),
                     style: TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w600,
                         color: AppColors.primaryGold)),
@@ -797,7 +798,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
             ],
           ),
           const SizedBox(height: 6),
-          Text('The driver will receive 100% of your tips.',
+          Text(tr('trip.tipNote'),
               style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
         ],
       ),
@@ -828,7 +829,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Payment Method',
+              Text(tr('payment.title'),
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
               const SizedBox(height: 2),
               Text(_paymentLabel,
@@ -861,7 +862,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
             ? const SizedBox(width: 22, height: 22,
                 child: CircularProgressIndicator(strokeWidth: 2.5,
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.black)))
-            : const Text('Submit',
+            : Text(tr('common.submit'),
                 style: TextStyle(
                     fontSize: 17, fontWeight: FontWeight.w800, color: Colors.black)),
       ),
@@ -877,7 +878,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
           side: BorderSide(color: Colors.grey.shade300, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
-        child: Text('Skip for Now',
+        child: Text(tr('trip.skipForNow'),
             style: TextStyle(
                 fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade500)),
       ),

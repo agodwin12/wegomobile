@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../../../utils/app_colors.dart';
@@ -209,7 +210,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                   letterSpacing: -0.3,
                 )),
             const SizedBox(height: 2),
-            Text('Choose your delivery type',
+            Text(tr('delivery.chooseType'),
                 style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 12,
@@ -240,7 +241,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
   }
 
   Widget _buildSubtitle() {
-    return Text('How would you like to track your delivery?',
+    return Text(tr('delivery.trackQuestion'),
         style: AppTypography.bodyMedium.copyWith(
             color: AppColors.darkTextSecondary, fontSize: 14));
   }
@@ -284,7 +285,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Regular',
+                          Text(tr('delivery.regular'),
                               style: TextStyle(
                                 fontFamily: 'Poppins',
                                 fontSize: 20,
@@ -293,7 +294,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                                 letterSpacing: -0.3,
                               )),
                           const SizedBox(height: 3),
-                          Text('Reliable delivery, step by step',
+                          Text(tr('delivery.regularSub'),
                               style: TextStyle(
                                 fontFamily: 'Roboto',
                                 fontSize: 13,
@@ -355,10 +356,10 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Book Regular Delivery',
+                        Text(tr('delivery.bookRegular'),
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 14,
@@ -420,7 +421,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                         children: [
                           Row(
                             children: [
-                              const Text('Express',
+                              Text(tr('delivery.express'),
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontSize: 20,
@@ -433,7 +434,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                             ],
                           ),
                           const SizedBox(height: 3),
-                          Text('Live map. Real-time tracking.',
+                          Text(tr('delivery.expressSub'),
                               style: TextStyle(
                                 fontFamily: 'Roboto',
                                 fontSize: 13,
@@ -496,10 +497,10 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Book Express Delivery',
+                        Text(tr('delivery.bookExpress'),
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 14,
