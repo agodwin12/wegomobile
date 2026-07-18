@@ -578,14 +578,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 1),
           _buildModernMenuItem(
             icon: Icons.directions_car_outlined,
-            title: 'Vehicle Information',
-            subtitle: 'Manage your vehicle details',
+            title: tr('profile.vehicleInfo'),
+            subtitle: tr('profile.vehicleInfoSub'),
             onTap: () => _navigateTo('/profile/vehicle'),
           ),
           _buildModernMenuItem(
             icon: Icons.description_outlined,
-            title: 'Driver Documents',
-            subtitle: 'License, CNI, Insurance',
+            title: tr('profile.driverDocs'),
+            subtitle: tr('profile.driverDocsSub'),
             onTap: () => _navigateTo('/profile/documents'),
             showDivider: false,
           ),
@@ -635,14 +635,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return [
       _buildModernMenuItem(
         icon: Icons.person_outline,
-        title: 'Edit Profile',
-        subtitle: 'Update your personal information',
+        title: tr('profile.editProfile'),
+        subtitle: tr('profile.editProfileSub'),
         onTap: () => _navigateTo('/profile/edit'),
       ),
       _buildModernMenuItem(
         icon: Icons.lock_outline,
-        title: 'Change Password',
-        subtitle: 'Update your password',
+        title: tr('profile.changePassword'),
+        subtitle: tr('profile.changePasswordSub'),
         onTap: () => _navigateTo('/profile/change-password'),
         showDivider: false,
       ),
@@ -653,14 +653,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return [
       _buildModernMenuItem(
         icon: Icons.notifications_outlined,
-        title: 'Notifications',
-        subtitle: 'Manage notification preferences',
+        title: tr('profile.notifications'),
+        subtitle: tr('profile.notificationsSub'),
         onTap: () => _navigateTo('/profile/notifications'),
       ),
       _buildModernMenuItem(
         icon: Icons.privacy_tip_outlined,
-        title: 'Privacy & Security',
-        subtitle: 'Control your privacy settings',
+        title: tr('profile.privacySecurity'),
+        subtitle: tr('profile.privacySecuritySub'),
         onTap: () => _navigateTo('/profile/privacy'),
       ),
       _buildModernMenuItem(
@@ -746,20 +746,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return [
       _buildModernMenuItem(
         icon: Icons.help_outline,
-        title: 'Help & FAQ',
-        subtitle: 'Get answers to common questions',
+        title: tr('profile.helpFaq'),
+        subtitle: tr('profile.helpFaqSub'),
         onTap: () => _navigateTo('/profile/help'),
       ),
       _buildModernMenuItem(
         icon: Icons.support_agent_outlined,
-        title: 'Contact Support',
-        subtitle: 'Get help from our team',
+        title: tr('profile.contactSupport'),
+        subtitle: tr('profile.contactSupportSub'),
         onTap: () => _navigateTo('/profile/support'),
       ),
       _buildModernMenuItem(
         icon: Icons.bug_report_outlined,
-        title: 'Report a Problem',
-        subtitle: 'Let us know about issues',
+        title: tr('profile.reportProblem'),
+        subtitle: tr('profile.reportProblemSub'),
         onTap: () => _navigateTo('/profile/report-problem'),
         showDivider: false,
       ),
@@ -885,22 +885,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 1),
           _buildDangerMenuItem(
             icon: Icons.power_settings_new,
-            title: 'Deactivate Account',
-            subtitle: 'Temporarily disable your account',
+            title: tr('profile.deactivate'),
+            subtitle: tr('profile.deactivateSub'),
             onTap: _showDeactivateDialog,
             color: AppColors.warning,
           ),
           _buildDangerMenuItem(
             icon: Icons.delete_forever_outlined,
-            title: 'Delete Account',
-            subtitle: 'Permanently remove your account',
+            title: tr('profile.deleteAccount'),
+            subtitle: tr('profile.deleteAccountSub'),
             onTap: _showDeleteDialog,
             color: AppColors.error,
           ),
           _buildDangerMenuItem(
             icon: Icons.logout,
-            title: 'Logout',
-            subtitle: 'Sign out of your account',
+            title: tr('profile.logout'),
+            subtitle: tr('profile.logoutSub'),
             onTap: _showLogoutDialog,
             color: AppColors.textSecondary,
             showDivider: false,
@@ -1044,7 +1044,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Retry'),
+                  child: Text(tr('common.retry')),
                 ),
                 const SizedBox(width: 12),
                 TextButton(
@@ -1098,14 +1098,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            const Text('Logout'),
+            Text(tr('profile.logout')),
           ],
         ),
-        content: const Text('Are you sure you want to logout?'),
+        content: Text(tr('profile.logout.confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1118,7 +1118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('Logout'),
+            child: Text(tr('profile.logout')),
           ),
         ],
       ),
@@ -1146,7 +1146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            const Text('Deactivate Account'),
+            Text(tr('profile.deactivate')),
           ],
         ),
         content: const Text(
@@ -1155,7 +1155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1173,7 +1173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('Deactivate'),
+            child: Text(tr('profile.deactivateBtn')),
           ),
         ],
       ),
@@ -1203,7 +1203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            const Text('Delete Account'),
+            Text(tr('profile.deleteAccount')),
           ],
         ),
         content: SingleChildScrollView(
@@ -1253,7 +1253,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1268,7 +1268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (success && mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Account deletion request submitted'),
+                    content: Text(tr('profile.deleteRequested')),
                     backgroundColor: AppColors.success,
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -1282,7 +1282,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('Delete Forever'),
+            child: Text(tr('profile.deleteForever')),
           ),
         ],
       ),
@@ -1316,7 +1316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case '/profile/avatar':
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Avatar upload screen coming soon'),
+            content: Text(tr('profile.avatarComingSoon')),
             backgroundColor: AppColors.primaryGold,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1326,7 +1326,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Navigate to: $route (Coming Soon)'),
+            content: Text(tr('profile.navComingSoon', {'route': route})),
             backgroundColor: AppColors.primaryGold,
             behavior: SnackBarBehavior.floating,
           ),
