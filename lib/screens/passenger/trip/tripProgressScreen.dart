@@ -6,6 +6,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -347,12 +348,12 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
       context: context, barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Trip Canceled', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        title: Text(tr('trip.canceled'), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         content: Text(message, style: const TextStyle(fontSize: 15, color: Colors.black54)),
         actions: [SizedBox(width: double.infinity, child: ElevatedButton(
           onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
           style: ElevatedButton.styleFrom(backgroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-          child: const Text('Okay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+          child: Text(tr('common.ok'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
         ))],
       ),
     );
@@ -637,9 +638,9 @@ class _CompletedPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(color: AppColors.primaryGold, borderRadius: BorderRadius.circular(50), boxShadow: [BoxShadow(color: AppColors.primaryGold.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 4))]),
-      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.check_circle_rounded, color: Colors.black, size: 18), SizedBox(width: 8),
-        Text('You have arrived!', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w800)),
+        Text(tr('trip.arrived'), style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w800)),
       ]),
     );
   }
@@ -692,7 +693,7 @@ class _DestinationRow extends StatelessWidget {
         Container(width: 38, height: 38, decoration: BoxDecoration(color: AppColors.error.withOpacity(0.14), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.location_on_rounded, color: AppColors.error, size: 22)),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Destination', style: TextStyle(fontSize: 11, color: AppColors.darkTextTertiary)),
+          Text(tr('ride.destination'), style: TextStyle(fontSize: 11, color: AppColors.darkTextTertiary)),
           const SizedBox(height: 2),
           Text(address.length > 35 ? '${address.substring(0, 35)}…' : address, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
         ])),
@@ -727,7 +728,7 @@ class _CompletedCard extends StatelessWidget {
             Container(width: 48, height: 48, decoration: BoxDecoration(color: Colors.black.withOpacity(0.12), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.emoji_events_rounded, color: Colors.black, size: 26)),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('You have arrived!', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w900)),
+              Text(tr('trip.arrived'), style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w900)),
               const SizedBox(height: 2),
               Text('Trip time: $elapsedLabel', style: TextStyle(color: Colors.black.withOpacity(0.65), fontSize: 12, fontWeight: FontWeight.w500)),
             ])),
@@ -736,7 +737,7 @@ class _CompletedCard extends StatelessWidget {
           SizedBox(width: double.infinity, height: 46, child: ElevatedButton(
             onPressed: onGoHome,
             style: ElevatedButton.styleFrom(backgroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
-            child: const Text('Done', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+            child: Text(tr('common.done'), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
           )),
         ]),
       ),
@@ -787,9 +788,9 @@ class _RouteTimeline extends StatelessWidget {
         ]),
         const SizedBox(width: 16),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _AddrLine(label: 'Pickup', address: pickup),
+          _AddrLine(label: tr('ride.pickup'), address: pickup),
           const Padding(padding: EdgeInsets.symmetric(vertical: 9), child: Divider(height: 1, color: AppColors.darkBorder)),
-          _AddrLine(label: 'Destination', address: dropoff),
+          _AddrLine(label: tr('ride.destination'), address: dropoff),
         ])),
       ]),
     );

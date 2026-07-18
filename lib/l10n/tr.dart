@@ -385,4 +385,21 @@ const Map<String, String> _en = {
   'delivery.express': 'Express',
   'delivery.expressSub': 'Live map. Real-time tracking.',
   'delivery.bookExpress': 'Book Express Delivery',
+
+  // ── Forms + in-trip ──
+  'form.firstName': 'First Name',
+  'form.lastName': 'Last Name',
+  'form.email': 'Email',
+  'form.city': 'City',
+  'form.address': 'Address',
+  'editProfile.changePhoto': 'Change profile picture',
+  'editProfile.avatarNav': 'Navigate to change avatar screen',
+  'editProfile.discardTitle': 'Discard Changes?',
+  'editProfile.discard': 'Discard',
+  'trip.findingDriver': 'Finding your driver',
+  'trip.headToPickup': 'Head to your pickup point',
+  'trip.canceled': 'Trip Canceled',
+  'trip.arrived': 'You have arrived!',
+  'trip.away': 'away',
+  'trip.tripTime': 'Trip time: {t}',
 };

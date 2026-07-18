@@ -6,6 +6,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -791,7 +792,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text('Payment Method', style: TextStyle(fontSize: 11, color: AppColors.darkTextTertiary)),
+                                  Text(tr('payment.title'), style: TextStyle(fontSize: 11, color: AppColors.darkTextTertiary)),
                                   const SizedBox(height: 2),
                                   Text(_paymentLabel, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
                                 ])),
@@ -808,7 +809,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
                               const SizedBox(height: 8),
                             ],
                             if (_driverHasArrived)
-                              Center(child: Text('Head to your pickup point', style: TextStyle(fontSize: 13, color: AppColors.darkTextTertiary, fontWeight: FontWeight.w500))),
+                              Center(child: Text(tr('trip.headToPickup'), style: TextStyle(fontSize: 13, color: AppColors.darkTextTertiary, fontWeight: FontWeight.w500))),
                           ],
                         ),
                       ),
@@ -928,7 +929,7 @@ class _PeekSection extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           driverHasArrived
-              ? 'Head to your pickup point'
+              ? tr('trip.headToPickup')
               : (distance > 0 ? '${distance.toStringAsFixed(1)} km away  ·  $eta' : '$eta away'),
           style: const TextStyle(fontSize: 13, color: AppColors.darkTextSecondary, fontWeight: FontWeight.w500),
         ),

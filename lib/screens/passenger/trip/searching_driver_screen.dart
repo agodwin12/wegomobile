@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -483,7 +484,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                           children: [
                             _RadarAnimation(radarCtrl: _radarController, pulseCtrl: _pulseController),
                             const SizedBox(height: 20),
-                            const Text('Finding your driver', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary, letterSpacing: -0.3)),
+                            Text(tr('trip.findingDriver'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary, letterSpacing: -0.3)),
                             const SizedBox(height: 6),
                             FadeTransition(
                               opacity: _tipFadeAnimation,

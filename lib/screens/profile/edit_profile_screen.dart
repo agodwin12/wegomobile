@@ -3,6 +3,7 @@
 // Allows users to update their personal information
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/profile_provider.dart';
@@ -170,7 +171,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // First Name
                   _buildTextField(
                     controller: _firstNameController,
-                    label: 'First Name',
+                    label: tr('form.firstName'),
                     icon: Icons.person,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -188,7 +189,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // Last Name
                   _buildTextField(
                     controller: _lastNameController,
-                    label: 'Last Name',
+                    label: tr('form.lastName'),
                     icon: Icons.person_outline,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -206,7 +207,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // Email
                   _buildTextField(
                     controller: _emailController,
-                    label: 'Email',
+                    label: tr('form.email'),
                     icon: Icons.email,
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
@@ -226,7 +227,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // Phone
                   _buildTextField(
                     controller: _phoneController,
-                    label: 'Phone Number',
+                    label: tr('auth.phone'),
                     icon: Icons.phone,
                     keyboardType: TextInputType.phone,
                     validator: (value) {
@@ -262,7 +263,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // City
                   _buildTextField(
                     controller: _cityController,
-                    label: 'City',
+                    label: tr('form.city'),
                     icon: Icons.location_city,
                     validator: null, // Optional field
                   ),
@@ -272,7 +273,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // Address
                   _buildTextField(
                     controller: _addressController,
-                    label: 'Address',
+                    label: tr('form.address'),
                     icon: Icons.home,
                     maxLines: 2,
                     validator: null, // Optional field
@@ -364,8 +365,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   onTap: () {
                     // TODO: Navigate to avatar screen
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Navigate to change avatar screen'),
+                      SnackBar(
+                        content: Text(tr('editProfile.avatarNav')),
                         backgroundColor: Color(0xFFFFDC71),
                       ),
                     );
@@ -392,8 +393,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             onPressed: () {
               // TODO: Navigate to avatar screen
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Change profile picture'),
+                SnackBar(
+                  content: Text(tr('editProfile.changePhoto')),
                   backgroundColor: Color(0xFFFFDC71),
                 ),
               );
@@ -561,7 +562,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('✓ Profile updated successfully'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
@@ -593,21 +594,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Discard Changes?'),
+        title: Text(tr('editProfile.discardTitle')),
         content: const Text(
           'You have unsaved changes. Are you sure you want to go back?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(tr('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Discard'),
+            child: Text(tr('editProfile.discard')),
           ),
         ],
       ),
