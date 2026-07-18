@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 
 import '../../authentication service/api_services.dart';
@@ -512,7 +513,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         : emailCtrl.text.trim();
 
     if (identifier.isEmpty || pwCtrl.text.isEmpty) {
-      _showToastMessage('Please enter your credentials', false);
+      _showToastMessage(tr('auth.enterCredentials'), false);
       return;
     }
 
@@ -527,14 +528,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     } on AuthException catch (e) {
       _showToastMessage(e.message, false);
     } on SocketException {
-      _showToastMessage('No internet connection', false);
+      _showToastMessage(tr('auth.err.noInternet'), false);
     } catch (e) {
-      String msg = 'Login failed. Please try again.';
+      String msg = tr('auth.err.loginFailed');
       final err  = e.toString();
-      if (err.contains('timeout'))         msg = 'Request timeout. Check your connection.';
+      if (err.contains('timeout'))         msg = tr('auth.err.timeout');
       else if (err.contains('NO_ACCESS_TOKEN') || err.contains('No access token'))
-        msg = 'Server error. Please try again.';
-      else if (err.contains('FormatException')) msg = 'Invalid response from server.';
+        msg = tr('auth.err.server');
+      else if (err.contains('FormatException')) msg = tr('auth.err.invalidResponse');
       _showToastMessage(msg, false);
     } finally {
       if (mounted) setState(() => loading = false);
@@ -558,17 +559,17 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       final resp = await GoogleAuthService.instance.registerPassengerWithGoogle();
       if (!resp.success || resp.data == null) {
         _showToastMessage(
-          resp.message ?? 'Google sign-in is available for passengers only.',
+          resp.message ?? tr('auth.err.googlePassengersOnly'),
           false,
         );
         return;
       }
       await _handleAuthSuccess(resp.data!);
     } on SocketException {
-      _showToastMessage('No internet connection', false);
+      _showToastMessage(tr('auth.err.noInternet'), false);
     } catch (e) {
       debugPrint('❌ [GOOGLE PASSENGER] $e');
-      _showToastMessage('Google sign-in failed. Please try again.', false);
+      _showToastMessage(tr('auth.err.googleFailed'), false);
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -632,7 +633,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     final firstName  = user['first_name']?.toString();
     final welcomeName = (firstName != null && firstName.isNotEmpty) ? firstName : 'User';
 
-    _showToastMessage('Welcome back, $welcomeName! 👋', true);
+    _showToastMessage(tr('auth.welcomeToast', {'name': welcomeName}), true);
     // Brief flash of the welcome toast, then straight to home (was 900ms).
     await Future.delayed(const Duration(milliseconds: 250));
     if (!mounted) return;
@@ -810,8 +811,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 ),
                 const Spacer(),
                 // ── Welcome text ──
-                const Text(
-                  'Welcome back',
+                Text(
+                  tr('auth.welcomeBack'),
                   style: TextStyle(
                     fontFamily: AppTypography.primaryFont,
                     fontSize: 30,
@@ -835,7 +836,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Your ride, your way',
+                      tr('auth.yourRideYourWay'),
                       style: TextStyle(
                         fontFamily: AppTypography.secondaryFont,
                         fontSize: 13,
@@ -885,7 +886,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
           const SizedBox(height: 14),
 
-          _buildLabel('Password'),
+          _buildLabel(tr('auth.password')),
           const SizedBox(height: 8),
           _buildPasswordField(),
 
@@ -931,7 +932,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             ),
             const SizedBox(width: 6),
             Text(
-              isPhoneMode ? 'Use email instead' : 'Use phone instead',
+              isPhoneMode ? tr('auth.useEmail') : tr('auth.usePhone'),
               style: TextStyle(
                 fontFamily: AppTypography.secondaryFont,
                 fontSize: 12,
@@ -994,7 +995,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       key: const ValueKey('email'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel('Email Address'),
+        _buildLabel(tr('auth.email')),
         const SizedBox(height: 8),
         AnimatedContainer(
           duration: const Duration(milliseconds: 180),
@@ -1030,7 +1031,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       key: const ValueKey('phone'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel('Phone Number'),
+        _buildLabel(tr('auth.phone')),
         const SizedBox(height: 8),
         AnimatedContainer(
           duration: const Duration(milliseconds: 180),
@@ -1096,7 +1097,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         obscureText: _obscurePassword,
         style: _inputTextStyle,
         decoration: InputDecoration(
-          hintText: 'Enter your password',
+          hintText: tr('auth.enterPassword'),
           hintStyle: _hintStyle,
           prefixIcon: Padding(
             padding: const EdgeInsets.only(left: 14, right: 10),
@@ -1148,7 +1149,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               ),
               const SizedBox(width: 8),
               Text(
-                'Remember me',
+                tr('auth.rememberMe'),
                 style: TextStyle(
                   fontFamily: AppTypography.secondaryFont,
                   fontSize: 12, color: AppColors.textSecondary,
@@ -1160,8 +1161,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         const Spacer(),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/forgot-password'),
-          child: const Text(
-            'Forgot password?',
+          child: Text(
+            tr('auth.forgotPassword'),
             style: TextStyle(
               fontFamily: AppTypography.secondaryFont,
               fontSize: 12, fontWeight: FontWeight.w600,
@@ -1207,8 +1208,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
-                  'Sign In',
+                Text(
+                  tr('auth.signIn'),
                   style: TextStyle(
                     fontFamily: AppTypography.primaryFont,
                     fontSize: 16, fontWeight: FontWeight.w700,
@@ -1254,7 +1255,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     return _OutlinedActionButton(
       onTap: _continueWithGoogle,
       customIcon: const _GoogleIcon(),
-      label: 'Continue with Google',
+      label: tr('auth.continueGoogle'),
     );
   }
 
@@ -1290,7 +1291,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   Expanded(
                     child: RichText(
                       text: TextSpan(
-                        text: 'New here? ',
+                        text: tr('auth.newHere'),
                         style: TextStyle(
                           fontFamily: AppTypography.secondaryFont,
                           fontSize: 13, color: AppColors.textSecondary,
@@ -1331,16 +1332,16 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     children: [
                       _buildRoleOption(
                         icon: Icons.person_outline_rounded,
-                        title: 'Passenger',
-                        subtitle: 'Book rides and travel comfortably',
+                        title: tr('role.passenger'),
+                        subtitle: tr('auth.bookRides'),
                         accentColor: AppColors.primaryGold,
                         onTap: _navigateToPassengerSignup,
                       ),
                       const SizedBox(height: 10),
                       _buildRoleOption(
                         icon: Icons.local_taxi_outlined,
-                        title: 'Driver',
-                        subtitle: 'Drive, deliver and earn money',
+                        title: tr('role.driver'),
+                        subtitle: tr('auth.driveEarn'),
                         accentColor: AppColors.primaryDark,
                         onTap: _navigateToDriverSignup,
                       ),
@@ -1616,8 +1617,8 @@ class _CountryPickerSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
             child: Row(
               children: [
-                const Text(
-                  'Select Country',
+                Text(
+                  tr('auth.selectCountry'),
                   style: TextStyle(
                     fontFamily: AppTypography.primaryFont,
                     fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primaryDark,

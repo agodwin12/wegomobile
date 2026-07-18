@@ -6,10 +6,14 @@ import '../core/app_settings.dart';
 ///
 /// Screens are migrated to `tr()` progressively — hardcoded French strings
 /// keep working untouched until they are keyed.
-String tr(String key) {
+String tr(String key, [Map<String, String>? params]) {
   final en = AppSettings.instance.lang == 'en';
   final table = en ? _en : _fr;
-  return table[key] ?? _fr[key] ?? key;
+  var s = table[key] ?? _fr[key] ?? key;
+  if (params != null) {
+    params.forEach((k, v) => s = s.replaceAll('{$k}', v));
+  }
+  return s;
 }
 
 const Map<String, String> _fr = {
@@ -82,6 +86,39 @@ const Map<String, String> _fr = {
   'wallet.topUp': 'Recharger',
   'payment.cash': 'Espèces',
   'payment.title': 'Mode de paiement',
+
+  // ── Roles ──
+  'role.passenger': 'Passager',
+  'role.driver': 'Chauffeur',
+  'role.user': 'Utilisateur',
+
+  // ── Auth / Login ──
+  'auth.welcomeBack': 'Bon retour',
+  'auth.enterCredentials': 'Veuillez saisir vos identifiants',
+  'auth.email': 'Adresse e-mail',
+  'auth.phone': 'Numéro de téléphone',
+  'auth.password': 'Mot de passe',
+  'auth.enterPassword': 'Saisissez votre mot de passe',
+  'auth.forgotPassword': 'Mot de passe oublié ?',
+  'auth.rememberMe': 'Se souvenir de moi',
+  'auth.signIn': 'Se connecter',
+  'auth.continueGoogle': 'Continuer avec Google',
+  'auth.newHere': 'Nouveau ici ? ',
+  'auth.usePhone': 'Utiliser le téléphone',
+  'auth.useEmail': "Utiliser l'e-mail",
+  'auth.selectCountry': 'Choisir le pays',
+  'auth.yourRideYourWay': 'Votre course, à votre façon',
+  'auth.bookRides': 'Réservez des courses et voyagez confortablement',
+  'auth.driveEarn': "Conduisez, livrez et gagnez de l'argent",
+  'auth.welcomeToast': 'Bon retour, {name} ! 👋',
+  'auth.err.noInternet': 'Pas de connexion Internet',
+  'auth.err.timeout': 'Délai dépassé. Vérifiez votre connexion.',
+  'auth.err.server': 'Erreur du serveur. Veuillez réessayer.',
+  'auth.err.loginFailed': 'Échec de la connexion. Veuillez réessayer.',
+  'auth.err.invalidResponse': 'Réponse invalide du serveur.',
+  'auth.err.invalidUserData': 'Données utilisateur invalides reçues du serveur',
+  'auth.err.googleFailed': 'La connexion Google a échoué. Veuillez réessayer.',
+  'auth.err.googlePassengersOnly': 'La connexion Google est réservée aux passagers.',
 };
 
 const Map<String, String> _en = {
@@ -154,4 +191,37 @@ const Map<String, String> _en = {
   'wallet.topUp': 'Top up',
   'payment.cash': 'Cash',
   'payment.title': 'Payment method',
+
+  // ── Roles ──
+  'role.passenger': 'Passenger',
+  'role.driver': 'Driver',
+  'role.user': 'User',
+
+  // ── Auth / Login ──
+  'auth.welcomeBack': 'Welcome back',
+  'auth.enterCredentials': 'Please enter your credentials',
+  'auth.email': 'Email Address',
+  'auth.phone': 'Phone Number',
+  'auth.password': 'Password',
+  'auth.enterPassword': 'Enter your password',
+  'auth.forgotPassword': 'Forgot password?',
+  'auth.rememberMe': 'Remember me',
+  'auth.signIn': 'Sign In',
+  'auth.continueGoogle': 'Continue with Google',
+  'auth.newHere': 'New here? ',
+  'auth.usePhone': 'Use phone instead',
+  'auth.useEmail': 'Use email instead',
+  'auth.selectCountry': 'Select Country',
+  'auth.yourRideYourWay': 'Your ride, your way',
+  'auth.bookRides': 'Book rides and travel comfortably',
+  'auth.driveEarn': 'Drive, deliver and earn money',
+  'auth.welcomeToast': 'Welcome back, {name}! 👋',
+  'auth.err.noInternet': 'No internet connection',
+  'auth.err.timeout': 'Request timeout. Check your connection.',
+  'auth.err.server': 'Server error. Please try again.',
+  'auth.err.loginFailed': 'Login failed. Please try again.',
+  'auth.err.invalidResponse': 'Invalid response from server.',
+  'auth.err.invalidUserData': 'Invalid user data received from server',
+  'auth.err.googleFailed': 'Google sign-in failed. Please try again.',
+  'auth.err.googlePassengersOnly': 'Google sign-in is available for passengers only.',
 };
