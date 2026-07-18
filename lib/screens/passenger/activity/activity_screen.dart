@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../utils/app_colors.dart';
@@ -658,8 +659,8 @@ class _ActivityScreenState extends State<ActivityScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Activity',
+              Text(
+                tr('nav.activity'),
                 style: TextStyle(
                   fontFamily: 'LeagueSpartan',
                   fontSize: 32,
@@ -671,11 +672,11 @@ class _ActivityScreenState extends State<ActivityScreen>
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _statPill('$_totalTrips', 'Trips', Icons.directions_car_rounded),
+                  _statPill('$_totalTrips', tr('activity.trips'), Icons.directions_car_rounded),
                   const SizedBox(width: 8),
-                  _statPill('$_totalRentals', 'Rentals', Icons.car_rental_rounded),
+                  _statPill('$_totalRentals', tr('activity.rentals'), Icons.car_rental_rounded),
                   const SizedBox(width: 8),
-                  _statPill('$_totalServices', 'Services', Icons.handyman_rounded),
+                  _statPill('$_totalServices', tr('activity.services'), Icons.handyman_rounded),
                 ],
               ),
             ],
@@ -706,11 +707,11 @@ class _ActivityScreenState extends State<ActivityScreen>
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
-            tabs: const [
-              Tab(text: 'Overview'),
-              Tab(text: 'Trips'),
-              Tab(text: 'Rentals'),
-              Tab(text: 'Services'),
+            tabs: [
+              Tab(text: tr('activity.overview')),
+              Tab(text: tr('activity.trips')),
+              Tab(text: tr('activity.rentals')),
+              Tab(text: tr('activity.services')),
             ],
           ),
         ),
@@ -765,27 +766,27 @@ class _ActivityScreenState extends State<ActivityScreen>
           const SizedBox(height: 28),
 
           if (_trips.isNotEmpty) ...[
-            _sectionHeader('Trips', _totalTrips, () => _tabController.animateTo(1)),
+            _sectionHeader(tr('activity.trips'), _totalTrips, () => _tabController.animateTo(1)),
             const SizedBox(height: 12),
             ..._trips.take(3).map(_buildTripCard),
             const SizedBox(height: 28),
           ],
           if (_rentals.isNotEmpty) ...[
-            _sectionHeader('Rentals', _totalRentals, () => _tabController.animateTo(2)),
+            _sectionHeader(tr('activity.rentals'), _totalRentals, () => _tabController.animateTo(2)),
             const SizedBox(height: 12),
             ..._rentals.take(2).map(_buildRentalCard),
             const SizedBox(height: 28),
           ],
           if (_services.isNotEmpty) ...[
-            _sectionHeader('Services', _totalServices, () => _tabController.animateTo(3)),
+            _sectionHeader(tr('activity.services'), _totalServices, () => _tabController.animateTo(3)),
             const SizedBox(height: 12),
             ..._services.take(2).map((s) => _buildServiceCard(s)),
             const SizedBox(height: 28),
           ],
           if (isEmpty) _emptyState(
             icon: Icons.history_rounded,
-            title: 'No activity yet',
-            subtitle: 'Your trips, rentals and services\nwill appear here.',
+            title: tr('activity.noActivity'),
+            subtitle: tr('activity.noActivitySub'),
           ),
         ],
       ),
@@ -795,12 +796,12 @@ class _ActivityScreenState extends State<ActivityScreen>
   Widget _buildSummaryRow() {
     return Row(
       children: [
-        _summaryCard('$_totalTrips', 'Trips', Icons.route_rounded, _C.black),
+        _summaryCard('$_totalTrips', tr('activity.trips'), Icons.route_rounded, _C.black),
         const SizedBox(width: 10),
-        _summaryCard('$_totalRentals', 'Rentals', Icons.car_rental_rounded, _C.gold,
+        _summaryCard('$_totalRentals', tr('activity.rentals'), Icons.car_rental_rounded, _C.gold,
             valueColor: _C.black, labelColor: Colors.black54),
         const SizedBox(width: 10),
-        _summaryCard('$_totalServices', 'Services', Icons.handyman_rounded, _C.black),
+        _summaryCard('$_totalServices', tr('activity.services'), Icons.handyman_rounded, _C.black),
       ],
     );
   }
@@ -908,7 +909,7 @@ class _ActivityScreenState extends State<ActivityScreen>
           child: _tripsLoading
               ? _loader()
               : _trips.isEmpty
-              ? _emptyState(icon: Icons.directions_car_outlined, title: 'No trips found', subtitle: 'Try a different filter')
+              ? _emptyState(icon: Icons.directions_car_outlined, title: tr('activity.noTrips'), subtitle: tr('activity.tryDifferentFilter'))
               : RefreshIndicator(
             color: _C.gold,
             backgroundColor: _C.black,
@@ -949,7 +950,7 @@ class _ActivityScreenState extends State<ActivityScreen>
           child: _rentalsLoading
               ? _loader()
               : _rentals.isEmpty
-              ? _emptyState(icon: Icons.car_rental_outlined, title: 'No rentals yet', subtitle: 'Rent a vehicle to get started')
+              ? _emptyState(icon: Icons.car_rental_outlined, title: tr('activity.noRentals'), subtitle: tr('activity.rentToStart'))
               : RefreshIndicator(
             color: _C.gold,
             backgroundColor: _C.black,
@@ -1006,7 +1007,7 @@ class _ActivityScreenState extends State<ActivityScreen>
           child: _servicesLoading
               ? _loader()
               : _services.isEmpty
-              ? _emptyState(icon: Icons.handyman_outlined, title: 'No services yet', subtitle: 'Post or book a service to see it here')
+              ? _emptyState(icon: Icons.handyman_outlined, title: tr('activity.noServices'), subtitle: tr('activity.postServiceHint'))
               : RefreshIndicator(
             color: _C.gold,
             backgroundColor: _C.black,
@@ -1627,7 +1628,7 @@ class _ActivityScreenState extends State<ActivityScreen>
             child: CircularProgressIndicator(strokeWidth: 2.5, color: _C.gold),
           ),
           const SizedBox(height: 14),
-          const Text('Loading…', style: TextStyle(fontSize: 13, color: _C.muted)),
+          Text(tr('common.loading'), style: TextStyle(fontSize: 13, color: _C.muted)),
         ],
       ),
     );

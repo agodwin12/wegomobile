@@ -133,6 +133,20 @@ const Map<String, String> _fr = {
   'home.safetyTitle': 'Votre sécurité compte',
   'home.safetySubtitle': 'Assistance 24/7 · Suivi en temps réel',
   'trip.status.completed': 'Terminé',
+
+  // ── Activity ──
+  'activity.overview': 'Aperçu',
+  'activity.trips': 'Courses',
+  'activity.rentals': 'Locations',
+  'activity.services': 'Services',
+  'activity.noActivity': 'Aucune activité pour le moment',
+  'activity.noActivitySub': 'Vos courses, locations et services\napparaîtront ici.',
+  'activity.noTrips': 'Aucune course trouvée',
+  'activity.tryDifferentFilter': 'Essayez un autre filtre',
+  'activity.noRentals': 'Aucune location pour le moment',
+  'activity.rentToStart': 'Louez un véhicule pour commencer',
+  'activity.noServices': 'Aucun service pour le moment',
+  'activity.postServiceHint': 'Publiez ou réservez un service pour le voir ici',
 };
 
 const Map<String, String> _en = {
@@ -252,4 +266,18 @@ const Map<String, String> _en = {
   'home.safetyTitle': 'Your safety matters',
   'home.safetySubtitle': '24/7 support · Real-time tracking',
   'trip.status.completed': 'Completed',
+
+  // ── Activity ──
+  'activity.overview': 'Overview',
+  'activity.trips': 'Trips',
+  'activity.rentals': 'Rentals',
+  'activity.services': 'Services',
+  'activity.noActivity': 'No activity yet',
+  'activity.noActivitySub': 'Your trips, rentals and services\nwill appear here.',
+  'activity.noTrips': 'No trips found',
+  'activity.tryDifferentFilter': 'Try a different filter',
+  'activity.noRentals': 'No rentals yet',
+  'activity.rentToStart': 'Rent a vehicle to get started',
+  'activity.noServices': 'No services yet',
+  'activity.postServiceHint': 'Post or book a service to see it here',
 };
