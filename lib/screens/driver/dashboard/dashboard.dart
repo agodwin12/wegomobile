@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -1403,7 +1404,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
             const SizedBox(height: 12),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Dismiss',
+              child: Text(tr('common.dismiss'),
                   style: AppTypography.bodySmall
                       .copyWith(color: Colors.white38)),
             ),
@@ -1494,7 +1495,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
               ),
             ),
             const SizedBox(height: 24),
-            Text('Loading dashboard…',
+            Text(tr('driver.loadingDashboard'),
                 style: AppTypography.bodyMedium
                     .copyWith(color: Colors.white54)),
           ],
@@ -2070,7 +2071,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    Text('Active Trip',
+                    Text(tr('driver.activeTrip'),
                         style: AppTypography.titleMedium.copyWith(
                           color:      AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
@@ -2128,7 +2129,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
     return Row(
       children: [
         _statCard(
-          label:      'Today',
+          label:      tr('driver.today'),
           value:      '${todayEarnings.toInt()}',
           unit:       'XAF',
           icon:       Icons.account_balance_wallet_rounded,
@@ -2139,7 +2140,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
         ),
         const SizedBox(width: 10),
         _statCard(
-          label:      'Trips',
+          label:      tr('activity.trips'),
           value:      '$tripsToday',
           unit:       'today',
           icon:       Icons.route_rounded,
@@ -2150,7 +2151,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
         ),
         const SizedBox(width: 10),
         _statCard(
-          label:      'This week',
+          label:      tr('driver.thisWeek'),
           value:      '${weekEarnings.toInt()}',
           unit:       'XAF',
           icon:       Icons.trending_up_rounded,
@@ -2239,7 +2240,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Status',
+          Text(tr('common.status'),
               style: AppTypography.titleMedium
                   .copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
@@ -2260,7 +2261,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
                 color:        AppColors.successLight,
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text('LIVE',
+              child: Text(tr('driver.live'),
                   style: AppTypography.labelSmall.copyWith(
                     color:         AppColors.success,
                     fontWeight:    FontWeight.w800,

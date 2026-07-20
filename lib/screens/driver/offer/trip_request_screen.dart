@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:wego_v1/utils/app_colors.dart';
 
@@ -197,12 +198,12 @@ class _TripRequestScreenState extends State<TripRequestScreen>
         Navigator.pop(context);
       } else {
         setState(() => _isProcessing = false);
-        _showErrorDialog(title: 'Trip Taken', message: 'Another driver accepted this trip.');
+        _showErrorDialog(title: tr('driver.tripTaken'), message: 'Another driver accepted this trip.');
       }
     } catch (_) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
-      _showErrorDialog(title: 'Error', message: 'Could not accept trip. Please try again.', onRetry: _handleAccept);
+      _showErrorDialog(title: tr('common.errorTitle'), message: 'Could not accept trip. Please try again.', onRetry: _handleAccept);
     }
   }
 
@@ -250,7 +251,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
       context: context, barrierDismissible: false,
       builder: (_) => _DarkDialog(
         icon: Icons.access_time_rounded, iconColor: AppColors.warning,
-        title: 'Request Expired',
+        title: tr('driver.requestExpired'),
         message: 'You didn\'t respond in time. The trip was declined automatically.',
         actions: [_GoldButton(label: 'OK', onTap: () {
           Navigator.pop(context); Navigator.pop(context);
@@ -267,9 +268,9 @@ class _TripRequestScreenState extends State<TripRequestScreen>
         title: title, message: message,
         actions: onRetry != null
             ? [
-          _OutlinedDarkButton(label: 'Cancel', onTap: () { Navigator.pop(context); Navigator.pop(context); }),
+          _OutlinedDarkButton(label: tr('common.cancel'), onTap: () { Navigator.pop(context); Navigator.pop(context); }),
           const SizedBox(width: 12),
-          _GoldButton(label: 'Retry', onTap: () { Navigator.pop(context); onRetry(); }),
+          _GoldButton(label: tr('common.retry'), onTap: () { Navigator.pop(context); onRetry(); }),
         ]
             : [_GoldButton(label: 'OK', onTap: () { Navigator.pop(context); Navigator.pop(context); })],
       ),
@@ -378,7 +379,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
               ),
             ),
             const SizedBox(height: 16),
-            const Text('New Trip Request',
+            Text(tr('driver.newTripRequest'),
                 style: TextStyle(
                     fontSize: 24, fontWeight: FontWeight.w900,
                     color: AppColors.darkTextPrimary, letterSpacing: -0.3)),
@@ -458,10 +459,10 @@ class _TripRequestScreenState extends State<TripRequestScreen>
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.primaryGold.withOpacity(0.3)),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: const [
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.verified_rounded, size: 14, color: AppColors.primaryGold),
                 SizedBox(width: 4),
-                Text('Verified', style: TextStyle(
+                Text(tr('driver.verified'), style: TextStyle(
                     fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryGold)),
               ]),
             ),
@@ -474,7 +475,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
           // Pickup
           _LocationRow(
             icon: Icons.my_location_rounded,
-            label: 'Pickup',
+            label: tr('ride.pickup'),
             address: _getPickupAddress(),
             color: AppColors.success,
           ),
@@ -482,7 +483,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
           // Dropoff
           _LocationRow(
             icon: Icons.location_on_rounded,
-            label: 'Drop-off',
+            label: tr('driver.dropoff'),
             address: _getDropoffAddress(),
             color: AppColors.error,
           ),
@@ -493,14 +494,14 @@ class _TripRequestScreenState extends State<TripRequestScreen>
           Row(children: [
             Expanded(child: _StatChip(
               icon: Icons.straighten_rounded,
-              label: 'Distance',
+              label: tr('common.distance'),
               value: _getDistance(),
               color: const Color(0xFF4C8DFF),
             )),
             const SizedBox(width: 12),
             Expanded(child: _StatChip(
               icon: Icons.payments_rounded,
-              label: 'Earnings',
+              label: tr('driver.earnings'),
               value: _getFare(),
               color: AppColors.primaryGold,
             )),
@@ -529,7 +530,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
                 ? const SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation(AppColors.error)))
-                : const Text('Decline',
+                : Text(tr('driver.decline'),
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.error)),
           ),
         ),
@@ -567,10 +568,10 @@ class _TripRequestScreenState extends State<TripRequestScreen>
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5,
                           valueColor: AlwaysStoppedAnimation(Colors.black)))
-                  : Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
+                  : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(Icons.check_circle_rounded, size: 22),
                       SizedBox(width: 8),
-                      Text('Accept Trip',
+                      Text(tr('driver.acceptTrip'),
                           style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                     ]),
             ),

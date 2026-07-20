@@ -10,6 +10,7 @@ import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
@@ -321,7 +322,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
               builder: (ctx) => AlertDialog(
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
-                title: const Text('Connection Timeout'),
+                title: Text(tr('driver.connTimeout')),
                 content: const Text(
                   'The request is taking longer than expected. '
                   'The trip may have started on the server. '
@@ -330,12 +331,12 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel')),
+                      child: Text(tr('common.cancel'))),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx, true),
                     style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryGold),
-                    child: const Text('Retry',
+                    child: Text(tr('common.retry'),
                         style: TextStyle(color: Colors.black)),
                   ),
                 ],
@@ -378,8 +379,8 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                 color: _kWarning, size: 24),
           ),
           const SizedBox(width: 12),
-          const Expanded(
-            child: Text('Report No-Show?',
+          Expanded(
+            child: Text(tr('driver.reportNoShow'),
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w700)),
           ),
@@ -388,7 +389,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Are you sure the passenger did not show up?',
+            Text(tr('driver.noShowConfirm'),
                 style: TextStyle(fontSize: 14)),
             const SizedBox(height: 16),
             Container(
@@ -413,7 +414,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Go Back')),
+              child: Text(tr('common.goBack'))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
@@ -421,7 +422,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Confirm No-Show',
+            child: Text(tr('driver.confirmNoShow'),
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -562,11 +563,11 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
   void _showNoShowAvailableSnackBar() {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Row(children: [
+      content: Row(children: [
         Icon(Icons.info_outline, color: Colors.white),
         SizedBox(width: 12),
         Expanded(
-          child: Text('You can now report passenger as no-show',
+          child: Text(tr('driver.canReportNoShow'),
               style: TextStyle(fontWeight: FontWeight.w600)),
         ),
       ]),
@@ -630,16 +631,16 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)),
-            title:   const Text('Leave Screen?'),
+            title:   Text(tr('driver.leaveScreen')),
             content: const Text(
                 'You are waiting for the passenger. Go back?'),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Stay')),
+                  child: Text(tr('driver.stay'))),
               TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Leave')),
+                  child: Text(tr('driver.leave'))),
             ],
           ),
         );
@@ -928,17 +929,17 @@ class _SheetContent extends StatelessWidget {
                           color: Colors.black, size: 26),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Waiting for Passenger',
+                          Text(tr('driver.waitingPassenger'),
                               style: TextStyle(
                                   fontSize:   17,
                                   fontWeight: FontWeight.w800,
                                   color:      Colors.black)),
                           SizedBox(height: 3),
-                          Text('Stay at the pickup point',
+                          Text(tr('driver.stayAtPickup'),
                               style: TextStyle(
                                   fontSize: 13,
                                   color:    Colors.black54)),
@@ -969,7 +970,7 @@ class _SheetContent extends StatelessWidget {
                               style: const TextStyle(
                                   fontSize:   17,
                                   fontWeight: FontWeight.w700)),
-                          Text('Your passenger',
+                          Text(tr('driver.yourPassenger'),
                               style: TextStyle(
                                   fontSize: 13,
                                   color:    _kTextSecondary)),
@@ -1039,7 +1040,7 @@ class _SheetContent extends StatelessWidget {
                                   strokeWidth: 2,
                                   valueColor:
                                       AlwaysStoppedAnimation(_kError)))
-                          : const Text('Cancel',
+                          : Text(tr('common.cancel'),
                               style: TextStyle(
                                   color:      _kError,
                                   fontWeight: FontWeight.w700)),
@@ -1334,7 +1335,7 @@ class _CancelDialogState extends State<_CancelDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Go Back')),
+            child: Text(tr('common.goBack'))),
         ElevatedButton(
           onPressed: _selected != null
               ? () => Navigator.pop(context, _selected)

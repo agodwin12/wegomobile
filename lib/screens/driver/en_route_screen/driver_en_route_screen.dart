@@ -10,6 +10,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -215,7 +216,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     );
     _pickupAddress = pickup['address']?.toString()
         ?? widget.trip['pickupAddress']?.toString()
-        ?? 'Pickup Location';
+        ?? tr('driver.pickupLocation');
 
     _dropoffLocation = LatLng(
       double.tryParse(dropoff['lat']?.toString()
@@ -619,8 +620,8 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
                 color: AppColors.success, size: 24),
           ),
           const SizedBox(width: 12),
-          const Expanded(
-            child: Text('Arrived at Pickup?',
+          Expanded(
+            child: Text(tr('driver.arrivedAtPickup'),
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w700)),
           ),
@@ -631,7 +632,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Not Yet')),
+              child: Text(tr('driver.notYet'))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -705,17 +706,17 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
               builder: (ctx) => AlertDialog(
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
-                title:   const Text('Connection Timeout'),
-                content: const Text('Request timed out. Try again?'),
+                title:   Text(tr('driver.connTimeout')),
+                content: Text(tr('driver.requestTimedOut')),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel')),
+                      child: Text(tr('common.cancel'))),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx, true),
                     style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryGold),
-                    child: const Text('Retry',
+                    child: Text(tr('common.retry'),
                         style: TextStyle(color: Colors.black)),
                   ),
                 ],
@@ -965,7 +966,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
                           scale: _pulseAnimation.value,
                           child: _StatusPill(
                             icon:  Icons.navigation_rounded,
-                            label: 'En Route to Pickup',
+                            label: tr('driver.enRoutePickup'),
                             color: AppColors.info,
                           ),
                         ),
@@ -1088,7 +1089,7 @@ class _ReroutingPill extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
     decoration: BoxDecoration(
         color: AppColors.warning, borderRadius: BorderRadius.circular(50)),
-    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
         width: 14, height: 14,
         child: CircularProgressIndicator(
@@ -1096,7 +1097,7 @@ class _ReroutingPill extends StatelessWidget {
             valueColor:  AlwaysStoppedAnimation(Colors.white)),
       ),
       SizedBox(width: 8),
-      Text('Rerouting…',
+      Text(tr('driver.rerouting'),
           style: TextStyle(
               color:      Colors.white,
               fontSize:   13,
@@ -1214,21 +1215,21 @@ class _BottomSheetContent extends StatelessWidget {
                 Row(children: [
                   Expanded(child: _InfoTile(
                     icon:   Icons.access_time_rounded,
-                    label:  'ETA',
+                    label:  tr('driver.eta'),
                     value:  fmtETA(etaMinutes),
                     accent: AppColors.info,
                   )),
                   const SizedBox(width: 10),
                   Expanded(child: _InfoTile(
                     icon:   Icons.straighten_rounded,
-                    label:  'Distance',
+                    label:  tr('common.distance'),
                     value:  fmtDist(distToPickup),
                     accent: AppColors.warning,
                   )),
                   const SizedBox(width: 10),
                   Expanded(child: _InfoTile(
                     icon:   Icons.speed_rounded,
-                    label:  'Speed',
+                    label:  tr('driver.speed'),
                     value:  '${currentSpeed.toStringAsFixed(0)} km/h',
                     accent: AppColors.success,
                   )),
@@ -1296,7 +1297,7 @@ class _BottomSheetContent extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Pickup Location',
+                          Text(tr('driver.pickupLocation'),
                               style: AppTypography.labelSmall.copyWith(
                                   color: AppColors.textSecondary)),
                           const SizedBox(height: 3),
@@ -1326,7 +1327,7 @@ class _BottomSheetContent extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
                       ),
-                      child: const Text('Cancel',
+                      child: Text(tr('common.cancel'),
                           style: TextStyle(
                               color:      AppColors.error,
                               fontWeight: FontWeight.w700)),
