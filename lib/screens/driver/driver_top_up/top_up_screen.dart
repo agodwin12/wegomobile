@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -140,14 +141,14 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
       'value':    'MTN_MOMO',
       'label':    'MTN MoMo',
       'emoji':    '🟡',
-      'subtitle': 'Instant — sent to your MTN number',
+      'subtitle': tr('topup.mtnSubtitle'),
       'needPhone': true,
     },
     {
       'value':    'ORANGE_MONEY',
       'label':    'Orange Money',
       'emoji':    '🟠',
-      'subtitle': 'Instant — sent to your Orange number',
+      'subtitle': tr('topup.orangeSubtitle'),
       'needPhone': true,
     },
   ];
@@ -274,7 +275,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
         // once the mobile-money charge SUCCEEDS.
         final campayRef = res['data']?['campayRef'] as String?;
         if (campayRef == null || campayRef.isEmpty) {
-          setState(() { _error = 'Could not start the payment. Please try again.'; _loading = false; });
+          setState(() { _error = tr('topup.couldNotStart'); _loading = false; });
           return;
         }
 
@@ -408,7 +409,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
 
   Widget _buildPendingScreen() {
     return PaymentPendingView(
-      title:       'Confirm on your phone',
+      title:       tr('topup.confirmPhone'),
       amountLabel: _fmtAmount(_pendingAmount),
       message:     'Enter your Mobile Money PIN on your phone to confirm. Your '
                    'wallet is credited the moment the payment succeeds — keep '
@@ -424,7 +425,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
 
   Widget _buildLottieSuccess() {
     return PaymentSuccessView(
-      title:           'Payment Successful',
+      title:           tr('topup.paymentSuccessful'),
       subtitle:        '${_fmtAmount(_successAmount)} added\nNew balance: ${_fmtAmount(_newBalance)}',
       buttonLabel:     'Done',
       background:      _kBlack,

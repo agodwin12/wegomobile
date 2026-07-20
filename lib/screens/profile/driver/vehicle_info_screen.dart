@@ -3,6 +3,7 @@
 // Drivers can view their vehicle details but cannot edit
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../providers/profile_provider.dart';
@@ -38,8 +39,8 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Vehicle Information',
+        title: Text(
+          tr('profile.vehicleInfo'),
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -129,8 +130,8 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'No Vehicle Registered',
+          Text(
+            tr('vehicle.noVehicle'),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -156,8 +157,8 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             icon: const Icon(Icons.support_agent),
-            label: const Text(
-              'Contact Support',
+            label: Text(
+              tr('profile.contactSupport'),
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -199,8 +200,8 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'View Only',
+                Text(
+                  tr('docs.viewOnly'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -209,7 +210,7 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'To update vehicle information, please contact support',
+                  tr('vehicle.viewOnlyNote'),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[700],
@@ -279,8 +280,8 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Vehicle Details',
+        Text(
+          tr('vehicle.details'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -290,37 +291,37 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
         const SizedBox(height: 16),
         _buildDetailCard(
           icon: Icons.directions_car,
-          label: 'Brand',
+          label: tr('vehicle.brand'),
           value: vehicle.brand, // ✅ CORRECT: brand not make
         ),
         _buildDetailCard(
           icon: Icons.car_rental,
-          label: 'Model',
+          label: tr('vehicle.model'),
           value: vehicle.model,
         ),
         _buildDetailCard(
           icon: Icons.calendar_today,
-          label: 'Year',
+          label: tr('vehicle.year'),
           value: vehicle.year,
         ),
         _buildDetailCard(
           icon: Icons.palette,
-          label: 'Color',
+          label: tr('vehicle.color'),
           value: vehicle.color,
         ),
         _buildDetailCard(
           icon: Icons.confirmation_number,
-          label: 'License Plate',
+          label: tr('vehicle.plate'),
           value: vehicle.getFormattedLicensePlate(),
         ),
         _buildDetailCard(
           icon: Icons.category,
-          label: 'Vehicle Type',
+          label: tr('vehicle.type'),
           value: vehicle.getVehicleTypeDisplayName(),
         ),
         _buildDetailCard(
           icon: Icons.airline_seat_recline_normal,
-          label: 'Seating Capacity',
+          label: tr('vehicle.capacity'),
           value: '${vehicle.capacity} passengers', // ✅ CORRECT: capacity not seatingCapacity
         ),
       ],
@@ -414,8 +415,8 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Insurance Information',
+        Text(
+          tr('vehicle.insuranceInfo'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -477,14 +478,14 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
               if (hasInsurance) ...[
                 const Divider(height: 24),
                 _buildInfoRow(
-                  'Insurance Number',
+                  tr('vehicle.insuranceNumber'),
                   vehicle.insuranceNumber ?? 'N/A',
                   Icons.confirmation_number,
                 ),
                 if (vehicle.insuranceExpiry != null) ...[
                   const SizedBox(height: 12),
                   _buildInfoRow(
-                    'Expiry Date',
+                    tr('common.expiryDate'),
                     DateFormat('dd MMM yyyy').format(vehicle.insuranceExpiry!),
                     Icons.calendar_today,
                   ),
@@ -500,15 +501,15 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
   String _getInsuranceMessage(String status) {
     switch (status) {
       case 'Valid':
-        return 'Your insurance is active and valid';
+        return tr('vehicle.insValid');
       case 'Expiring Soon':
-        return 'Please renew your insurance soon';
+        return tr('vehicle.renewSoon');
       case 'Expired':
-        return 'Your insurance has expired. Please contact support';
+        return tr('vehicle.insExpired');
       case 'Not Set':
-        return 'No insurance information available';
+        return tr('vehicle.noInsurance');
       default:
-        return 'Insurance status unknown';
+        return tr('vehicle.insUnknown');
     }
   }
 
@@ -520,8 +521,8 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Registration Information',
+        Text(
+          tr('vehicle.regInfo'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -538,13 +539,13 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
           child: Column(
             children: [
               _buildInfoRow(
-                'Registered',
+                tr('vehicle.registered'),
                 DateFormat('dd MMM yyyy').format(vehicle.createdAt),
                 Icons.event,
               ),
               const Divider(height: 24),
               _buildInfoRow(
-                'Last Updated',
+                tr('common.lastUpdated'),
                 DateFormat('dd MMM yyyy').format(vehicle.updatedAt),
                 Icons.update,
               ),
@@ -606,8 +607,8 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
           ),
         ),
         icon: const Icon(Icons.support_agent, size: 24),
-        label: const Text(
-          'Request Vehicle Update',
+        label: Text(
+          tr('vehicle.requestUpdate'),
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -625,22 +626,22 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Request Vehicle Update'),
-        content: const Text(
+        title: Text(tr('vehicle.requestUpdate')),
+        content: Text(
           'To update your vehicle information, please contact our support team. They will guide you through the verification process.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr('common.cancel')),
           ),
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
               // TODO: Navigate to support screen
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Navigate to Contact Support'),
+                SnackBar(
+                  content: Text(tr('driver.navContactSupport')),
                   backgroundColor: Color(0xFFFFDC71),
                 ),
               );
@@ -650,7 +651,7 @@ class _VehicleInfoScreenState extends State<VehicleInfoScreen> {
               foregroundColor: Colors.black,
             ),
             icon: const Icon(Icons.support_agent),
-            label: const Text('Contact Support'),
+            label: Text(tr('profile.contactSupport')),
           ),
         ],
       ),

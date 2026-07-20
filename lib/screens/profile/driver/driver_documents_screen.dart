@@ -4,6 +4,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -41,8 +42,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'My Documents',
+        title: Text(
+          tr('docs.title'),
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -82,7 +83,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                 const SizedBox(height: 24),
 
                 // Driver's License Section
-                const Text(
+                Text(
                   'Driver\'s License',
                   style: TextStyle(
                     fontSize: 18,
@@ -96,8 +97,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                 const SizedBox(height: 24),
 
                 // CNI Section
-                const Text(
-                  'National ID Card (CNI)',
+                Text(
+                  tr('docs.cni'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -143,8 +144,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'No Documents Found',
+          Text(
+            tr('docs.noDocs'),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -170,8 +171,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             icon: const Icon(Icons.support_agent),
-            label: const Text(
-              'Contact Support',
+            label: Text(
+              tr('profile.contactSupport'),
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -213,8 +214,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'View Only',
+                Text(
+                  tr('docs.viewOnly'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -223,7 +224,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'To update or upload new documents, please contact support',
+                  tr('docs.viewOnlyNote'),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[700],
@@ -392,7 +393,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Driver\'s License',
                     style: TextStyle(
                       fontSize: 16,
@@ -457,14 +458,14 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
 
     if (!hasCNI) {
       return _buildNoDocumentCard(
-        'No CNI uploaded',
+        tr('docs.noCni'),
         Icons.badge,
       );
     }
 
     return GestureDetector(
       onTap: () => _viewDocument(
-        'National ID Card (CNI)',
+        tr('docs.cni'),
         docs.cniUrl,
         docs.cniNumber,
         null,
@@ -514,8 +515,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'National ID Card',
+                  Text(
+                    tr('docs.nationalId'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -626,8 +627,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
           ),
         ),
         icon: const Icon(Icons.support_agent, size: 24),
-        label: const Text(
-          'Request Document Update',
+        label: Text(
+          tr('docs.requestUpdate'),
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -645,22 +646,22 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Request Document Update'),
-        content: const Text(
+        title: Text(tr('docs.requestUpdate')),
+        content: Text(
           'To upload or update your documents, please contact our support team. They will guide you through the verification process.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr('common.cancel')),
           ),
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
               // TODO: Navigate to support screen
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Navigate to Contact Support'),
+                SnackBar(
+                  content: Text(tr('driver.navContactSupport')),
                   backgroundColor: Color(0xFFFFDC71),
                 ),
               );
@@ -670,7 +671,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
               foregroundColor: Colors.black,
             ),
             icon: const Icon(Icons.support_agent),
-            label: const Text('Contact Support'),
+            label: Text(tr('profile.contactSupport')),
           ),
         ],
       ),
@@ -774,7 +775,7 @@ class DocumentViewerScreen extends StatelessWidget {
                   // Document Number
                   if (documentNumber != null) ...[
                     _buildDetailRow(
-                      'Document Number',
+                      tr('docs.docNumber'),
                       documentNumber!,
                       Icons.confirmation_number,
                     ),
@@ -784,7 +785,7 @@ class DocumentViewerScreen extends StatelessWidget {
                   // Expiry Date
                   if (expiryDate != null) ...[
                     _buildDetailRow(
-                      'Expiry Date',
+                      tr('common.expiryDate'),
                       DateFormat('dd MMM yyyy').format(expiryDate!),
                       Icons.calendar_today,
                     ),
@@ -793,7 +794,7 @@ class DocumentViewerScreen extends StatelessWidget {
 
                   // Uploaded Date
                   _buildDetailRow(
-                    'Uploaded',
+                    tr('docs.uploaded'),
                     DateFormat('dd MMM yyyy').format(createdAt),
                     Icons.upload_file,
                   ),
@@ -851,8 +852,8 @@ class DocumentViewerScreen extends StatelessWidget {
   Future<void> _downloadDocument(BuildContext context) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Downloading...'),
+        SnackBar(
+          content: Text(tr('docs.downloading')),
           duration: Duration(seconds: 1),
         ),
       );
@@ -865,7 +866,7 @@ class DocumentViewerScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloaded to: ${file.path}'),
+            content: Text(tr('docs.downloadedTo', {'path': file.path})),
             backgroundColor: Colors.green,
           ),
         );
@@ -873,8 +874,8 @@ class DocumentViewerScreen extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Download failed'),
+          SnackBar(
+            content: Text(tr('docs.downloadFailed')),
             backgroundColor: Colors.red,
           ),
         );
