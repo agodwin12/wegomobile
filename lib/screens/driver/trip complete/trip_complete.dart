@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -289,17 +290,17 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)),
-            title: const Text('Leave?',
+            title: Text(tr('driver.leaveQ'),
                 style: TextStyle(fontWeight: FontWeight.w700)),
             content:
-            const Text('Return to dashboard without finishing?'),
+            Text(tr('driver.returnDashboardQ')),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Stay')),
+                  child: Text(tr('driver.stay'))),
               TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Leave',
+                  child: Text(tr('driver.leave'),
                       style: TextStyle(color: AppColors.error))),
             ],
           ),
@@ -387,7 +388,7 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
                           child: TextButton(
                             onPressed:
                             _isSubmitting ? null : _skipAndFinish,
-                            child: Text('Return to dashboard',
+                            child: Text(tr('driver.returnDashboard'),
                                 style: AppTypography.bodyMedium.copyWith(
                                     color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w600)),
@@ -508,7 +509,7 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Your Earnings',
+                Text(tr('driver.yourEarnings'),
                     style: AppTypography.bodySmall.copyWith(
                         color: Colors.white38,
                         fontWeight: FontWeight.w500)),
@@ -558,21 +559,21 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
     return Row(children: [
       Expanded(child: _StatCard(
         icon:   Icons.straighten_rounded,
-        label:  'Distance',
+        label:  tr('common.distance'),
         value:  '${_distanceKm.toStringAsFixed(1)} km',
         accent: AppColors.info,
       )),
       const SizedBox(width: 12),
       Expanded(child: _StatCard(
         icon:   Icons.access_time_rounded,
-        label:  'Duration',
+        label:  tr('common.duration'),
         value:  _formatDuration(widget.tripDuration),
         accent: AppColors.success,
       )),
       const SizedBox(width: 12),
       Expanded(child: _StatCard(
         icon:   Icons.tag_rounded,
-        label:  'Trip ID',
+        label:  tr('driver.tripId'),
         value:  '#$shortId',
         accent: AppColors.warning,
       )),
@@ -607,7 +608,7 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Payment Confirmed',
+                Text(tr('driver.paymentConfirmed'),
                     style: AppTypography.titleMedium.copyWith(
                         color: AppColors.success,
                         fontWeight: FontWeight.w700)),
@@ -646,7 +647,7 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Confirm Cash Payment',
+                Text(tr('driver.confirmCashPayment'),
                     style: AppTypography.titleMedium
                         .copyWith(fontWeight: FontWeight.w700)),
                 Text('Did you receive ${_fare.toInt()} XAF?',
@@ -664,7 +665,7 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
             onPressed: _confirmPayment,
             icon: const Icon(Icons.check_rounded,
                 color: Colors.white, size: 18),
-            label: const Text('Yes, Payment Received',
+            label: Text(tr('driver.yesPaymentReceived'),
                 style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

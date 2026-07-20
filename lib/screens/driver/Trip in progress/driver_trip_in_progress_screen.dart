@@ -10,6 +10,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -608,7 +609,7 @@ class _DriverTripInProgressScreenState
                 color: AppColors.success, size: 24),
           ),
           const SizedBox(width: 12),
-          const Text('Almost There!',
+          Text(tr('driver.almostThere'),
               style: TextStyle(
                   fontSize: 18, fontWeight: FontWeight.w700)),
         ]),
@@ -618,7 +619,7 @@ class _DriverTripInProgressScreenState
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Not Yet')),
+              child: Text(tr('driver.notYet'))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -628,7 +629,7 @@ class _DriverTripInProgressScreenState
                 backgroundColor: AppColors.success,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8))),
-            child: const Text('Yes, Complete Trip',
+            child: Text(tr('driver.yesCompleteTrip'),
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -738,16 +739,16 @@ class _DriverTripInProgressScreenState
                 color: AppColors.error, size: 24),
           ),
           const SizedBox(width: 12),
-          const Text('Emergency',
+          Text(tr('driver.emergency'),
               style: TextStyle(
                   fontSize: 18, fontWeight: FontWeight.w700)),
         ]),
         content:
-            const Text('Do you need emergency assistance?'),
+            Text(tr('driver.emergencyQ')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(tr('common.cancel'))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -756,7 +757,7 @@ class _DriverTripInProgressScreenState
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error),
-            child: const Text('Call Emergency',
+            child: Text(tr('driver.callEmergency'),
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -792,7 +793,7 @@ class _DriverTripInProgressScreenState
                 color: AppColors.error, size: 24),
           ),
           const SizedBox(width: 12),
-          const Text('Trip Canceled',
+          Text(tr('trip.canceled'),
               style: TextStyle(
                   fontSize: 18, fontWeight: FontWeight.w700)),
         ]),
@@ -809,7 +810,7 @@ class _DriverTripInProgressScreenState
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Return Home',
+              child: Text(tr('driver.returnHome'),
                   style: TextStyle(
                       fontSize:   16,
                       fontWeight: FontWeight.w700,
@@ -1019,7 +1020,7 @@ class _DriverTripInProgressScreenState
                         color:        AppColors.warning,
                         borderRadius: BorderRadius.circular(50),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SizedBox(
@@ -1030,7 +1031,7 @@ class _DriverTripInProgressScreenState
                                     Colors.white)),
                           ),
                           SizedBox(width: 8),
-                          Text('Rerouting…',
+                          Text(tr('driver.rerouting'),
                               style: TextStyle(
                                   color:      Colors.white,
                                   fontSize:   13,
@@ -1276,7 +1277,7 @@ class _SheetContent extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Trip Progress',
+                    Text(tr('driver.tripProgress'),
                         style: AppTypography.titleMedium
                             .copyWith(fontWeight: FontWeight.w700)),
                     Text(
@@ -1312,7 +1313,7 @@ class _SheetContent extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(child: _InfoTile(
                     icon:   Icons.straighten_rounded,
-                    label:  'Remaining',
+                    label:  tr('driver.remaining'),
                     value:  formatDistance(distanceToDestination),
                     accent: AppColors.warning,
                   )),

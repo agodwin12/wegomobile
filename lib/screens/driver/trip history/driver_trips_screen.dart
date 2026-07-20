@@ -21,6 +21,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -457,7 +458,7 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
               SizedBox(
                 width: (constraints.maxWidth - 10) / 2,
                 child: _pill(
-                  label: 'Loaded',
+                  label: tr('driver.loaded'),
                   value: '$count',
                   accent: AppColors.primaryGold,
                   bg: Colors.white.withOpacity(0.06),
@@ -466,7 +467,7 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
               SizedBox(
                 width: (constraints.maxWidth - 10) / 2,
                 child: _pill(
-                  label: 'Completed',
+                  label: tr('trip.status.completed'),
                   value: '$completed',
                   accent: AppColors.success,
                   bg: Colors.white.withOpacity(0.06),
@@ -475,7 +476,7 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
               SizedBox(
                 width: constraints.maxWidth,
                 child: _pill(
-                  label: 'Canceled',
+                  label: tr('trip.status.canceled'),
                   value: '$canceled',
                   accent: AppColors.error,
                   bg: Colors.white.withOpacity(0.06),
@@ -490,7 +491,7 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
           children: [
             Expanded(
               child: _pill(
-                label: 'Loaded',
+                label: tr('driver.loaded'),
                 value: '$count',
                 accent: AppColors.primaryGold,
                 bg: Colors.white.withOpacity(0.06),
@@ -499,7 +500,7 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
             const SizedBox(width: 10),
             Expanded(
               child: _pill(
-                label: 'Completed',
+                label: tr('trip.status.completed'),
                 value: '$completed',
                 accent: AppColors.success,
                 bg: Colors.white.withOpacity(0.06),
@@ -508,7 +509,7 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
             const SizedBox(width: 10),
             Expanded(
               child: _pill(
-                label: 'Canceled',
+                label: tr('trip.status.canceled'),
                 value: '$canceled',
                 accent: AppColors.error,
                 bg: Colors.white.withOpacity(0.06),
@@ -597,12 +598,12 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
             onTap: () => _setFilter(TripFilter.all),
           ),
           _filterChip(
-            label: 'Completed',
+            label: tr('trip.status.completed'),
             active: _filter == TripFilter.completed,
             onTap: () => _setFilter(TripFilter.completed),
           ),
           _filterChip(
-            label: 'Canceled',
+            label: tr('trip.status.canceled'),
             active: _filter == TripFilter.canceled,
             onTap: () => _setFilter(TripFilter.canceled),
           ),
@@ -1315,19 +1316,19 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
 
                   _detailRow(
                     icon: Icons.schedule_rounded,
-                    label: 'Time',
+                    label: tr('common.time'),
                     value: _formatDateTime(when),
                   ),
                   const SizedBox(height: 10),
                   _detailRow(
                     icon: Icons.my_location_rounded,
-                    label: 'Pickup',
+                    label: tr('ride.pickup'),
                     value: pickupAddr.isNotEmpty ? pickupAddr : '—',
                   ),
                   const SizedBox(height: 10),
                   _detailRow(
                     icon: Icons.place_rounded,
-                    label: 'Dropoff',
+                    label: tr('driver.dropoff'),
                     value: dropoffAddr.isNotEmpty ? dropoffAddr : '—',
                   ),
 
@@ -1337,7 +1338,7 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
                     const SizedBox(height: 10),
                     _detailRow(
                       icon: Icons.report_gmailerrorred_rounded,
-                      label: 'Reason',
+                      label: tr('common.reason'),
                       value: reason,
                     ),
                   ],

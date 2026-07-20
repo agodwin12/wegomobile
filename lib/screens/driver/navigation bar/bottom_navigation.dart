@@ -1,5 +1,6 @@
 // lib/widgets/wego_bottom_navigation.dart
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 
 class WegoBottomNavigation extends StatelessWidget {
@@ -33,27 +34,27 @@ class WegoBottomNavigation extends StatelessWidget {
             children: [
               _buildNavItem(
                 icon: Icons.home_outlined,
-                label: 'Home',
+                label: tr('nav.home'),
                 index: 0,
               ),
               _buildNavItem(
                 icon: Icons.directions_car_outlined,
-                label: 'Trips',
+                label: tr('activity.trips'),
                 index: 1,
               ),
               _buildNavItem(
                 icon: Icons.attach_money_outlined,
-                label: 'Earnings',
+                label: tr('driver.earnings'),
                 index: 2,
               ),
               _buildNavItem(
                 icon: Icons.notifications_outlined,
-                label: 'Alerts',
+                label: tr('nav.alerts'),
                 index: 3,
               ),
               _buildNavItem(
                 icon: Icons.person_outline,
-                label: 'Profile',
+                label: tr('profile.title'),
                 index: 4,
               ),
             ],
