@@ -1,6 +1,7 @@
 // lib/screens/signup/passenger_sign_up/signup_passenger_screen.dart
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -450,7 +451,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
             const SizedBox(height: 20),
             Row(
               children: [
-                Text('Select Country', style: AppTypography.headlineSmall),
+                Text(tr('auth.selectCountry'), style: AppTypography.headlineSmall),
                 const Spacer(),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -701,7 +702,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Personal Information', style: AppTypography.displaySmall),
+            Text(tr('signup.personalInfo'), style: AppTypography.displaySmall),
             const SizedBox(height: 8),
             Text(
               'Please provide your details to get started',
@@ -798,28 +799,28 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
             ),
             const SizedBox(height: 12),
             Center(
-              child: Text('Add profile photo (optional)',
+              child: Text(tr('signup.addPhoto'),
                   style: AppTypography.caption),
             ),
             const SizedBox(height: 32),
 
             _buildTextField(
               controller: firstCtrl,
-              label: 'First Name',
+              label: tr('form.firstName'),
               hint: 'Enter your first name',
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 20),
             _buildTextField(
               controller: lastCtrl,
-              label: 'Last Name',
+              label: tr('form.lastName'),
               hint: 'Enter your last name',
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 20),
             _buildTextField(
               controller: emailCtrl,
-              label: 'Email Address',
+              label: tr('auth.email'),
               hint: 'example@email.com',
               keyboardType: TextInputType.emailAddress,
               prefixIcon: Icons.email_outlined,
@@ -865,7 +866,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Security', style: AppTypography.displaySmall),
+            Text(tr('signup.security'), style: AppTypography.displaySmall),
             const SizedBox(height: 8),
             Text(
               'Create a strong password to secure your account',
@@ -876,7 +877,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
 
             _buildTextField(
               controller: pwCtrl,
-              label: 'Password',
+              label: tr('auth.password'),
               hint: 'Enter your password',
               obscureText: _obscurePassword,
               prefixIcon: Icons.lock_outline,
@@ -892,13 +893,13 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
               ),
             ),
             const SizedBox(height: 12),
-            Text('Must be at least 8 characters',
+            Text(tr('signup.min8'),
                 style: AppTypography.caption),
             const SizedBox(height: 24),
 
             _buildTextField(
               controller: confirmPwCtrl,
-              label: 'Confirm Password',
+              label: tr('signup.confirmPassword'),
               hint: 'Re-enter your password',
               obscureText: _obscureConfirmPassword,
               prefixIcon: Icons.lock_outline,
@@ -986,7 +987,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
             ),
             const SizedBox(height: 24),
 
-            Text('Verification Code',
+            Text(tr('signup.verificationCode'),
                 style: AppTypography.displaySmall,
                 textAlign: TextAlign.center),
             const SizedBox(height: 12),
@@ -1140,7 +1141,7 @@ class _SignupPassengerScreenState extends State<SignupPassengerScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Phone Number', style: AppTypography.labelLarge),
+        Text(tr('auth.phone'), style: AppTypography.labelLarge),
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(

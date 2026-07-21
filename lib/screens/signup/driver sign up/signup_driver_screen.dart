@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -1246,28 +1247,28 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             const SizedBox(height: 32),
             _buildTextField(
               controller: firstCtrl,
-              label: 'First Name',
+              label: tr('form.firstName'),
               hint: 'Enter your first name',
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 20),
             _buildTextField(
               controller: lastCtrl,
-              label: 'Last Name',
+              label: tr('form.lastName'),
               hint: 'Enter your last name',
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 20),
             _buildTextField(
               controller: cniCtrl,
-              label: 'National Identity Card (CNI)',
+              label: tr('signup.cni'),
               hint: 'Enter your CNI number',
               prefixIcon: Icons.badge_outlined,
             ),
             const SizedBox(height: 20),
             _buildTextField(
               controller: emailCtrl,
-              label: 'Email Address',
+              label: tr('auth.email'),
               hint: 'example@email.com',
               keyboardType: TextInputType.emailAddress,
               prefixIcon: Icons.email_outlined,
@@ -1335,8 +1336,8 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
           children: [
             _buildStepTitle(
               icon: Icons.directions_car,
-              title: 'Vehicle Information',
-              subtitle: 'Tell us about your vehicle',
+              title: tr('profile.vehicleInfo'),
+              subtitle: tr('signup.vehicleInfoSub'),
             ),
             const SizedBox(height: 32),
             Column(
@@ -1392,21 +1393,21 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             const SizedBox(height: 20),
             _buildTextField(
               controller: vehicleMakeModelCtrl,
-              label: 'Vehicle Make & Model',
+              label: tr('signup.makeModel'),
               hint: 'e.g., Toyota Corolla',
               prefixIcon: Icons.car_rental,
             ),
             const SizedBox(height: 20),
             _buildTextField(
               controller: vehicleColorCtrl,
-              label: 'Vehicle Color',
+              label: tr('vehicle.color'),
               hint: 'e.g., Black, White, Silver',
               prefixIcon: Icons.palette_outlined,
             ),
             const SizedBox(height: 20),
             _buildTextField(
               controller: vehicleYearCtrl,
-              label: 'Vehicle Year',
+              label: tr('vehicle.year'),
               hint: 'e.g., 2020',
               keyboardType: TextInputType.number,
               prefixIcon: Icons.calendar_today_outlined,
@@ -1414,14 +1415,14 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             const SizedBox(height: 20),
             _buildTextField(
               controller: vehiclePlateCtrl,
-              label: 'Vehicle Plate Number',
+              label: tr('signup.vehiclePlate'),
               hint: 'e.g., LT-1234-AB',
               prefixIcon: Icons.pin_outlined,
             ),
             const SizedBox(height: 32),
             _buildImageUploadCard(
-              title: 'Vehicle Photo',
-              subtitle: 'Upload a clear photo of your vehicle (Optional)',
+              title: tr('signup.vehiclePhoto'),
+              subtitle: tr('signup.vehiclePhotoSub'),
               icon: Icons.directions_car,
               image: _vehicleImage,
               onTap: () => _pickImage('vehicle'),
@@ -1455,8 +1456,8 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
           children: [
             _buildStepTitle(
               icon: Icons.description_outlined,
-              title: 'Documents',
-              subtitle: 'Upload your driver documents',
+              title: tr('signup.documents'),
+              subtitle: tr('signup.documentsSub'),
             ),
             const SizedBox(height: 32),
             _buildTextField(
@@ -1471,7 +1472,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
               child: AbsorbPointer(
                 child: _buildTextField(
                   controller: licenseExpiryCtrl,
-                  label: 'License Expiry Date',
+                  label: tr('signup.licenseExpiry'),
                   hint: 'YYYY-MM-DD',
                   prefixIcon: Icons.event_outlined,
                 ),
@@ -1487,7 +1488,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             const SizedBox(height: 24),
             _buildImageUploadCard(
               title: 'Driver\'s License Document',
-              subtitle: 'Upload a clear photo of your license (Required)',
+              subtitle: tr('signup.licensePhotoSub'),
               icon: Icons.credit_card,
               image: _licenseImage,
               onTap: () => _pickImage('license'),
@@ -1496,7 +1497,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             const SizedBox(height: 24),
             _buildTextField(
               controller: insuranceNumberCtrl,
-              label: 'Insurance Policy Number (Optional)',
+              label: tr('signup.insuranceNumber'),
               hint: 'Enter insurance number',
               prefixIcon: Icons.shield_outlined,
             ),
@@ -1506,7 +1507,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
               child: AbsorbPointer(
                 child: _buildTextField(
                   controller: insuranceExpiryCtrl,
-                  label: 'Insurance Expiry Date (Optional)',
+                  label: tr('signup.insuranceExpiry'),
                   hint: 'YYYY-MM-DD',
                   prefixIcon: Icons.event_outlined,
                 ),
@@ -1514,8 +1515,8 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             ),
             const SizedBox(height: 24),
             _buildImageUploadCard(
-              title: 'Insurance Document',
-              subtitle: 'Upload your insurance document (Optional)',
+              title: tr('signup.insuranceDoc'),
+              subtitle: tr('signup.insuranceDocSub'),
               icon: Icons.shield_outlined,
               image: _insuranceImage,
               onTap: () => _pickImage('insurance'),
@@ -1553,13 +1554,13 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
           children: [
             _buildStepTitle(
               icon: Icons.lock_outline,
-              title: 'Security',
-              subtitle: 'Create a strong password',
+              title: tr('signup.security'),
+              subtitle: tr('signup.securitySub'),
             ),
             const SizedBox(height: 40),
             _buildTextField(
               controller: pwCtrl,
-              label: 'Password',
+              label: tr('auth.password'),
               hint: 'Enter your password',
               obscureText: _obscurePassword,
               prefixIcon: Icons.lock_outline,
@@ -1585,7 +1586,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             const SizedBox(height: 24),
             _buildTextField(
               controller: confirmPwCtrl,
-              label: 'Confirm Password',
+              label: tr('signup.confirmPassword'),
               hint: 'Re-enter your password',
               obscureText: _obscureConfirmPassword,
               prefixIcon: Icons.lock_outline,
@@ -1630,7 +1631,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
           children: [
             _buildStepTitle(
               icon: Icons.verified_user_outlined,
-              title: 'Complete Google Registration',
+              title: tr('signup.completeGoogle'),
               subtitle:
               'Your Google account will be used instead of password and OTP.',
             ),
@@ -1648,26 +1649,26 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
                 children: [
                   _buildSummaryRow(
                     icon: Icons.person_outline,
-                    label: 'Name',
+                    label: tr('common.name'),
                     value:
                     '${firstCtrl.text.trim()} ${lastCtrl.text.trim()}'.trim(),
                   ),
                   const SizedBox(height: 14),
                   _buildSummaryRow(
                     icon: Icons.email_outlined,
-                    label: 'Email',
+                    label: tr('form.email'),
                     value: emailCtrl.text.trim(),
                   ),
                   const SizedBox(height: 14),
                   _buildSummaryRow(
                     icon: Icons.phone_outlined,
-                    label: 'Phone',
+                    label: tr('auth.phone'),
                     value: '$selectedCountryCode${phoneCtrl.text.trim()}',
                   ),
                   const SizedBox(height: 14),
                   _buildSummaryRow(
                     icon: Icons.directions_car_outlined,
-                    label: 'Vehicle',
+                    label: tr('common.vehicle'),
                     value: vehiclePlateCtrl.text.trim(),
                   ),
                 ],
