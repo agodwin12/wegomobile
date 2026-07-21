@@ -18,6 +18,7 @@ import 'dart:convert';
 import '../../../authentication service/api_services.dart';
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -882,11 +883,11 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Icon(Icons.swap_horiz_rounded,
                       color: AppColors.primaryGold, size: 14),
                   SizedBox(width: 4),
-                  Text('Switch',
+                  Text(tr('agent.switch'),
                       style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize:   11,
@@ -1159,7 +1160,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                 color:        AppColors.primaryGold,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text('Resume',
+              child: Text(tr('agent.resume'),
                   style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize:   12,
@@ -1211,7 +1212,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                 shape: BoxShape.circle,
               ),
               child: _togglingStatus
-                  ? const Padding(
+                  ? Padding(
                   padding: EdgeInsets.all(14),
                   child: CircularProgressIndicator(
                       strokeWidth: 2.5, color: Colors.white))
@@ -1307,7 +1308,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
           ],
         ),
         child: _loadingWallet
-            ? const Center(
+            ? Center(
             child: Padding(
                 padding: EdgeInsets.all(16),
                 child: CircularProgressIndicator(
@@ -1319,7 +1320,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               const Icon(Icons.account_balance_wallet_rounded,
                   color: AppColors.primaryGold, size: 16),
               const SizedBox(width: 8),
-              const Text('Delivery Wallet',
+              Text(tr('agent.wallet'),
                   style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize:   12,
@@ -1341,11 +1342,11 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     border: Border.all(
                         color: AppColors.primaryGold.withOpacity(0.3)),
                   ),
-                  child: const Row(children: [
+                  child: Row(children: [
                     Icon(Icons.add_rounded,
                         color: AppColors.primaryGold, size: 12),
                     SizedBox(width: 3),
-                    Text('Top Up',
+                    Text(tr('agent.topUp'),
                         style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize:   11,
@@ -1367,7 +1368,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   color:         AppColors.primaryGold,
                   letterSpacing: -1),
             ),
-            Text('Available balance',
+            Text(tr('agent.availableBalance'),
                 style: TextStyle(
                     fontFamily: 'Roboto',
                     fontSize:   11,
@@ -1510,7 +1511,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quick actions',
+        Text(tr('agent.quickActions'),
             style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize:   14,
@@ -1520,7 +1521,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         Row(children: [
           Expanded(child: _actionButton(
               icon:  Icons.account_balance_wallet_outlined,
-              label: 'My Wallet',
+              label: tr('agent.myWallet'),
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) =>
@@ -1528,21 +1529,21 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
           const SizedBox(width: 10),
           Expanded(child: _actionButton(
               icon:  Icons.history_rounded,
-              label: 'History',
+              label: tr('agent.history'),
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const DeliveryHistoryScreen())))),
           const SizedBox(width: 10),
           Expanded(child: _actionButton(
               icon:  Icons.person_outline_rounded,
-              label: 'Profile',
+              label: tr('profile.title'),
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const AgentProfileScreen())))),
           const SizedBox(width: 10),
           Expanded(child: _actionButton(
               icon:  Icons.headset_mic_outlined,
-              label: 'Support',
+              label: tr('agent.support'),
               onTap: () {
                 // TODO: launch support screen
               })),
@@ -1601,7 +1602,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
               padding: EdgeInsets.only(top: 2),
               child:   Text('⚠️', style: TextStyle(fontSize: 20))),
           const SizedBox(width: 12),
@@ -1609,14 +1610,14 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Wallet balance too low',
+                Text(tr('agent.balanceTooLow'),
                     style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize:   13,
                         fontWeight: FontWeight.w700,
                         color:      AppColors.warning)),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                     'You need sufficient balance to cover the delivery commission '
                         'before accepting jobs. Top up to go online.',
                     style: TextStyle(
@@ -1637,7 +1638,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                       color:        AppColors.warning,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text('Top up wallet',
+                    child: Text(tr('agent.topUpWallet'),
                         style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize:   12,
@@ -1665,7 +1666,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         borderRadius: BorderRadius.circular(16),
         border:       Border.all(color: AppColors.info.withOpacity(0.2)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.info_outline_rounded, color: AppColors.info, size: 18),
@@ -1674,7 +1675,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('How earnings work',
+                Text(tr('agent.howEarningsWork'),
                     style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize:   12,
@@ -1825,7 +1826,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                                     fontWeight:    FontWeight.w800,
                                     color:         AppColors.success,
                                     letterSpacing: -0.5)),
-                            Text('Your payout',
+                            Text(tr('agent.yourPayout'),
                                 style: TextStyle(
                                     fontFamily: 'Roboto',
                                     fontSize:   11,
@@ -1841,7 +1842,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                                     fontSize:   15,
                                     fontWeight: FontWeight.w700,
                                     color:      AppColors.warning)),
-                            Text('Commission',
+                            Text(tr('agent.commission'),
                                 style: TextStyle(
                                     fontFamily: 'Roboto',
                                     fontSize:   11,
@@ -1913,7 +1914,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
                         ),
-                        child: const Text('Decline',
+                        child: Text(tr('agent.decline'),
                             style: TextStyle(
                                 fontFamily: 'Poppins',
                                 fontSize:   14,
@@ -1939,12 +1940,12 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                             width:  20, height: 20,
                             child:  CircularProgressIndicator(
                                 strokeWidth: 2.5, color: Colors.white))
-                            : const Row(
+                            : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.check_rounded, size: 18),
                             SizedBox(width: 6),
-                            Text('Accept',
+                            Text(tr('agent.accept'),
                                 style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontSize:   14,

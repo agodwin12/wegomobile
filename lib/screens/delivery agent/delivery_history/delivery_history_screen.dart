@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -206,16 +207,16 @@ String _dur(int? mins) {
 
 ({Color color, IconData icon, String label}) _statusCfg(String s) =>
     switch (s) {
-      'delivered'        => (color: AppColors.success,     icon: Icons.check_circle_rounded,    label: 'Delivered'),
-      'cancelled'        => (color: AppColors.error,       icon: Icons.cancel_rounded,           label: 'Cancelled'),
-      'en_route_pickup'  => (color: AppColors.info,        icon: Icons.directions_bike_rounded,  label: 'En Route'),
-      'arrived_pickup'   => (color: AppColors.info,        icon: Icons.location_on_rounded,      label: 'At Pickup'),
-      'picked_up'        => (color: AppColors.primaryGold, icon: Icons.inventory_2_rounded,      label: 'Picked Up'),
-      'en_route_dropoff' => (color: AppColors.primaryGold, icon: Icons.directions_bike_rounded,  label: 'Delivering'),
-      'arrived_dropoff'  => (color: AppColors.primaryGold, icon: Icons.where_to_vote_rounded,    label: 'Arrived'),
-      'accepted'         => (color: AppColors.info,        icon: Icons.thumb_up_rounded,         label: 'Accepted'),
-      'disputed'         => (color: AppColors.warning,     icon: Icons.gavel_rounded,            label: 'Disputed'),
-      'expired'          => (color: AppColors.secondaryGrey, icon: Icons.access_time_rounded,    label: 'Expired'),
+      'delivered'        => (color: AppColors.success,     icon: Icons.check_circle_rounded,    label: tr('agent.st.delivered')),
+      'cancelled'        => (color: AppColors.error,       icon: Icons.cancel_rounded,           label: tr('agent.st.cancelled')),
+      'en_route_pickup'  => (color: AppColors.info,        icon: Icons.directions_bike_rounded,  label: tr('agent.st.enRoute')),
+      'arrived_pickup'   => (color: AppColors.info,        icon: Icons.location_on_rounded,      label: tr('agent.st.atPickup')),
+      'picked_up'        => (color: AppColors.primaryGold, icon: Icons.inventory_2_rounded,      label: tr('agent.st.pickedUp')),
+      'en_route_dropoff' => (color: AppColors.primaryGold, icon: Icons.directions_bike_rounded,  label: tr('agent.st.delivering')),
+      'arrived_dropoff'  => (color: AppColors.primaryGold, icon: Icons.where_to_vote_rounded,    label: tr('agent.st.arrived')),
+      'accepted'         => (color: AppColors.info,        icon: Icons.thumb_up_rounded,         label: tr('agent.st.accepted')),
+      'disputed'         => (color: AppColors.warning,     icon: Icons.gavel_rounded,            label: tr('agent.st.disputed')),
+      'expired'          => (color: AppColors.secondaryGrey, icon: Icons.access_time_rounded,    label: tr('agent.st.expired')),
       _                  => (color: AppColors.secondaryGrey, icon: Icons.help_outline_rounded,   label: s),
     };
 
@@ -391,7 +392,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
               color: AppColors.primaryDark,
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text('Delivery History',
+            title: Text(tr('agent.deliveryHistory'),
                 style: AppTypography.titleLarge
                     .copyWith(color: AppColors.primaryDark)),
             actions: [
@@ -590,10 +591,10 @@ class _HistoryState extends State<DeliveryHistoryScreen>
           _chip('All',       _fStatus == null,
                   () { setState(() => _fStatus = null);        _loadList(reset: true); }),
           const SizedBox(width: 6),
-          _chip('Delivered', _fStatus == 'delivered',
+          _chip(tr('agent.st.delivered'), _fStatus == 'delivered',
                   () { setState(() => _fStatus = 'delivered'); _loadList(reset: true); }),
           const SizedBox(width: 6),
-          _chip('Cancelled', _fStatus == 'cancelled',
+          _chip(tr('agent.st.cancelled'), _fStatus == 'cancelled',
                   () { setState(() => _fStatus = 'cancelled'); _loadList(reset: true); }),
           const SizedBox(width: 10),
           _chip(
@@ -649,7 +650,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
           Icon(Icons.local_shipping_outlined,
               size: 64, color: AppColors.secondaryLightGrey),
           const SizedBox(height: 16),
-          Text('No deliveries yet',
+          Text(tr('agent.noDeliveries'),
               style: AppTypography.titleMedium
                   .copyWith(color: AppColors.primaryDark)),
           const SizedBox(height: 8),
@@ -803,7 +804,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                         Text(
                           d.isDelivered
                               ? (d.isCash ? 'Cash delivery' : 'Wallet credited')
-                              : (d.isCancelled ? 'Cancelled' : d.status),
+                              : (d.isCancelled ? tr('agent.st.cancelled') : d.status),
                           style: AppTypography.labelSmall.copyWith(
                             // ✅ black sublabel
                               color: AppColors.primaryDark, fontSize: 10),
@@ -930,12 +931,12 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                 ),
               ),
               const SizedBox(height: 20),
-              Text('Filter Deliveries',
+              Text(tr('agent.filterDeliveries'),
                   style: AppTypography.titleLarge
                       .copyWith(color: AppColors.primaryDark)),
               const SizedBox(height: 20),
               _sheetSection('Status', {
-                null: 'All', 'delivered': 'Delivered', 'cancelled': 'Cancelled',
+                null: 'All', 'delivered': tr('agent.st.delivered'), 'cancelled': tr('agent.st.cancelled'),
               }, tStatus, (v) => setSt(() => tStatus = v)),
               const SizedBox(height: 16),
               _sheetSection('Type', {
@@ -964,7 +965,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: Text('Clear',
+                      child: Text(tr('rental.clearFilters'),
                           style: AppTypography.labelMedium
                               .copyWith(color: AppColors.primaryDark)),
                     ),
@@ -989,7 +990,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: Text('Apply',
+                      child: Text(tr('ride.promoApply'),
                           style: AppTypography.labelMedium.copyWith(
                               color: AppColors.primaryDark,
                               fontWeight: FontWeight.w700)),
@@ -1163,7 +1164,7 @@ class _DetailState extends State<_DetailSheet> {
             Divider(height: 1, color: AppColors.borderLight),
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator())
                   : ListView(
                 controller: ctrl,
                 padding: const EdgeInsets.all(20),
@@ -1188,8 +1189,8 @@ class _DetailState extends State<_DetailSheet> {
                       Clipboard.setData(
                           ClipboardData(text: d.deliveryCode));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Code copied'),
+                        SnackBar(
+                            content: Text(tr('agent.codeCopied')),
                             duration: Duration(seconds: 1)),
                       );
                     },
@@ -1284,15 +1285,15 @@ class _DetailState extends State<_DetailSheet> {
 
   Widget _timelineSection(_Delivery d) {
     final events = <({String label, String? time, Color color})>[
-      (label: 'Delivery accepted',
+      (label: tr('agent.deliveryAccepted'),
       time: _dtFull.format(d.displayDate.toLocal()),
       color: AppColors.secondaryGrey),
       if (d.deliveredAt != null)
-        (label: 'Delivered',
+        (label: tr('agent.st.delivered'),
         time: _dtFull.format(d.deliveredAt!.toLocal()),
         color: AppColors.success),
       if (d.cancelledAt != null)
-        (label: 'Cancelled',
+        (label: tr('agent.st.cancelled'),
         time: _dtFull.format(d.cancelledAt!.toLocal()),
         color: AppColors.error),
     ];

@@ -5,6 +5,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -193,7 +194,7 @@ class _State extends State<AgentProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : _error != null
           ? _errorView()
           : CustomScrollView(slivers: [
@@ -231,11 +232,11 @@ class _State extends State<AgentProfileScreen> {
       color: AppColors.primaryDark,
       onPressed: () => Navigator.pop(context),
     ),
-    title: Text('My Profile',
+    title: Text(tr('agent.myProfile'),
         style: AppTypography.titleLarge.copyWith(color: AppColors.primaryDark)),
     actions: [
       if (_saving)
-        const Padding(padding: EdgeInsets.all(16),
+        Padding(padding: EdgeInsets.all(16),
             child: SizedBox(width: 20, height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2)))
       else
@@ -428,7 +429,7 @@ class _State extends State<AgentProfileScreen> {
       return Row(children: [
         Icon(Icons.directions_bike_rounded, color: AppColors.secondaryLightGrey, size: 18),
         const SizedBox(width: 8),
-        Text('No vehicle info added yet',
+        Text(tr('agent.noVehicleInfo'),
             style: AppTypography.bodySmall.copyWith(color: AppColors.secondaryGrey)),
       ]);
     }
@@ -555,7 +556,7 @@ class _State extends State<AgentProfileScreen> {
             backgroundColor: AppColors.primaryGold, elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: Text('Retry',
+          child: Text(tr('common.retry'),
               style: AppTypography.labelMedium.copyWith(
                   color: AppColors.primaryDark, fontWeight: FontWeight.w700)),
         ),
@@ -593,7 +594,7 @@ class _State extends State<AgentProfileScreen> {
                     decoration: BoxDecoration(color: AppColors.borderLight,
                         borderRadius: BorderRadius.circular(2)))),
                 const SizedBox(height: 20),
-                Text('Edit Profile',
+                Text(tr('agent.editProfile'),
                     style: AppTypography.titleLarge.copyWith(color: AppColors.primaryDark)),
                 const SizedBox(height: 20),
 
@@ -665,7 +666,7 @@ class _State extends State<AgentProfileScreen> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: Text('Save Changes',
+                    child: Text(tr('agent.saveChanges'),
                         style: AppTypography.labelLarge.copyWith(
                             color: AppColors.primaryDark, fontWeight: FontWeight.w700)),
                   ),

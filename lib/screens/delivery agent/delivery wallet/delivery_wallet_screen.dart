@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -639,7 +640,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                     fontWeight: FontWeight.w800,
                     color: AppColors.primaryGold,
                     letterSpacing: -0.5)),
-            Text('Available balance',
+            Text(tr('agent.availableBalance'),
                 style: TextStyle(
                     fontFamily: 'Roboto',
                     fontSize: 10,
@@ -674,7 +675,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
 
   Widget _buildOverviewTab() {
     if (_loadingWallet) {
-      return const Center(
+      return Center(
           child: CircularProgressIndicator(color: AppColors.primaryGold));
     }
     return RefreshIndicator(
@@ -721,7 +722,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                   style: const TextStyle(
                       fontFamily: 'Roboto', fontSize: 11, color: AppColors.error)),
             const SizedBox(height: 4),
-            const Text('Contact support to resolve this.',
+            Text(tr('agent.contactSupportResolve'),
                 style: TextStyle(
                     fontFamily: 'Roboto', fontSize: 11, color: AppColors.error)),
           ]),
@@ -740,18 +741,18 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         border: Border.all(color: AppColors.warning.withOpacity(0.4)),
       ),
       child: Row(children: [
-        const Text('⚠️', style: TextStyle(fontSize: 20)),
+        Text('⚠️', style: TextStyle(fontSize: 20)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Balance too low to accept jobs',
+            Text(tr('agent.tooLowAccept'),
                 style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppColors.warning)),
             const SizedBox(height: 3),
-            const Text('Top up your wallet to start accepting deliveries.',
+            Text(tr('agent.topUpToAccept'),
                 style: TextStyle(
                     fontFamily: 'Roboto',
                     fontSize: 11,
@@ -766,7 +767,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 decoration: BoxDecoration(
                     color: AppColors.warning,
                     borderRadius: BorderRadius.circular(8)),
-                child: const Text('Top Up Now',
+                child: Text(tr('agent.topUpNow'),
                     style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 11,
@@ -870,15 +871,15 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 color: AppColors.primaryGold, size: 26),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Reload Wallet',
+              Text(tr('agent.reloadWallet'),
                   style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: Colors.white)),
-              Text('MTN MoMo · Orange Money · Cash',
+              Text(tr('agent.payMethods'),
                   style: TextStyle(
                       fontFamily: 'Roboto', fontSize: 11, color: Colors.white54)),
             ]),
@@ -892,7 +893,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
 
   Widget _buildRecentHistory() {
     if (_loadingHistory && _topups.isEmpty) {
-      return const Center(
+      return Center(
           child: Padding(
               padding: EdgeInsets.all(20),
               child:
@@ -903,7 +904,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
     final recent = _topups.take(3).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('Recent requests',
+        Text(tr('agent.recentRequests'),
             style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 13,
@@ -911,7 +912,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 color: AppColors.textPrimary)),
         GestureDetector(
           onTap: () => _tabs.animateTo(2),
-          child: const Text('View all',
+          child: Text(tr('common.seeAll'),
               style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 12,
@@ -995,7 +996,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           ),
 
           const SizedBox(height: 14),
-          Text('Check Your Phone',
+          Text(tr('agent.checkPhone'),
               style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 22,
@@ -1042,7 +1043,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 border: Border.all(color: AppColors.info.withOpacity(0.3)),
               ),
               child: Column(children: [
-                const Text('USSD Code',
+                Text(tr('agent.ussdCode'),
                     style: TextStyle(
                         fontFamily: 'Roboto',
                         fontSize: 10,
@@ -1070,7 +1071,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                   strokeWidth: 2, color: color),
             ),
             const SizedBox(width: 10),
-            Text('Waiting for confirmation...',
+            Text(tr('agent.waitingConfirm'),
                 style: TextStyle(
                     fontFamily: 'Roboto',
                     fontSize: 12,
@@ -1122,7 +1123,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             ),
           ),
           const SizedBox(height: 12),
-          Text('Wallet Topped Up!',
+          Text(tr('agent.walletToppedUp'),
               style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 22,
@@ -1151,7 +1152,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 Border.all(color: AppColors.success.withOpacity(0.3)),
               ),
               child: Column(children: [
-                Text('New balance',
+                Text(tr('agent.newBalance'),
                     style: TextStyle(
                         fontFamily: 'Roboto',
                         fontSize: 11,
@@ -1179,14 +1180,14 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
             ),
-            child: const Text('View Wallet',
+            child: Text(tr('agent.viewWallet'),
                 style: TextStyle(
                     fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: _resetTopUpForm,
-            child: const Text('Top up again',
+            child: Text(tr('agent.topUpAgain'),
                 style: TextStyle(
                     fontFamily: 'Poppins',
                     color: AppColors.primaryGold,
@@ -1215,7 +1216,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 color: AppColors.success, size: 46),
           ),
           const SizedBox(height: 20),
-          Text('Request Submitted!',
+          Text(tr('agent.requestSubmitted'),
               style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 20,
@@ -1246,14 +1247,14 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
             ),
-            child: const Text('View in History',
+            child: Text(tr('agent.viewInHistory'),
                 style: TextStyle(
                     fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: _resetTopUpForm,
-            child: const Text('Submit another',
+            child: Text(tr('agent.submitAnother'),
                 style: TextStyle(
                     fontFamily: 'Poppins',
                     color: AppColors.primaryGold,
@@ -1268,7 +1269,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
 
   Widget _buildChannelSelector() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Payment method',
+      Text(tr('payment.title'),
           style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 13,
@@ -1347,11 +1348,11 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
               border: Border.all(
                   color: AppColors.success.withOpacity(0.3)),
             ),
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.bolt_rounded,
                   color: AppColors.success, size: 12),
               SizedBox(width: 4),
-              Text('Instant — no screenshot needed',
+              Text(tr('agent.instantNoScreenshot'),
                   style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize: 10,
@@ -1534,7 +1535,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
 
   Widget _buildHistoryTab() {
     if (_loadingHistory && _topups.isEmpty) {
-      return const Center(
+      return Center(
           child: CircularProgressIndicator(color: AppColors.primaryGold));
     }
     if (_topups.isEmpty) {
@@ -1543,7 +1544,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           Icon(Icons.receipt_long_rounded,
               size: 52, color: AppColors.borderMedium),
           const SizedBox(height: 12),
-          Text('No top-up requests yet',
+          Text(tr('agent.noTopUps'),
               style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14,
@@ -1552,7 +1553,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           const SizedBox(height: 20),
           TextButton(
             onPressed: () => _tabs.animateTo(1),
-            child: const Text('Top Up Now',
+            child: Text(tr('agent.topUpNow'),
                 style: TextStyle(
                     fontFamily: 'Poppins',
                     color: AppColors.primaryGold,
@@ -1572,7 +1573,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (_, i) {
           if (i == _topups.length) {
-            return const Center(
+            return Center(
                 child: Padding(
                     padding: EdgeInsets.all(16),
                     child: CircularProgressIndicator(
@@ -1680,7 +1681,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                   color: AppColors.info.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('Instant',
+                child: Text(tr('agent.instant'),
                     style: TextStyle(
                         fontFamily: 'Roboto',
                         fontSize: 9,

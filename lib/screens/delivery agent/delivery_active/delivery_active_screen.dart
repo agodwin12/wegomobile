@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -176,7 +177,7 @@ enum _Stage {
       case _Stage.arrived_pickup:  return 'Package Picked Up';
       case _Stage.picked_up:       return 'En Route to Dropoff';
       case _Stage.en_route_dropoff:return 'Arrived at Dropoff';
-      case _Stage.arrived_dropoff: return 'Enter Delivery PIN';
+      case _Stage.arrived_dropoff: return tr('agent.enterPin');
       default:                     return '';
     }
   }
@@ -488,7 +489,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         color: AppColors.primaryGold, size: 28),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Enter Delivery PIN',
+                  Text(tr('agent.enterPin'),
                       style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 17,
@@ -544,7 +545,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text('Back',
+                        child: Text(tr('agent.back'),
                             style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                       ),
                     ),
@@ -582,7 +583,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                             height: 18,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2.5, color: Colors.white))
-                            : const Text('Confirm',
+                            : Text(tr('common.confirm'),
                             style: TextStyle(
                                 fontFamily: 'Poppins',
                                 fontWeight: FontWeight.w700,
@@ -676,7 +677,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Cancel delivery?',
+              Text(tr('agent.cancelDeliveryQ'),
                   style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 16,
@@ -707,7 +708,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text('Yes, cancel delivery',
+                  child: Text(tr('agent.yesCancelDelivery'),
                       style: TextStyle(
                           fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
                 ),
@@ -724,7 +725,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text('Keep delivery',
+                  child: Text(tr('agent.keepDelivery'),
                       style: TextStyle(
                           fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                 ),
@@ -859,7 +860,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
       title: Row(
         children: [
           if (isExpress) ...[
-            const Text('⚡ ', style: TextStyle(fontSize: 16)),
+            Text('⚡ ', style: TextStyle(fontSize: 16)),
           ],
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1071,7 +1072,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
           Row(children: [
             Icon(Icons.route_rounded, size: 14, color: AppColors.textSecondary),
             SizedBox(width: 6),
-            Text('Route',
+            Text(tr('delivery.route'),
                 style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 11,
@@ -1085,7 +1086,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 height: 8,
                 decoration: const BoxDecoration(
                     color: AppColors.primaryDark, shape: BoxShape.circle)),
-            label: 'Pickup',
+            label: tr('ride.pickup'),
             address: _delivery.pickupAddress,
             landmark: _delivery.pickupLandmark,
             isActive: _stage.index <= _Stage.arrived_pickup.index,
@@ -1101,7 +1102,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 decoration: BoxDecoration(
                     color: AppColors.success, shape: BoxShape.circle,
                     border: Border.all(color: AppColors.success, width: 1))),
-            label: 'Dropoff',
+            label: tr('driver.dropoff'),
             address: _delivery.dropoffAddress,
             landmark: _delivery.dropoffLandmark,
             isActive: _stage.index >= _Stage.picked_up.index,
@@ -1206,7 +1207,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       decoration: BoxDecoration(
                           color: AppColors.error.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4)),
-                      child: const Text('Fragile',
+                      child: Text(tr('agent.fragile'),
                           style: TextStyle(
                               fontFamily: 'Roboto',
                               fontSize: 9,
@@ -1277,7 +1278,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             Icon(Icons.person_outline_rounded,
                 size: 14, color: AppColors.textSecondary),
             SizedBox(width: 6),
-            Text('Recipient',
+            Text(tr('delivery.recipient'),
                 style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 11,
@@ -1456,7 +1457,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Pickup photo',
+              Text(tr('agent.pickupPhoto'),
                   style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 12,
@@ -1469,7 +1470,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   color: AppColors.info.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('Optional',
+                child: Text(tr('agent.optional'),
                     style: TextStyle(
                         fontFamily: 'Roboto',
                         fontSize: 9,
@@ -1479,7 +1480,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             ],
           ),
           const SizedBox(height: 4),
-          const Text('Take a photo before collecting the package',
+          Text('Take a photo before collecting the package',
               style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 11,
@@ -1504,7 +1505,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         color: Colors.black38,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2.5),
                       ),
@@ -1540,7 +1541,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   Icon(Icons.camera_alt_rounded,
                       color: AppColors.textSecondary, size: 20),
                   SizedBox(width: 8),
-                  Text('Tap to take photo',
+                  Text(tr('agent.tapToPhoto'),
                       style: TextStyle(
                           fontFamily: 'Roboto',
                           fontSize: 12,
@@ -1568,13 +1569,13 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('🔐', style: TextStyle(fontSize: 20)),
+          Text('🔐', style: TextStyle(fontSize: 20)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Get the delivery PIN',
+                Text(tr('agent.getPin'),
                     style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 12,
@@ -1674,7 +1675,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     color: AppColors.success, size: 52),
               ),
               const SizedBox(height: 20),
-              const Text('Delivery Complete! 🎉',
+              Text(tr('agent.deliveryComplete'),
                   style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 22,
@@ -1733,7 +1734,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('💵 Cash payment received?',
+                      Text('💵 Cash payment received?',
                           style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 12,
@@ -1769,7 +1770,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                               child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
                                   color: Colors.white))
-                              : const Text('Confirm Cash Received',
+                              : Text(tr('agent.confirmCashReceived'),
                               style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 13,
@@ -1791,13 +1792,13 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     border: Border.all(
                         color: AppColors.success.withOpacity(0.3)),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.check_rounded,
                           color: AppColors.success, size: 16),
                       SizedBox(width: 6),
-                      Text('Cash payment confirmed',
+                      Text(tr('agent.cashConfirmed'),
                           style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 12,
@@ -1823,7 +1824,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('Back to Dashboard',
+                  child: Text(tr('agent.backToDashboard'),
                       style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 15,
@@ -1877,7 +1878,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       color: AppColors.error, size: 40),
                 ),
                 const SizedBox(height: 20),
-                const Text('Delivery Cancelled',
+                Text(tr('agent.deliveryCancelled'),
                     style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 20,
@@ -1904,7 +1905,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text('Back to Dashboard',
+                  child: Text(tr('agent.backToDashboard'),
                       style: TextStyle(
                           fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
                 ),

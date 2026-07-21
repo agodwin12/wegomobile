@@ -10,6 +10,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -75,7 +76,7 @@ enum _XStage {
       case _XStage.arrived_pickup:   return 'Package Picked Up';
       case _XStage.picked_up:        return 'En Route to Dropoff';
       case _XStage.en_route_dropoff: return 'Arrived at Dropoff';
-      case _XStage.arrived_dropoff:  return 'Enter Delivery PIN';
+      case _XStage.arrived_dropoff:  return tr('agent.enterPin');
       default:                       return '';
     }
   }
@@ -571,7 +572,7 @@ class _DeliveryActiveExpressScreenState
                       color: AppColors.primaryGold, size: 28),
                 ),
                 const SizedBox(height: 16),
-                const Text('Enter Delivery PIN',
+                Text(tr('agent.enterPin'),
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 17,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
@@ -618,7 +619,7 @@ class _DeliveryActiveExpressScreenState
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Back',
+                      child: Text(tr('agent.back'),
                           style: TextStyle(fontFamily: 'Poppins',
                               fontWeight: FontWeight.w600)),
                     ),
@@ -647,7 +648,7 @@ class _DeliveryActiveExpressScreenState
                           ? const SizedBox(width: 18, height: 18,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2.5, color: Colors.white))
-                          : const Text('Confirm',
+                          : Text(tr('common.confirm'),
                               style: TextStyle(fontFamily: 'Poppins',
                                   fontWeight: FontWeight.w700, fontSize: 14)),
                     ),
@@ -705,7 +706,7 @@ class _DeliveryActiveExpressScreenState
           child: Column(mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Cancel delivery?',
+                Text(tr('agent.cancelDeliveryQ'),
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 16,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
@@ -728,7 +729,7 @@ class _DeliveryActiveExpressScreenState
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14))),
-                    child: const Text('Yes, cancel',
+                    child: Text(tr('delivery.yesCancel'),
                         style: TextStyle(fontFamily: 'Poppins',
                             fontWeight: FontWeight.w700)),
                   ),
@@ -745,7 +746,7 @@ class _DeliveryActiveExpressScreenState
                             const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14))),
-                    child: Text('Keep delivery',
+                    child: Text(tr('agent.keepDelivery'),
                         style: TextStyle(fontFamily: 'Poppins',
                             fontWeight: FontWeight.w600,
                             color:      AppColors.textSecondary)),
@@ -1281,7 +1282,7 @@ class _DeliveryActiveExpressScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Pickup photo (optional)',
+        Text(tr('agent.pickupPhotoOpt'),
             style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
                 fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
@@ -1318,7 +1319,7 @@ class _DeliveryActiveExpressScreenState
                       Icon(Icons.camera_alt_rounded,
                           color: AppColors.textSecondary, size: 18),
                       SizedBox(width: 8),
-                      Text('Take pickup photo',
+                      Text(tr('agent.takePickupPhoto'),
                           style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
                               color: AppColors.textSecondary)),
                     ],
@@ -1338,7 +1339,7 @@ class _DeliveryActiveExpressScreenState
         border: Border.all(color: AppColors.warning.withOpacity(0.35)),
       ),
       child: Row(children: [
-        const Text('🔐', style: TextStyle(fontSize: 18)),
+        Text('🔐', style: TextStyle(fontSize: 18)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -1374,7 +1375,7 @@ class _DeliveryActiveExpressScreenState
                   color: AppColors.success, size: 50),
             ),
             const SizedBox(height: 20),
-            const Text('⚡ Express Delivery Complete!',
+            Text('⚡ Express Delivery Complete!',
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 20,
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
@@ -1413,7 +1414,7 @@ class _DeliveryActiveExpressScreenState
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('💵 Confirm cash received',
+                      Text('💵 Confirm cash received',
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color:      AppColors.warning)),
@@ -1438,7 +1439,7 @@ class _DeliveryActiveExpressScreenState
                               ? const SizedBox(width: 18, height: 18,
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2.5, color: Colors.white))
-                              : const Text('Confirm Cash',
+                              : Text(tr('agent.confirmCash'),
                                   style: TextStyle(fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w700)),
                         ),
@@ -1457,13 +1458,13 @@ class _DeliveryActiveExpressScreenState
                   border: Border.all(
                       color: AppColors.success.withOpacity(0.3)),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.check_rounded,
                         color: AppColors.success, size: 15),
                     SizedBox(width: 6),
-                    Text('Cash confirmed',
+                    Text(tr('agent.cashConfirmed'),
                         style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color:      AppColors.success)),
@@ -1482,7 +1483,7 @@ class _DeliveryActiveExpressScreenState
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16))),
-                child: const Text('Back to Dashboard',
+                child: Text(tr('agent.backToDashboard'),
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 15,
                         fontWeight: FontWeight.w700)),
               ),
@@ -1524,7 +1525,7 @@ class _DeliveryActiveExpressScreenState
                     color: AppColors.error, size: 40),
               ),
               const SizedBox(height: 20),
-              const Text('Delivery Cancelled',
+              Text(tr('agent.deliveryCancelled'),
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 20,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
@@ -1545,7 +1546,7 @@ class _DeliveryActiveExpressScreenState
                         horizontal: 32, vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14))),
-                child: const Text('Back to Dashboard',
+                child: Text(tr('agent.backToDashboard'),
                     style: TextStyle(fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700)),
               ),
