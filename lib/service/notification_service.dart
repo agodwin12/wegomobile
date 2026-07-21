@@ -18,6 +18,24 @@ import '../firebase_options.dart';
 // BACKGROUND MESSAGE HANDLER
 // Must be a top-level function
 // ═══════════════════════════════════════════════════════════════════════
+//
+// The backend sends DATA-ONLY messages (NotificationService.js builds a
+// payload with `data` and no `notification` block) so that Flutter controls
+// how every alert looks. The trade-off is that Android and iOS will NOT draw
+// anything by themselves — a data-only message is delivered silently and the
+// app must render it.
+//
+// This handler runs in its own isolate, so it cannot reuse the plugin
+// instance or the channel created in NotificationService.init(). It builds
+// its own, otherwise nothing is shown while the app is backgrounded or
+// closed — which is exactly when a push matters most.
+
+const AndroidNotificationChannel _kBackgroundChannel = AndroidNotificationChannel(
+  'wego_high_importance',
+  'WeGo Notifications',
+  description: 'Trip offers, delivery updates, wallet activity and more.',
+  importance: Importance.high,
+);
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -26,6 +44,51 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 
   debugPrint('🔔 [NOTIF] Background message: ${message.data['type']}');
+
+  final title = message.notification?.title ?? message.data['title'] ?? 'WeGo';
+  final body = message.notification?.body ?? message.data['body'] ?? '';
+
+  // Nothing worth showing (e.g. a silent sync ping).
+  if (title.isEmpty && body.isEmpty) return;
+
+  final local = FlutterLocalNotificationsPlugin();
+
+  await local.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    ),
+  );
+
+  // Creating a channel that already exists is a no-op, so this is safe.
+  await local
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(_kBackgroundChannel);
+
+  await local.show(
+    message.hashCode,
+    title,
+    body,
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        _kBackgroundChannel.id,
+        _kBackgroundChannel.name,
+        channelDescription: _kBackgroundChannel.description,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    ),
+    // Tapping routes through onDidReceiveNotificationResponse once the app
+    // is back in the foreground.
+    payload: jsonEncode(message.data),
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════
