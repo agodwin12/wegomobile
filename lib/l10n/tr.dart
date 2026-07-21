@@ -723,6 +723,16 @@ const Map<String, String> _fr = {
   'signup.licenseDoc': 'Permis de conduire',
   'rental.vehicleCount': '{n} véhicule(s)',
 
+
+  // -- Active trip resume banner --
+  'trip.resumeTitle': 'Course en cours',
+  'trip.resumeTap': 'Touchez pour revenir à votre course',
+  'trip.resumeSearching': 'Recherche d’un chauffeur…',
+  'trip.resumeOnTheWay': 'Votre chauffeur arrive',
+  'trip.resumeArrived': 'Votre chauffeur est arrivé',
+  'trip.resumeInProgress': 'Course en cours',
+  'trip.resumeWith': 'avec {name}',
+
 };
 
 const Map<String, String> _en = {
@@ -1444,5 +1454,15 @@ const Map<String, String> _en = {
   'signup.licenseNumberHint': 'Enter your license number',
   'signup.licenseDoc': "Driver's License Document",
   'rental.vehicleCount': '{n} vehicle(s)',
+
+
+  // -- Active trip resume banner --
+  'trip.resumeTitle': 'Trip in progress',
+  'trip.resumeTap': 'Tap to return to your trip',
+  'trip.resumeSearching': 'Looking for a driver…',
+  'trip.resumeOnTheWay': 'Your driver is on the way',
+  'trip.resumeArrived': 'Your driver has arrived',
+  'trip.resumeInProgress': 'Trip in progress',
+  'trip.resumeWith': 'with {name}',
 
 };

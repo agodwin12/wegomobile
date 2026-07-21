@@ -41,6 +41,7 @@ import '../bottom_nav_bar/bottom_bar.dart';
 import '../delivery/delivery_home_screen.dart';
 import '../reservation/rental_screen.dart';
 import '../ride/ride map/ride_map.dart';
+import '../trip/active_trip_resume.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -62,7 +63,7 @@ class PassengerDashboard extends StatefulWidget {
 }
 
 class _PassengerDashboardState extends State<PassengerDashboard>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
 
   // ── Navigation ──────────────────────────────────────────────────
   int _selectedIndex = 0;
@@ -84,6 +85,9 @@ class _PassengerDashboardState extends State<PassengerDashboard>
   List<Map<String, dynamic>>? _favoritePlaces;
   bool _isLoading  = true;
   int  _totalRides = 0;
+
+  // ── Ride still running on the server (survives app close / phone off) ──
+  ActiveTrip? _activeTrip;
 
   // ── Location / map ──────────────────────────────────────────────
   LatLng?         _currentLatLng;
@@ -112,11 +116,28 @@ class _PassengerDashboardState extends State<PassengerDashboard>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pageController = PageController(viewportFraction: 0.92);
     _setupAnimations();
     _initializeDashboard();
     _fetchLocation();
     loadMapStylePref().then((s) { if (mounted) setState(() => _mapStyle = s); });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // A ride keeps running on the server while the app is closed. Re-check on
+    // every return to the foreground so the banner reflects reality — the trip
+    // may have started, finished or been cancelled while we were away.
+    if (state == AppLifecycleState.resumed) _refreshActiveTrip();
+  }
+
+  /// Looks up any ride still in flight for this passenger and shows/hides the
+  /// resume banner accordingly.
+  Future<void> _refreshActiveTrip() async {
+    final trip = await fetchActiveTrip(_accessToken);
+    if (!mounted) return;
+    setState(() => _activeTrip = trip);
   }
 
   void _setupAnimations() {
@@ -138,6 +159,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _entryCtrl.dispose();
     _pulseCtrl.dispose();
     _pageController.dispose();
@@ -239,7 +261,11 @@ class _PassengerDashboardState extends State<PassengerDashboard>
       }
 
       await _loadProfileData();
-      await Future.wait([_loadDashboardData(), _loadFavoritePlaces()]);
+      await Future.wait([
+        _loadDashboardData(),
+        _loadFavoritePlaces(),
+        _refreshActiveTrip(),
+      ]);
 
       _entryCtrl.forward();
     } catch (e) {
@@ -900,6 +926,9 @@ class _PassengerDashboardState extends State<PassengerDashboard>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 4),
+          // Sits above everything else: a passenger reopening the app mid-ride
+          // must see it before anything competes for attention.
+          if (_activeTrip != null) _buildActiveTripBanner(_activeTrip!),
           _buildSearchBar(),
           _buildQuickActions(),
           _buildStatsStrip(),
@@ -912,6 +941,105 @@ class _PassengerDashboardState extends State<PassengerDashboard>
           _buildSafetyBanner(),
           const SizedBox(height: 100),
         ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // ACTIVE TRIP BANNER
+  // ─────────────────────────────────────────────────────────────────
+  //
+  // The passenger's ride lives on the server. If they force-quit the app or
+  // the phone dies, the trip carries on — this is their way back into it.
+  // Tapping reopens whichever screen matches the current status.
+
+  Widget _buildActiveTripBanner(ActiveTrip trip) {
+    final name = trip.driverName;
+
+    return GestureDetector(
+      onTap: () async {
+        await openActiveTrip(context, trip);
+        // The trip may have ended while they were on that screen.
+        if (mounted) _refreshActiveTrip();
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_kDark, Color(0xFF2E2E2E)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: _kGold.withOpacity(0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Pulsing dot — reuses the dashboard's existing animation so the
+            // banner reads as "live" without a second controller.
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, __) => Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _kGold.withOpacity(0.14 * _pulse.value.clamp(0.6, 1.0)),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.local_taxi_rounded,
+                    color: _kGold, size: 21),
+              ),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    tr(trip.statusKey),
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    name.isEmpty
+                        ? tr('trip.resumeTap')
+                        : tr('trip.resumeWith', {'name': name}),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.62),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: _kGold,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.arrow_forward_rounded,
+                  size: 17, color: _kDark),
+            ),
+          ],
+        ),
       ),
     );
   }

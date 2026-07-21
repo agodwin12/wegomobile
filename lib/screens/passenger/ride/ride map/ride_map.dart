@@ -20,9 +20,8 @@ import '../../../../utils/map_style.dart';
 import '../../../../widgets/map_style_button.dart';
 import '../../../../utils/app_colors.dart';
 import '../../../../utils/app_typography.dart';
+import '../../trip/active_trip_resume.dart';
 import '../../trip/searching_driver_screen.dart';
-import '../../trip/driver_arriving_screen.dart';
-import '../../trip/tripProgressScreen.dart';
 // ride_payment_screen removed — rides are paid directly to the driver (P2P).
 
 // ─── Sheet modes ──────────────────────────────────────────────────────────────
@@ -279,61 +278,13 @@ class _RideMapScreenState extends State<RideMapScreen>
   }
 
   // ─── Resume an in-progress ride after an app/phone restart ──────────────────
-  // Defensive: any parse failure simply leaves the passenger on the map screen.
-  LatLng? _latLngFrom(dynamic lat, dynamic lng) {
-    final dLat = lat is num ? lat.toDouble() : double.tryParse('${lat ?? ''}');
-    final dLng = lng is num ? lng.toDouble() : double.tryParse('${lng ?? ''}');
-    if (dLat == null || dLng == null) return null;
-    return LatLng(dLat, dLng);
-  }
-
+  // The lookup and the status → screen mapping live in active_trip_resume.dart
+  // so this screen and the dashboard banner can never disagree about where a
+  // given status should lead.
   Future<void> _resumeActiveTripIfAny() async {
-    try {
-      if (_accessToken == null || _accessToken!.isEmpty) return;
-      final resp = await ApiService.getActiveTrip(accessToken: _accessToken!);
-      final trip = resp['data']?['trip'];
-      if (trip == null || !mounted) return;
-
-      final status = (trip['status'] ?? '').toString();
-      final tripId = (trip['id'] ?? '').toString();
-      if (tripId.isEmpty) return;
-
-      final pick = _latLngFrom(trip['pickupLat'], trip['pickupLng']);
-      final drop = _latLngFrom(trip['dropoffLat'], trip['dropoffLng']);
-      if (pick == null || drop == null) return; // can't safely rebuild the screen
-
-      final pickAddr = (trip['pickupAddress'] ?? '').toString();
-      final dropAddr = (trip['dropoffAddress'] ?? '').toString();
-      final driver = (trip['driver'] is Map)
-          ? Map<String, dynamic>.from(trip['driver'] as Map)
-          : <String, dynamic>{};
-
-      Widget? screen;
-      if (status == 'SEARCHING') {
-        screen = SearchingDriverScreen(
-          tripId: tripId, pickupAddress: pickAddr, dropoffAddress: dropAddr,
-          pickupLocation: pick, dropoffLocation: drop,
-        );
-      } else if (['MATCHED', 'DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED'].contains(status)) {
-        screen = DriverArrivingScreen(
-          tripId: tripId, driver: driver,
-          pickupLocation: pick, dropoffLocation: drop,
-          pickupAddress: pickAddr, dropoffAddress: dropAddr,
-        );
-      } else if (status == 'IN_PROGRESS') {
-        screen = TripInProgressScreen(
-          tripId: tripId, driver: driver,
-          pickupLocation: pick, dropoffLocation: drop,
-          pickupAddress: pickAddr, dropoffAddress: dropAddr,
-        );
-      }
-
-      if (screen != null && mounted) {
-        await Navigator.push(context, MaterialPageRoute(builder: (_) => screen!));
-      }
-    } catch (e) {
-      debugPrint('ℹ️ [RIDE_MAP] No active trip to resume (or resume skipped): $e');
-    }
+    final trip = await fetchActiveTrip(_accessToken);
+    if (trip == null || !mounted) return;
+    await openActiveTrip(context, trip);
   }
 
   Future<void> _applyPrefilledDestination(Map<String, dynamic> dest) async {
