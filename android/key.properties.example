@@ -1,0 +1,20 @@
+# Release signing credentials — TEMPLATE.
+#
+# Copy this file to android/key.properties and fill in your own values.
+# key.properties is git-ignored and must NEVER be committed: it holds the
+# passwords to the keystore that signs your Play Store releases.
+#
+# Losing the keystore or its passwords means you can never publish an update
+# to the app again — Google provides no recovery. Back both up off-machine.
+#
+# Generate a keystore with:
+#   keytool -genkeypair -v -keystore <path>/wego-release.jks \
+#           -keyalg RSA -keysize 2048 -validity 10000 -alias wego
+
+storePassword=your_keystore_password
+keyPassword=your_key_password
+keyAlias=wego
+
+# Absolute path to the .jks file. Use forward slashes, even on Windows:
+#   storeFile=C:/Users/<you>/wego-release.jks
+storeFile=/absolute/path/to/wego-release.jks
