@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../../l10n/tr.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../../../../../utils/app_colors.dart';
@@ -114,14 +115,14 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
     // Hardcoded fallback
     if (mounted) setState(() {
       _categories = [
-        _Category(value: 'document',    label: 'Document',    emoji: '📄'),
-        _Category(value: 'food',        label: 'Food',        emoji: '🍱'),
-        _Category(value: 'electronics', label: 'Electronics', emoji: '📱'),
-        _Category(value: 'clothing',    label: 'Clothing',    emoji: '👕'),
-        _Category(value: 'medicine',    label: 'Medicine',    emoji: '💊'),
-        _Category(value: 'fragile',     label: 'Fragile',     emoji: '🏺'),
-        _Category(value: 'groceries',   label: 'Groceries',   emoji: '🛒'),
-        _Category(value: 'other',       label: 'Other',       emoji: '📦'),
+        _Category(value: 'document',    label: tr('pkg.document'),    emoji: '📄'),
+        _Category(value: 'food',        label: tr('pkg.food'),        emoji: '🍱'),
+        _Category(value: 'electronics', label: tr('pkg.electronics'), emoji: '📱'),
+        _Category(value: 'clothing',    label: tr('pkg.clothing'),    emoji: '👕'),
+        _Category(value: 'medicine',    label: tr('pkg.medicine'),    emoji: '💊'),
+        _Category(value: 'fragile',     label: tr('pkg.fragile'),     emoji: '🏺'),
+        _Category(value: 'groceries',   label: tr('pkg.groceries'),   emoji: '🛒'),
+        _Category(value: 'other',       label: tr('pkg.other'),       emoji: '📦'),
       ];
       _loadingCats = false;
     });
@@ -414,7 +415,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
 
   Widget _buildCategorySection() {
     return _card(
-      title: 'What are you sending? *',
+      title: tr('pkg.whatSending'),
       child: _loadingCats
           ? const Center(
           child: Padding(
@@ -499,7 +500,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
               Text('Photo uploaded ✓',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 13,
                       fontWeight: FontWeight.w600, color: AppColors.success)),
-              Text('Driver will see this',
+              Text(tr('pkg.driverWillSee'),
                   style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
                       color: AppColors.textSecondary)),
             ],
@@ -509,7 +510,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
           onPressed: () => setState(() {
             _packagePhoto = null; _packagePhotoUrl = null;
           }),
-          child: Text('Retake',
+          child: Text(tr('pkg.retake'),
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         ),
       ],
@@ -535,7 +536,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: AppColors.primaryDark)),
               SizedBox(height: 8),
-              Text('Uploading...', style: TextStyle(
+              Text(tr('pkg.uploading'), style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
             ])
             : Column(
@@ -575,7 +576,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
         ),
         child: Row(
           children: [
-            const Text('🏺', style: TextStyle(fontSize: 26)),
+            Text('🏺', style: TextStyle(fontSize: 26)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -585,7 +586,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
                       style: TextStyle(
                           fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700,
                           color: _isFragile ? AppColors.warning : AppColors.textPrimary)),
-                  Text('Driver handles with extra care',
+                  Text(tr('pkg.extraCare'),
                       style: AppTypography.caption.copyWith(fontSize: 11)),
                 ],
               ),
@@ -620,8 +621,8 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
 
   Widget _buildDescSection() {
     return _card(
-      title: 'Description (optional)',
-      subtitle: 'Additional info for the driver',
+      title: tr('pkg.description'),
+      subtitle: tr('pkg.descriptionSub'),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.backgroundLight,

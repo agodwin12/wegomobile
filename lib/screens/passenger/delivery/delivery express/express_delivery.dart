@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -316,15 +317,15 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20)),
-        title: const Text('Cancel delivery?',
+        title: Text(tr('delivery.cancelQ'),
             style: TextStyle(fontFamily: 'Poppins',
                 fontWeight: FontWeight.w700)),
-        content: const Text('Are you sure?',
+        content: Text(tr('delivery.areYouSure'),
             style: TextStyle(fontFamily: 'Roboto', fontSize: 14)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('No')),
+              child: Text('No')),
           ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
@@ -332,7 +333,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10))),
-              child: const Text('Yes, cancel')),
+              child: Text(tr('delivery.yesCancel'))),
         ],
       ),
     );
@@ -498,7 +499,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                       decoration: BoxDecoration(
                           color: AppColors.successLight,
                           borderRadius: BorderRadius.circular(20)),
-                      child: const Text('Delivered',
+                      child: Text(tr('delivery.delivered'),
                           style: TextStyle(
                               fontFamily:  'Poppins',
                               fontSize:    12,
@@ -524,7 +525,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                           .contains(_currentStatus))
                     TextButton(
                         onPressed: _cancelDelivery,
-                        child: const Text('Cancel',
+                        child: Text(tr('common.cancel'),
                             style: TextStyle(
                                 fontFamily: 'Roboto',
                                 fontSize:   13,
@@ -619,7 +620,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                     color: AppColors.error, size: 40),
               ),
               const SizedBox(height: 24),
-              const Text('Delivery cancelled',
+              Text(tr('delivery.cancelled'),
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 22,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
@@ -639,7 +640,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14))),
-                  child: const Text('Back to home',
+                  child: Text(tr('delivery.backHome'),
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 15,
                           fontWeight: FontWeight.w700)),
                 ),

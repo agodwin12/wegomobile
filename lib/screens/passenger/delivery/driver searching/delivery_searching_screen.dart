@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -476,7 +477,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                                 blurRadius: 8)],
                           ),
                           child: Row(children: [
-                            const Text('🛵',
+                            Text('🛵',
                                 style: TextStyle(fontSize: 13)),
                             const SizedBox(width: 5),
                             Text('$_nearbyCount nearby',
@@ -664,7 +665,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
 
   Widget _buildRouteCard() {
     return _card(
-      label: 'Route',
+      label: tr('delivery.route'),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -756,7 +757,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
             .join();
 
     return _card(
-      label: 'Recipient',
+      label: tr('delivery.recipient'),
       child: Row(children: [
         Container(
           width: 36, height: 36,
@@ -781,10 +782,10 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                     color: AppColors.darkTextSecondary)),
           ]),
         ),
-        Row(children: const [
+        Row(children: [
           Icon(Icons.check_circle_rounded, color: AppColors.success, size: 14),
           SizedBox(width: 4),
-          Text('PIN sent',
+          Text(tr('delivery.pinSent'),
               style: TextStyle(fontFamily: 'Roboto', fontSize: 10,
                   color: AppColors.success)),
         ]),
@@ -794,7 +795,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
 
   Widget _buildFareCard() {
     return _card(
-      label: 'Fare',
+      label: tr('delivery.fare'),
       child: Column(children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -806,7 +807,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                       fontWeight: FontWeight.w800,
                       color:       AppColors.darkTextPrimary,
                       letterSpacing: -0.5)),
-              const Text('Total fare',
+              Text(tr('delivery.totalFare'),
                   style: TextStyle(fontSize: 10,
                       color: AppColors.darkTextSecondary)),
             ]),
@@ -815,7 +816,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                   style: const TextStyle(fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primaryGold)),
-              const Text('Payment',
+              Text(tr('delivery.payment'),
                   style: TextStyle(fontSize: 10,
                       color: AppColors.darkTextSecondary)),
             ]),
@@ -873,14 +874,14 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
-          child: const Text('Try again',
+          child: Text(tr('common.retry'),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
         ),
       ),
       const SizedBox(height: 10),
       TextButton(
         onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-        child: const Text('Back to home',
+        child: Text(tr('delivery.backHome'),
             style: TextStyle(fontSize: 13, color: AppColors.darkTextTertiary)),
       ),
     ]);
@@ -894,7 +895,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
             ? const SizedBox(width: 18, height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation(AppColors.primaryGold)))
-            : const Text('Cancel search',
+            : Text(tr('delivery.cancelSearch'),
                 style: TextStyle(fontSize: 13, color: AppColors.darkTextTertiary)),
       ),
     );

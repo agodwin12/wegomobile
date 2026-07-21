@@ -9,6 +9,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../l10n/tr.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import '../../../../../utils/app_colors.dart';
@@ -326,8 +327,8 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content:         Text('Could not resolve address. Try searching again.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:         Text(tr('delivery.addrFail')),
         backgroundColor: AppColors.error,
         behavior:        SnackBarBehavior.floating,
       ));
@@ -572,7 +573,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                 const Icon(Icons.route_rounded,
                     color: AppColors.primaryGold, size: 18),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   'Set Your Route',
                   style: TextStyle(
                     fontFamily: 'Poppins',
@@ -795,7 +796,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Current Location',
                     style: TextStyle(
                       fontFamily: 'Poppins',
@@ -872,7 +873,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                   color: AppColors.primaryGold, size: 17),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'Use my current location',
               style: TextStyle(
                 fontFamily: 'Poppins',
@@ -1025,7 +1026,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                     style: AppTypography.inputText
                         .copyWith(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'Search destination…',
+                      hintText: tr('delivery.searchDest'),
                       hintStyle: AppTypography.inputHint
                           .copyWith(fontSize: 13),
                       border: InputBorder.none,

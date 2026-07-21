@@ -6,6 +6,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../l10n/tr.dart';
 import 'package:http/http.dart' as http;
 import '../../../../../utils/app_colors.dart';
 import '../../../../../utils/app_typography.dart';
@@ -308,7 +309,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                   color: AppColors.success, size: 32),
             ),
             const SizedBox(height: 16),
-            const Text('Delivery Booked!',
+            Text(tr('delivery.booked'),
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 18,
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
@@ -316,7 +317,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 style: TextStyle(fontFamily: 'Roboto', fontSize: 14,
                     color: AppColors.textSecondary)),
             const SizedBox(height: 8),
-            Text('Searching for a driver...',
+            Text(tr('ride.searchingDriver'),
                 style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
                     color: AppColors.textSecondary)),
           ],
@@ -335,7 +336,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Track delivery',
+              child: Text(tr('delivery.track'),
                   style: TextStyle(fontFamily: 'Poppins',
                       fontWeight: FontWeight.w700)),
             ),
@@ -479,7 +480,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 icon: Icons.my_location_rounded,
                 color: AppColors.primaryDark,
                 address: widget.pickupAddress,
-                label: 'Pickup',
+                label: tr('ride.pickup'),
               )),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -495,7 +496,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 icon: Icons.flag_rounded,
                 color: _isExpress ? AppColors.primaryGold : AppColors.success,
                 address: widget.dropoffAddress,
-                label: 'Dropoff',
+                label: tr('driver.dropoff'),
               )),
             ],
           ),
@@ -521,7 +522,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 13,
                             fontWeight: FontWeight.w700)),
                     if (widget.isFragile)
-                      const Text('🏺 Fragile',
+                      Text('🏺 Fragile',
                           style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
                               color: AppColors.warning,
                               fontWeight: FontWeight.w500)),
@@ -541,7 +542,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                     color: AppColors.primaryGold,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('EXPRESS',
+                  child: Text(tr('delivery.expressBadge'),
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 10,
                           fontWeight: FontWeight.w800,
                           color: AppColors.primaryDark)),
@@ -596,7 +597,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: AppColors.primaryDark)),
             const SizedBox(width: 12),
-            Text('Calculating fare...',
+            Text(tr('delivery.calculatingFare'),
                 style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
                     color: AppColors.textSecondary)),
           ],
@@ -620,7 +621,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 style: const TextStyle(fontSize: 12, color: AppColors.error))),
             TextButton(
               onPressed: _fetchEstimate,
-              child: const Text('Retry',
+              child: Text(tr('common.retry'),
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
                       color: AppColors.error)),
             ),
@@ -655,7 +656,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                           color: AppColors.primaryGold,
                           letterSpacing: -1,
                         )),
-                    Text('Total fare',
+                    Text(tr('delivery.totalFare'),
                         style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
                             color: Colors.white.withOpacity(0.5))),
                   ],
@@ -732,7 +733,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Recipient details',
+          Text(tr('delivery.recipientDetails'),
               style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 14),
@@ -798,10 +799,10 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: const [
+          Row(children: [
             Icon(Icons.local_offer_outlined, size: 18, color: AppColors.primaryGold),
             SizedBox(width: 8),
-            Text('Have a coupon?',
+            Text(tr('ride.promoQuestion'),
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
           ]),
           const SizedBox(height: 12),
@@ -812,7 +813,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 textCapitalization: TextCapitalization.characters,
                 enabled: !applied,
                 decoration: InputDecoration(
-                  hintText: 'Enter code',
+                  hintText: tr('delivery.enterCode'),
                   isDense: true,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -831,7 +832,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                       _couponMessage = null;
                       _fetchEstimate();
                     }),
-                    child: const Text('Remove'),
+                    child: Text(tr('common.remove')),
                   )
                 : ElevatedButton(
                     onPressed: _applyingCoupon ? null : _applyCoupon,
@@ -843,7 +844,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                         ? const SizedBox(
                             width: 16, height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Apply'),
+                        : Text(tr('ride.promoApply')),
                   ),
           ]),
           if (_couponMessage != null) ...[
@@ -876,7 +877,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Payment method',
+          Text(tr('payment.title'),
               style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 14),

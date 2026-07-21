@@ -9,6 +9,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../../l10n/tr.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -126,21 +127,21 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Cancel delivery?',
+        title: Text(tr('delivery.cancelQ'),
             style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-        content: const Text('Are you sure you want to cancel this delivery?',
+        content: Text(tr('delivery.cancelConfirm'),
             style: TextStyle(fontFamily: 'Roboto', fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
+            child: Text('No'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error, foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-            child: const Text('Yes, cancel'),
+            child: Text(tr('delivery.yesCancel')),
           ),
         ],
       ),
@@ -175,7 +176,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tracking your delivery',
+            Text(tr('delivery.tracking'),
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 16,
                     fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             Text(widget.delivery['deliveryCode'] as String? ?? '',
@@ -289,7 +290,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Delivery progress',
+          Text(tr('delivery.progress'),
               style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
@@ -442,7 +443,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        child: const Text('Cancel delivery',
+        child: Text(tr('delivery.cancelBtn'),
             style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
                 fontWeight: FontWeight.w600)),
       ),
@@ -468,7 +469,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
                     color: AppColors.error, size: 40),
               ),
               const SizedBox(height: 24),
-              const Text('Delivery cancelled',
+              Text(tr('delivery.cancelled'),
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 22,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
@@ -488,7 +489,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
                       foregroundColor: Colors.white, elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14))),
-                  child: const Text('Back to home',
+                  child: Text(tr('delivery.backHome'),
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 15,
                           fontWeight: FontWeight.w700)),
                 ),
