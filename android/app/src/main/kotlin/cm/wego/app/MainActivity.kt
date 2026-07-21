@@ -1,4 +1,4 @@
-package com.example.wego_new_app
+package cm.wego.app
 
 import io.flutter.embedding.android.FlutterActivity
 

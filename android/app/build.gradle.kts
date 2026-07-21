@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.wego_new_app"
+    namespace = "cm.wego.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.wego_new_app"
+        applicationId = "cm.wego.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
