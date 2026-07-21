@@ -585,113 +585,101 @@ class ProfileApiService {
   // SUPPORT & HELP
   // ═══════════════════════════════════════════════════════════════════
 
-  /// Get FAQ categories
+  // ── FAQ ────────────────────────────────────────────────────────────
+  //
+  // The backend exposes ONE FAQ endpoint: GET /support/faq, optionally
+  // filtered with ?category= or ?search=. It answers with the questions
+  // already grouped by category:
+  //
+  //   { data: { total, faqs: { payment: [ {id, question, answer, ...} ] } } }
+  //
+  // The previous helpers here called /support/faq/category/:id,
+  // /support/faq/search and /support/faq/:id/helpful — none of which exist,
+  // and read data.categories, which the server never returns. That is why
+  // Help & FAQ always showed "Failed to load FAQ items".
+
+  /// Fetches the FAQ and returns one entry per category, items included.
   Future<List<FAQCategory>> getFAQCategories() async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(
-        Uri.parse('$baseUrl/support/faq/categories'),
-        headers: headers,
+    final grouped = await _fetchGroupedFaq();
+
+    return grouped.entries.map((entry) {
+      final items = entry.value
+          .map((json) => FAQItem.fromJson(json))
+          .toList();
+      return FAQCategory(
+        id: entry.key,
+        name: _prettyCategory(entry.key),
+        icon: entry.key,
+        description: '',
+        itemCount: items.length,
+        items: items,
       );
-
-      print('📱 [PROFILE API] Get FAQ categories - Status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        final responseData = data['data'] as Map<String, dynamic>;
-        final categoriesJson = responseData['categories'] as List<dynamic>;
-        return categoriesJson
-            .map((json) => FAQCategory.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception('Failed to get FAQ categories: ${response.body}');
-      }
-    } catch (e) {
-      print('❌ [PROFILE API] Error getting FAQ categories: $e');
-      rethrow;
-    }
+    }).toList();
   }
 
-  /// Get FAQ items by category
+  /// Questions for a single category.
   Future<List<FAQItem>> getFAQItems(String categoryId) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(
-        Uri.parse('$baseUrl/support/faq/category/$categoryId'),
-        headers: headers,
-      );
-
-      print('📱 [PROFILE API] Get FAQ items - Status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        final responseData = data['data'] as Map<String, dynamic>;
-        final itemsJson = responseData['items'] as List<dynamic>;
-        return itemsJson
-            .map((json) => FAQItem.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception('Failed to get FAQ items: ${response.body}');
-      }
-    } catch (e) {
-      print('❌ [PROFILE API] Error getting FAQ items: $e');
-      rethrow;
-    }
+    final grouped = await _fetchGroupedFaq(category: categoryId);
+    return grouped.values
+        .expand((list) => list)
+        .map((json) => FAQItem.fromJson(json))
+        .toList();
   }
 
-  /// Search FAQ
+  /// Full-text search, handled server-side by the same endpoint.
   Future<List<FAQItem>> searchFAQ(String query) async {
+    final grouped = await _fetchGroupedFaq(search: query);
+    return grouped.values
+        .expand((list) => list)
+        .map((json) => FAQItem.fromJson(json))
+        .toList();
+  }
+
+  /// No "helpful" endpoint exists server-side yet, so this is intentionally a
+  /// local no-op: the UI can keep its optimistic tick without firing a request
+  /// that would 404. Wire it up here when the backend route lands.
+  Future<void> markFAQHelpful(String faqId) async {
+    print('ℹ️  [PROFILE API] FAQ $faqId marked helpful (local only — no endpoint)');
+  }
+
+  Future<Map<String, List<Map<String, dynamic>>>> _fetchGroupedFaq({
+    String? category,
+    String? search,
+  }) async {
     try {
-      final headers = await _getHeaders();
-      final response = await http.get(
-        Uri.parse('$baseUrl/support/faq/search?q=$query'),
-        headers: headers,
-      );
+      final query = <String, String>{
+        if (category != null && category.isNotEmpty) 'category': category,
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      };
+      final uri = Uri.parse('$baseUrl/support/faq')
+          .replace(queryParameters: query.isEmpty ? null : query);
 
-      print('📱 [PROFILE API] Search FAQ - Status: ${response.statusCode}');
+      final response = await http.get(uri, headers: await _getHeaders());
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        final responseData = data['data'] as Map<String, dynamic>;
-        final itemsJson = responseData['results'] as List<dynamic>;
-        return itemsJson
-            .map((json) => FAQItem.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception('Failed to search FAQ: ${response.body}');
+      print('📱 [PROFILE API] Get FAQ - Status: ${response.statusCode}');
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load the FAQ: ${response.body}');
       }
+
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final faqs = (data['data']?['faqs'] ?? <String, dynamic>{})
+          as Map<String, dynamic>;
+
+      return faqs.map(
+        (key, value) => MapEntry(key, (value as List).cast<Map<String, dynamic>>()),
+      );
     } catch (e) {
-      print('❌ [PROFILE API] Error searching FAQ: $e');
+      print('❌ [PROFILE API] Error loading FAQ: $e');
       rethrow;
     }
   }
 
-  /// Mark FAQ as helpful
-  Future<void> markFAQHelpful(String faqId) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.post(
-        Uri.parse('$baseUrl/support/faq/$faqId/helpful'),
-        headers: headers,
-      );
-
-      print('📱 [PROFILE API] Mark FAQ helpful - Status: ${response.statusCode}');
-
-      if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else if (response.statusCode != 200) {
-        throw Exception('Failed to mark FAQ as helpful: ${response.body}');
-      }
-    } catch (e) {
-      print('❌ [PROFILE API] Error marking FAQ helpful: $e');
-      rethrow;
-    }
+  /// 'payment_issue' → 'Payment issue'. The API stores raw category slugs.
+  String _prettyCategory(String slug) {
+    if (slug.isEmpty) return slug;
+    final words = slug.replaceAll('_', ' ').replaceAll('-', ' ');
+    return words[0].toUpperCase() + words.substring(1);
   }
 
   /// Create support ticket
@@ -702,36 +690,27 @@ class ProfileApiService {
     required String priority,
     List<File>? attachments,
   }) async {
+    // The real route is POST /support/contact and it takes JSON with a
+    // `message` field — not multipart POST /support/tickets with `description`
+    // (that path is GET-only, so every call here used to fail). Attachments are
+    // not supported server-side; they are accepted and ignored for now.
     try {
-      final headers = await _getMultipartHeaders();
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/support/tickets'),
+      final response = await http.post(
+        Uri.parse('$baseUrl/support/contact'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'subject': subject,
+          'message': description,
+          'category': category,
+          'priority': priority,
+        }),
       );
-
-      request.headers.addAll(headers);
-      request.fields['subject'] = subject;
-      request.fields['description'] = description;
-      request.fields['category'] = category;
-      request.fields['priority'] = priority;
-
-      if (attachments != null) {
-        for (var file in attachments) {
-          request.files.add(
-            await http.MultipartFile.fromPath('attachments', file.path),
-          );
-        }
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
 
       print('📱 [PROFILE API] Create ticket - Status: ${response.statusCode}');
 
       if (response.statusCode == 201) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        final ticketData = data['data'] as Map<String, dynamic>;
-        return SupportTicket.fromJson(ticketData['ticket'] as Map<String, dynamic>);
+        return SupportTicket.fromJson(data['data'] as Map<String, dynamic>);
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please login again.');
       } else {
@@ -805,91 +784,33 @@ class ProfileApiService {
     }
   }
 
-  /// Add message to support ticket
-  Future<TicketMessage> addTicketMessage({
-    required String ticketId,
-    required String message,
-    List<File>? attachments,
-  }) async {
-    try {
-      final headers = await _getMultipartHeaders();
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/support/tickets/$ticketId/messages'),
-      );
-
-      request.headers.addAll(headers);
-      request.fields['message'] = message;
-
-      if (attachments != null) {
-        for (var file in attachments) {
-          request.files.add(
-            await http.MultipartFile.fromPath('attachments', file.path),
-          );
-        }
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      print('📱 [PROFILE API] Add ticket message - Status: ${response.statusCode}');
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        final messageData = data['data'] as Map<String, dynamic>;
-        return TicketMessage.fromJson(messageData['message'] as Map<String, dynamic>);
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception('Failed to add message: ${response.body}');
-      }
-    } catch (e) {
-      print('❌ [PROFILE API] Error adding ticket message: $e');
-      rethrow;
-    }
-  }
-
-  /// Submit problem report
+  /// Submit problem report.
+  ///
+  /// The route is POST /support/report and it reads exactly two JSON fields:
+  /// `problemType` (app_crash | payment_issue | login_problem |
+  /// feature_not_working | other) and `description`. The old implementation
+  /// posted multipart `type`/`title`/`description` to /support/report-problem,
+  /// which does not exist.
   Future<ProblemReport> submitProblemReport(ProblemReport report) async {
     try {
-      final headers = await _getMultipartHeaders();
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/support/report-problem'),
+      final response = await http.post(
+        Uri.parse('$baseUrl/support/report'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'problemType': report.type,
+          // The server has no title field — keep it in the body so support
+          // still sees what the user called it.
+          'description': report.title.isEmpty
+              ? report.description
+              : '${report.title}\n\n${report.description}',
+        }),
       );
-
-      request.headers.addAll(headers);
-      request.fields['type'] = report.type;
-      request.fields['title'] = report.title;
-      request.fields['description'] = report.description;
-
-      if (report.relatedTripId != null) {
-        request.fields['relatedTripId'] = report.relatedTripId!;
-      }
-      if (report.relatedServiceId != null) {
-        request.fields['relatedServiceId'] = report.relatedServiceId!;
-      }
-      if (report.deviceInfo != null) {
-        request.fields['deviceInfo'] = json.encode(report.deviceInfo);
-      }
-
-      if (report.screenshots != null) {
-        for (var path in report.screenshots!) {
-          request.files.add(
-            await http.MultipartFile.fromPath('screenshots', path),
-          );
-        }
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
 
       print('📱 [PROFILE API] Submit report - Status: ${response.statusCode}');
 
       if (response.statusCode == 201) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        final reportData = data['data'] as Map<String, dynamic>;
-        return ProblemReport.fromJson(reportData['report'] as Map<String, dynamic>);
+        return ProblemReport.fromJson(data['data'] as Map<String, dynamic>);
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please login again.');
       } else {

@@ -1141,7 +1141,7 @@ class _DriverTripInProgressScreenState
               Positioned.fill(
                 child: Container(
                   color: Colors.black26,
-                  child: const Center(
+                  child: Center(
                     child: CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation(
                             AppColors.primaryGold)),
@@ -1501,7 +1501,7 @@ class _PassengerCard extends StatelessWidget {
                           fontWeight: FontWeight.w700)),
                 ])
               else
-                Text('Your passenger',
+                Text(tr('driver.yourPassenger'),
                     style: AppTypography.bodySmall
                         .copyWith(color: AppColors.textSecondary)),
             ],

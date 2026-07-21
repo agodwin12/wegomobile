@@ -735,7 +735,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
       case 'CASH':         return tr('pay.cashPickup');
       case 'ORANGE_MONEY': return tr('pay.orangeTitle');
       case 'MTN_MOMO':     return tr('pay.mtnTitle');
-      default:             return 'Not selected';
+      default:             return tr('veh.notSelected');
     }
   }
 
@@ -1626,7 +1626,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
             // Header
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Price Breakdown',
+                  Text(tr('veh.priceBreakdown'),
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,

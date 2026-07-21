@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../utils/app_colors.dart';
 
@@ -549,7 +550,7 @@ class _RatingScreenState extends State<RatingScreen> with TickerProviderStateMix
               maxLines: 4,
               maxLength: 200,
               decoration: InputDecoration(
-                hintText: 'Share more details about your experience...',
+                hintText: tr('rating.shareMore'),
                 hintStyle: AppTypography.inputHint,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.all(20),

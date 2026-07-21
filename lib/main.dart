@@ -34,12 +34,10 @@ import 'screens/forgot_password/forgot_password_screen.dart';
 import 'screens/passenger/dashboard/passenger_dashboard.dart';
 import 'screens/driver/navigation_wrapper/driver_navigation_wrapper.dart';
 import 'screens/driver/dashboard/dashboard.dart';
-import 'screens/driver/driver_container/driver_container_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 // SCREENS - ACCOUNT
 // ═══════════════════════════════════════════════════════════════════════
-import 'screens/passenger/account/my_account/account_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 // SCREENS - PROFILE MANAGEMENT
@@ -47,6 +45,12 @@ import 'screens/passenger/account/my_account/account_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/edit_profile_screen.dart';
 import 'screens/profile/change_password_screen.dart';
+import 'screens/profile/change_avatar_screen.dart';
+import 'screens/profile/help_faq_screen.dart';
+import 'screens/profile/privacy_security_screen.dart';
+import 'screens/profile/support_screens.dart';
+import 'screens/profile/driver/vehicle_info_screen.dart';
+import 'screens/profile/driver/driver_documents_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 // SCREENS - NOTIFICATIONS
@@ -464,12 +468,6 @@ class _WegoAppState extends State<WegoApp> {
             case '/dashboard/delivery-agent':
               return MaterialPageRoute(builder: (_) => const DeliveryAgentDashboard());
 
-          // ── Account ─────────────────────────────────────────
-            case '/account':
-              return MaterialPageRoute(
-                builder: (_) => const AccountScreen(user: {}, accessToken: ''),
-              );
-
           // ── Profile ─────────────────────────────────────────
             case '/profile':
               return MaterialPageRoute(builder: (_) => const ProfileScreen());
@@ -481,42 +479,28 @@ class _WegoAppState extends State<WegoApp> {
               return MaterialPageRoute(builder: (_) => const ChangePasswordScreen());
 
             case '/profile/avatar':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'Change Avatar', message: 'Upload or change your profile picture',
-              ));
+              return MaterialPageRoute(builder: (_) => const ChangeAvatarScreen());
 
             case '/profile/help':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'Help & FAQ', message: 'Get answers to common questions',
-              ));
+              return MaterialPageRoute(builder: (_) => const HelpFAQScreen());
 
             case '/profile/notifications':
               return MaterialPageRoute(builder: (_) => const NotificationScreen());
 
             case '/profile/privacy':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'Privacy & Security', message: 'Control your privacy settings',
-              ));
+              return MaterialPageRoute(builder: (_) => const PrivacySecurityScreen());
 
             case '/profile/support':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'Contact Support', message: 'Get help from our support team',
-              ));
+              return MaterialPageRoute(builder: (_) => const ContactSupportScreen());
 
             case '/profile/report-problem':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'Report a Problem', message: 'Let us know about any issues',
-              ));
+              return MaterialPageRoute(builder: (_) => const ReportProblemScreen());
 
             case '/profile/vehicle':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'Vehicle Information', message: 'Manage your vehicle details',
-              ));
+              return MaterialPageRoute(builder: (_) => const VehicleInfoScreen());
 
             case '/profile/documents':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'Driver Documents', message: 'Manage your license, CNI, and insurance',
-              ));
+              return MaterialPageRoute(builder: (_) => const DriverDocumentsScreen());
 
           // ── Notifications ────────────────────────────────────
             case '/notifications':
@@ -557,11 +541,6 @@ class _WegoAppState extends State<WegoApp> {
                 builder: (_) => CategoryListingsScreen(category: category),
               );
 
-            case '/services/all':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'All Services', message: 'Browse all available services',
-              ));
-
             case '/services/search':
               final args = ModalRoute.of(context)?.settings.arguments
               as Map<String, dynamic>?;
@@ -570,11 +549,6 @@ class _WegoAppState extends State<WegoApp> {
                   initialQuery: args?['query'] as String?,
                 ),
               );
-
-            case '/services/reviews':
-              return MaterialPageRoute(builder: (_) => const _ComingSoonScreen(
-                title: 'Reviews', message: 'Read all reviews for this service',
-              ));
 
             case '/services/edit-listing':
               final args = ModalRoute.of(context)?.settings.arguments
@@ -590,95 +564,6 @@ class _WegoAppState extends State<WegoApp> {
               return MaterialPageRoute(builder: (_) => const LoginScreen());
           }
         },
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// COMING SOON SCREEN
-// ═══════════════════════════════════════════════════════════════════════
-
-class _ComingSoonScreen extends StatelessWidget {
-  final String title;
-  final String message;
-
-  const _ComingSoonScreen({
-    required this.title,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-        ),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFDC71), Color(0xFFF5C844)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color:      const Color(0xFFFFDC71).withOpacity(0.3),
-                      blurRadius: 20,
-                      offset:     const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.construction, size: 64, color: Colors.black87),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'Coming Soon!',
-                style: TextStyle(
-                  fontSize: 28, fontWeight: FontWeight.w700, color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                style: const TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFDC71),
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon:  const Icon(Icons.arrow_back),
-                label: const Text(
-                  'Go Back',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

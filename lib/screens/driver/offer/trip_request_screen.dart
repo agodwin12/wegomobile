@@ -198,12 +198,12 @@ class _TripRequestScreenState extends State<TripRequestScreen>
         Navigator.pop(context);
       } else {
         setState(() => _isProcessing = false);
-        _showErrorDialog(title: tr('driver.tripTaken'), message: 'Another driver accepted this trip.');
+        _showErrorDialog(title: tr('driver.tripTaken'), message: tr('offer.takenByOther'));
       }
     } catch (_) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
-      _showErrorDialog(title: tr('common.errorTitle'), message: 'Could not accept trip. Please try again.', onRetry: _handleAccept);
+      _showErrorDialog(title: tr('common.errorTitle'), message: tr('offer.acceptFailed'), onRetry: _handleAccept);
     }
   }
 

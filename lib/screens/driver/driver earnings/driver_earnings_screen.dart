@@ -1439,7 +1439,7 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
               style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13, color: _kGold, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 24),
-            Text('Amount (XAF)', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
+            Text(tr('wallet.amountXaf'), style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(color: _kWhite, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE0E0E0))),

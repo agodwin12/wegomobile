@@ -364,7 +364,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
 
   Widget _buildSizeSection() {
     return _card(
-      title: 'Package size',
+      title: tr('pkg.size'),
       child: Row(
         children: [
           _sizeCard('small',  'Small',  '< 1 kg',  '🟢'),
@@ -473,8 +473,8 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
 
   Widget _buildPhotoSection() {
     return _card(
-      title: 'Package photo *',
-      subtitle: 'Helps the driver identify your package',
+      title: tr('pkg.photoRequired'),
+      subtitle: tr('pkg.photoHelps'),
       child: _packagePhotoUrl != null
           ? _buildPhotoSuccess()
           : _buildPhotoUploader(),
@@ -545,7 +545,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
               Icon(Icons.camera_alt_outlined,
                   size: 30, color: AppColors.textLight),
               const SizedBox(height: 8),
-              Text('Tap to add package photo',
+              Text(tr('pkg.tapAddPhoto'),
                   style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textSecondary, fontSize: 13)),
               Text('JPG · PNG · WEBP · max 5 MB',
@@ -582,7 +582,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Fragile package',
+                  Text(tr('pkg.fragile'),
                       style: TextStyle(
                           fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700,
                           color: _isFragile ? AppColors.warning : AppColors.textPrimary)),
@@ -634,7 +634,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
           maxLines: 3,
           style: AppTypography.inputText.copyWith(fontSize: 14),
           decoration: InputDecoration(
-            hintText: 'e.g. "Handle with care — glass inside"',
+            hintText: tr('pkg.noteExample'),
             hintStyle: AppTypography.inputHint.copyWith(fontSize: 13),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.all(14),

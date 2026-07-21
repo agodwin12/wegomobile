@@ -1462,8 +1462,8 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             const SizedBox(height: 32),
             _buildTextField(
               controller: licenseNumberCtrl,
-              label: 'Driver\'s License Number',
-              hint: 'Enter your license number',
+              label: tr('signup.licenseNumber'),
+              hint: tr('signup.licenseNumberHint'),
               prefixIcon: Icons.credit_card,
             ),
             const SizedBox(height: 20),
@@ -1487,7 +1487,7 @@ class _SignupDriverScreenState extends State<SignupDriverScreen>
             ),
             const SizedBox(height: 24),
             _buildImageUploadCard(
-              title: 'Driver\'s License Document',
+              title: tr('signup.licenseDoc'),
               subtitle: tr('signup.licensePhotoSub'),
               icon: Icons.credit_card,
               image: _licenseImage,

@@ -1217,9 +1217,9 @@ class _DriverMainScreenState extends State<DriverMainScreen>
 
   String _getGreeting() {
     final h = DateTime.now().hour;
-    if (h >= 5 && h < 12)  return 'Good morning';
-    if (h >= 12 && h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h >= 5 && h < 12)  return tr('home.goodMorning');
+    if (h >= 12 && h < 17) return tr('home.goodAfternoon');
+    return tr('home.goodEvening');
   }
 
   String _getAvatarLetter() =>

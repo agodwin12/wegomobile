@@ -10,6 +10,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../profile/support_screens.dart';
 import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -642,7 +643,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
                 backgroundColor: AppColors.success,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8))),
-            child: Text('Yes, I\'ve Arrived',
+            child: Text(tr('driver.yesArrived'),
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -948,7 +949,11 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
               child: Row(children: [
                 _CircleBtn(
                     icon: Icons.support_agent_rounded,
-                    onTap: () {}),
+                    onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ContactSupportScreen()),
+                        )),
                 const SizedBox(width: 10),
                 _CircleBtn(
                   icon:  _isMuted

@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../l10n/tr.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../models/chat_message.dart';
@@ -674,8 +675,8 @@ class _ChatScreenContentState extends State<_ChatScreenContent> with WidgetsBind
                 textCapitalization: TextCapitalization.sentences,
                 maxLines: null,
                 keyboardType: TextInputType.multiline,
-                decoration: const InputDecoration(
-                  hintText: 'Type a message...',
+                decoration: InputDecoration(
+                  hintText: tr('chat.typeMessage'),
                   border: InputBorder.none,
                   hintStyle: TextStyle(
                     color: Colors.black38,

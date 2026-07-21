@@ -724,7 +724,7 @@ class _DriverTripCompleteScreenState extends State<DriverTripCompleteScreen>
                 const Icon(Icons.check_circle_rounded,
                     size: 14, color: AppColors.success),
                 const SizedBox(width: 5),
-                Text('Trip completed successfully',
+                Text(tr('driver.tripCompletedOk'),
                     style: AppTypography.bodySmall.copyWith(
                         color: AppColors.success,
                         fontWeight: FontWeight.w500)),

@@ -278,6 +278,13 @@ class TicketMessage {
 // FAQ ITEM MODEL
 // ═══════════════════════════════════════════════════════════════════
 
+DateTime _parseDate(dynamic value) {
+  if (value is String) {
+    return DateTime.tryParse(value) ?? DateTime.now();
+  }
+  return DateTime.now();
+}
+
 class FAQItem {
   final int id;
   final String category;
@@ -313,8 +320,10 @@ class FAQItem {
       viewCount: json['view_count'] as int? ?? json['viewCount'] as int? ?? 0,
       helpfulCount: json['helpful_count'] as int? ?? json['helpfulCount'] as int? ?? 0,
       isExpanded: false,
-      createdAt: DateTime.parse(json['created_at'] as String? ?? json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String? ?? json['updatedAt'] as String),
+      // GET /support/faq returns a trimmed shape (id, question, answer,
+      // category, order) with no timestamps — parse them only when present.
+      createdAt: _parseDate(json['created_at'] ?? json['createdAt']),
+      updatedAt: _parseDate(json['updated_at'] ?? json['updatedAt']),
     );
   }
 

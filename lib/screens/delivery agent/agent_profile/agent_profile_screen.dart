@@ -287,7 +287,7 @@ class _State extends State<AgentProfileScreen> {
         const SizedBox(height: 12),
 
         // Name
-        Text(p.fullName.isNotEmpty ? p.fullName : 'No name set',
+        Text(p.fullName.isNotEmpty ? p.fullName : tr('agent.noNameSet'),
             style: AppTypography.headlineSmall.copyWith(
                 color: AppColors.primaryDark, fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),

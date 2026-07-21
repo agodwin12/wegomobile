@@ -549,7 +549,7 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✓ Thanks for your feedback!'),
+            content: Text(tr('help.thanksFeedback')),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
@@ -750,7 +750,7 @@ class _FAQItemsScreenState extends State<FAQItemsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✓ Thanks for your feedback!'),
+            content: Text(tr('help.thanksFeedback')),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),

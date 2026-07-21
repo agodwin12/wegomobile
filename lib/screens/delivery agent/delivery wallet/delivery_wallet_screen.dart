@@ -103,12 +103,12 @@ enum _TopUpStatus {
   String get label {
     switch (this) {
       case _TopUpStatus.pending:        return 'Pending';
-      case _TopUpStatus.under_review:   return 'Under Review';
+      case _TopUpStatus.under_review:   return tr('wallet.underReview');
       case _TopUpStatus.confirmed:      return 'Confirmed';
       case _TopUpStatus.credited:       return 'Credited';
       case _TopUpStatus.rejected:       return 'Rejected';
-      case _TopUpStatus.campay_pending: return 'Awaiting Payment';
-      case _TopUpStatus.campay_failed:  return 'Payment Failed';
+      case _TopUpStatus.campay_pending: return tr('wallet.awaitingPayment');
+      case _TopUpStatus.campay_failed:  return tr('booking.paymentFailed');
     }
   }
 
@@ -1092,7 +1092,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           // Try another amount button
           TextButton(
             onPressed: _resetTopUpForm,
-            child: Text('Cancel / Try different amount',
+            child: Text(tr('wallet.cancelTryDifferent'),
                 style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 12,
@@ -1367,7 +1367,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
 
   Widget _buildAmountField() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Amount (XAF)',
+      Text(tr('wallet.amountXaf'),
           style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 13,
@@ -1422,7 +1422,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         decoration: _inputDecoration('Enter amount', suffix: 'XAF'),
         validator: (v) {
           final n = int.tryParse(v?.trim() ?? '');
-          if (n == null || n <= 0) return 'Enter a valid amount';
+          if (n == null || n <= 0) return tr('val.amountInvalid');
           if (n < 25) return 'Minimum top-up is 25 XAF';
           return null;
         },
@@ -1443,10 +1443,10 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       ),
       validator: (v) {
         if (_selectedChannel == 'cash') return null;
-        if (v == null || v.trim().isEmpty) return 'Phone number is required';
+        if (v == null || v.trim().isEmpty) return tr('val.phoneRequired');
         final digits = v.trim().replaceAll(RegExp(r'\D'), '');
         if (digits.length != 9 && digits.length != 12) {
-          return 'Enter 9 digits (670000000) or full format (237670000000)';
+          return tr('val.phoneFormat');
         }
         return null;
       },

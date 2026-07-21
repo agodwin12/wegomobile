@@ -172,11 +172,11 @@ enum _Stage {
 
   String get actionLabel {
     switch (this) {
-      case _Stage.accepted:        return 'Start Route to Pickup';
-      case _Stage.en_route_pickup: return 'I\'ve Arrived at Pickup';
-      case _Stage.arrived_pickup:  return 'Package Picked Up';
-      case _Stage.picked_up:       return 'En Route to Dropoff';
-      case _Stage.en_route_dropoff:return 'Arrived at Dropoff';
+      case _Stage.accepted:        return tr('dstage.startRoute');
+      case _Stage.en_route_pickup: return tr('dstage.arrivedAtPickup');
+      case _Stage.arrived_pickup:  return tr('dstage.packagePickedUp');
+      case _Stage.picked_up:       return tr('dstage.enRouteDropoff');
+      case _Stage.en_route_dropoff:return tr('dstage.arrivedAtDropoff');
       case _Stage.arrived_dropoff: return tr('agent.enterPin');
       default:                     return '';
     }
@@ -184,13 +184,13 @@ enum _Stage {
 
   String get statusLabel {
     switch (this) {
-      case _Stage.accepted:        return 'Head to pickup';
-      case _Stage.en_route_pickup: return 'On the way to pickup';
-      case _Stage.arrived_pickup:  return 'At pickup — collect package';
-      case _Stage.picked_up:       return 'Package collected — head to dropoff';
-      case _Stage.en_route_dropoff:return 'On the way to dropoff';
-      case _Stage.arrived_dropoff: return 'At dropoff — ask for PIN';
-      case _Stage.delivered:       return 'Delivered ✓';
+      case _Stage.accepted:        return tr('dstage.headToPickup');
+      case _Stage.en_route_pickup: return tr('dstage.onWayPickup');
+      case _Stage.arrived_pickup:  return tr('dstage.atPickupCollect');
+      case _Stage.picked_up:       return tr('dstage.collectedHeadDropoff');
+      case _Stage.en_route_dropoff:return tr('dstage.onWayDropoff');
+      case _Stage.arrived_dropoff: return tr('dstage.atDropoffAskPin');
+      case _Stage.delivered:       return tr('dstage.deliveredCheck');
     }
   }
 
@@ -1044,7 +1044,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
       case _Stage.en_route_pickup: return 'En Route to Pickup';
       case _Stage.arrived_pickup:  return 'At Pickup Location';
       case _Stage.picked_up:       return 'Package Collected';
-      case _Stage.en_route_dropoff:return 'En Route to Dropoff';
+      case _Stage.en_route_dropoff:return tr('dstage.enRouteDropoff');
       case _Stage.arrived_dropoff: return 'At Dropoff Location';
       default:                     return '';
     }

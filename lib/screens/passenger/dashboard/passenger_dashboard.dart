@@ -15,6 +15,7 @@ import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../profile/support_screens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -339,23 +340,12 @@ class _PassengerDashboardState extends State<PassengerDashboard>
 
   String _getGreeting() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return tr('home.goodMorning');
+    if (h < 17) return tr('home.goodAfternoon');
+    return tr('home.goodEvening');
   }
 
   String? get _avatarUrl => _userData?['avatar_url']?.toString();
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:         Text(tr('common.comingSoon', {'feature': feature})),
-      backgroundColor: _kDark,
-      behavior:        SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      action: SnackBarAction(
-          label: 'OK', textColor: _kGold, onPressed: () {}),
-    ));
-  }
 
   // ─────────────────────────────────────────────────────────────────
   // NAVIGATION
@@ -1291,6 +1281,8 @@ class _PassengerDashboardState extends State<PassengerDashboard>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // No dedicated offers listing exists yet, so there is no
+              // "see all" here — the carousel below already shows them all.
               Text(tr('home.offers'),
                   style: TextStyle(
                     fontSize:   18,
@@ -1298,15 +1290,6 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                     color:      _kDark,
                     letterSpacing: -0.3,
                   )),
-              GestureDetector(
-                onTap: () => _showComingSoon('All offers'),
-                child: Text(tr('common.seeAll'),
-                    style: TextStyle(
-                      fontSize:   13,
-                      fontWeight: FontWeight.w600,
-                      color:      _kGold,
-                    )),
-              ),
             ],
           ),
         ),
@@ -1474,7 +1457,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                     letterSpacing: -0.3,
                   )),
               GestureDetector(
-                onTap: () => _showComingSoon('All trips'),
+                onTap: () => Navigator.push(context, _route(const ActivityScreen())),
                 child: Text(tr('common.seeAll'),
                     style: TextStyle(
                       fontSize:   13,
@@ -1578,7 +1561,11 @@ class _PassengerDashboardState extends State<PassengerDashboard>
 
   Widget _buildSafetyBanner() {
     return GestureDetector(
-      onTap: () => _showComingSoon('Safety center'),
+      // The banner promises 24/7 assistance — take the user straight there.
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ContactSupportScreen()),
+      ),
       child: Container(
         margin:  const EdgeInsets.fromLTRB(16, 24, 16, 0),
         padding: const EdgeInsets.all(18),

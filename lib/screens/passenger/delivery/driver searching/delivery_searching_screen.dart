@@ -721,7 +721,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                 '${_packageSize.length > 1 ? _packageSize.substring(1) : ""}',
                 style: const TextStyle(fontSize: 12,
                     fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
-              Text(_isExpress ? 'Express delivery' : 'Regular delivery',
+              Text(_isExpress ? tr('del.express') : tr('del.regular'),
                   style: const TextStyle(fontSize: 11,
                       color: AppColors.darkTextSecondary)),
             ],
@@ -851,7 +851,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
       child: Row(children: [
         const Icon(Icons.lock_rounded, color: Color(0xFF4C8DFF), size: 14),
         const SizedBox(width: 8),
-        const Expanded(
+        Expanded(
           child: Text(
             'A 4-digit PIN was sent to the recipient\'s number. '
             'The driver will request it to confirm delivery.',

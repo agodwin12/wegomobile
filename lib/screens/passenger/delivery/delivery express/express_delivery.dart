@@ -624,7 +624,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 22,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
-              Text(_cancelReason ?? 'This delivery has been cancelled.',
+              Text(_cancelReason ?? tr('del.cancelledMsg'),
                   textAlign: TextAlign.center,
                   style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.textSecondary)),

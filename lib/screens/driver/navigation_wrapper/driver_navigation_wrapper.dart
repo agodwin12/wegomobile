@@ -6,6 +6,7 @@ import '../dashboard/dashboard.dart'; // DriverMainScreen
 import '../driver earnings/driver_earnings_screen.dart';
 import '../navigation bar/bottom_navigation.dart'; // WegoBottomNavigation
 import '../trip history/driver_trips_screen.dart'; // DriverTripsScreen
+import 'package:wego_v1/screens/notification/notification_screen.dart';
 import 'package:wego_v1/screens/profile/profile_screen.dart';
 
 class DriverNavigationWrapper extends StatefulWidget {
@@ -58,9 +59,8 @@ class _DriverNavigationWrapperState extends State<DriverNavigationWrapper> {
         setState(() => _selectedIndex = 2);
         break;
 
-      case 3: // Alerts (coming soon)
-        _showComingSoon('Notifications');
-        setState(() => _selectedIndex = 0);
+      case 3: // Alerts
+        _navigateToNotifications();
         break;
 
       case 4: // Profile (push route)
@@ -84,35 +84,16 @@ class _DriverNavigationWrapperState extends State<DriverNavigationWrapper> {
     });
   }
 
-  void _showComingSoon(String feature) {
-    if (!mounted) return;
+  void _navigateToNotifications() {
+    debugPrint('🔔 [DRIVER-NAV] Navigating to notifications...');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '$feature - Coming soon!',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF2196F3),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12), // ✅ fixed
-        ),
-        duration: const Duration(seconds: 2),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationScreen()),
+    ).then((_) {
+      if (!mounted) return;
+      setState(() => _selectedIndex = 0);
+    });
   }
 
   @override

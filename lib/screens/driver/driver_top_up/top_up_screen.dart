@@ -748,7 +748,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
                 fontWeight: FontWeight.w800,
                 color:      _kBlack,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText:       '0',
                 hintStyle:      TextStyle(
                   fontFamily: 'LeagueSpartan',
@@ -931,7 +931,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
                 fontWeight: FontWeight.w600,
                 color:      _kBlack,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText:       '6XX XXX XXX',
                 hintStyle:      TextStyle(color: Color(0xFF9E9E9E), fontSize: 15),
                 border:         InputBorder.none,
@@ -1003,7 +1003,7 @@ class _DriverTopUpScreenState extends State<DriverTopUpScreen>
               strokeWidth: 2.5,
             ),
           )
-              : const Row(
+              : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.add_rounded, color: _kBlack, size: 20),

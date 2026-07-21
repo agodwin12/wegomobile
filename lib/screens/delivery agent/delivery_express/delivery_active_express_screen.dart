@@ -71,11 +71,11 @@ enum _XStage {
 
   String get actionLabel {
     switch (this) {
-      case _XStage.accepted:         return 'Start — Head to Pickup';
-      case _XStage.en_route_pickup:  return 'Arrived at Pickup';
-      case _XStage.arrived_pickup:   return 'Package Picked Up';
-      case _XStage.picked_up:        return 'En Route to Dropoff';
-      case _XStage.en_route_dropoff: return 'Arrived at Dropoff';
+      case _XStage.accepted:         return tr('dstage.startHeadPickup');
+      case _XStage.en_route_pickup:  return tr('dstage.arrivedPickupShort');
+      case _XStage.arrived_pickup:   return tr('dstage.packagePickedUp');
+      case _XStage.picked_up:        return tr('dstage.enRouteDropoff');
+      case _XStage.en_route_dropoff: return tr('dstage.arrivedAtDropoff');
       case _XStage.arrived_dropoff:  return tr('agent.enterPin');
       default:                       return '';
     }
@@ -83,13 +83,13 @@ enum _XStage {
 
   String get statusLabel {
     switch (this) {
-      case _XStage.accepted:         return 'Head to pickup';
-      case _XStage.en_route_pickup:  return 'On the way to pickup';
-      case _XStage.arrived_pickup:   return 'At pickup — collect package';
-      case _XStage.picked_up:        return 'Package collected';
-      case _XStage.en_route_dropoff: return 'Heading to dropoff';
-      case _XStage.arrived_dropoff:  return 'At dropoff — ask for PIN';
-      case _XStage.delivered:        return 'Delivered ✓';
+      case _XStage.accepted:         return tr('dstage.headToPickup');
+      case _XStage.en_route_pickup:  return tr('dstage.onWayPickup');
+      case _XStage.arrived_pickup:   return tr('dstage.atPickupCollect');
+      case _XStage.picked_up:        return tr('dstage.packageCollected');
+      case _XStage.en_route_dropoff: return tr('dstage.headingDropoff');
+      case _XStage.arrived_dropoff:  return tr('dstage.atDropoffAskPin');
+      case _XStage.delivered:        return tr('dstage.deliveredCheck');
     }
   }
 

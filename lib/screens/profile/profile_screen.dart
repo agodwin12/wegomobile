@@ -16,6 +16,7 @@ import '../../utils/app_colors.dart';
 import '../../utils/app_typography.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
+import 'change_avatar_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -1240,7 +1241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               TextField(
                 controller: reasonController,
                 decoration: InputDecoration(
-                  labelText: 'Reason (optional)',
+                  labelText: tr('profile.reasonOptional'),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1314,23 +1315,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         break;
 
       case '/profile/avatar':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr('profile.avatarComingSoon')),
-            backgroundColor: AppColors.primaryGold,
-            behavior: SnackBarBehavior.floating,
-          ),
+        final changed = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ChangeAvatarScreen()),
         );
+        // The avatar lives in the header of this screen — refresh on change.
+        if (changed == true && mounted) {
+          _loadData();
+        }
         break;
 
+      // Everything else is a plain named route registered in main.dart.
       default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr('profile.navComingSoon', {'route': route})),
-            backgroundColor: AppColors.primaryGold,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        await Navigator.pushNamed(context, route);
     }
   }
 
@@ -1394,7 +1391,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // ═══════════════════════════════════════════════════════════════
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
             Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
             SizedBox(width: 10),

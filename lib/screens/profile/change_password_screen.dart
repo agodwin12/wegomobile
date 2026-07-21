@@ -94,7 +94,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your current password';
+                      return tr('val.currentPwdRequired');
                     }
                     return null;
                   },
@@ -112,16 +112,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a new password';
+                      return tr('val.newPwdRequired');
                     }
                     if (value == _currentPasswordController.text) {
-                      return 'New password must be different';
+                      return tr('val.pwdMustDiffer');
                     }
                     if (value.length < 8) {
-                      return 'Password must be at least 8 characters';
+                      return tr('val.pwdMin8');
                     }
                     if (!_hasUppercase || !_hasLowercase || !_hasDigit || !_hasSpecialChar) {
-                      return 'Password does not meet requirements';
+                      return tr('val.pwdRequirements');
                     }
                     return null;
                   },
@@ -144,10 +144,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
+                      return tr('val.confirmPwdRequired');
                     }
                     if (value != _newPasswordController.text) {
-                      return 'Passwords do not match';
+                      return tr('fp.mismatch');
                     }
                     return null;
                   },
@@ -511,7 +511,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ Password changed successfully'),
+          content: Text(tr('pwd.changed')),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),

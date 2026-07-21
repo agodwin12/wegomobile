@@ -670,9 +670,9 @@ class _PeekRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(children: [
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(tripCompleted ? '🎉 You have arrived!' : 'Trip in Progress', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary, letterSpacing: -0.3)),
+        Text(tripCompleted ? tr('trip.arrivedExcl') : tr('trip.inProgress'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary, letterSpacing: -0.3)),
         const SizedBox(height: 2),
-        Text(tripCompleted ? 'Trip completed' : '${distanceKm > 0 ? "${distanceKm.toStringAsFixed(1)} km  ·  " : ""}$eta to destination', style: const TextStyle(fontSize: 13, color: AppColors.darkTextSecondary, fontWeight: FontWeight.w500)),
+        Text(tripCompleted ? tr('trip.completedShort') : '${distanceKm > 0 ? "${distanceKm.toStringAsFixed(1)} km  ·  " : ""}$eta to destination', style: const TextStyle(fontSize: 13, color: AppColors.darkTextSecondary, fontWeight: FontWeight.w500)),
       ])),
       Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)), child: Text(plate, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 2))),
     ]);

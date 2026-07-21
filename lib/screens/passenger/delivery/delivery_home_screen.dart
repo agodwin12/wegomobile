@@ -201,7 +201,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Send a Package',
+            Text(tr('del.sendPackage'),
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 20,

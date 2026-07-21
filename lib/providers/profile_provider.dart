@@ -569,26 +569,6 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  /// Add message to ticket
-  Future<bool> addTicketMessage({
-    required String ticketId,
-    required String message,
-    List<File>? attachments,
-  }) async {
-    try {
-      await _apiService.addTicketMessage(
-        ticketId: ticketId,
-        message: message,
-        attachments: attachments,
-      );
-      print('✅ [PROFILE PROVIDER] Ticket message added');
-      return true;
-    } catch (e) {
-      print('❌ [PROFILE PROVIDER] Error adding message: $e');
-      return false;
-    }
-  }
-
   /// Submit problem report
   Future<bool> submitProblemReport(ProblemReport report) async {
     _isUpdating = true;

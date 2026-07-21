@@ -175,10 +175,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     icon: Icons.person,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your first name';
+                        return tr('val.firstNameRequired');
                       }
                       if (value.length < 2) {
-                        return 'First name must be at least 2 characters';
+                        return tr('val.firstNameShort');
                       }
                       return null;
                     },
@@ -193,10 +193,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     icon: Icons.person_outline,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your last name';
+                        return tr('val.lastNameRequired');
                       }
                       if (value.length < 2) {
-                        return 'Last name must be at least 2 characters';
+                        return tr('val.lastNameShort');
                       }
                       return null;
                     },
@@ -212,11 +212,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
+                        return tr('val.emailRequired');
                       }
                       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
                           .hasMatch(value)) {
-                        return 'Please enter a valid email';
+                        return tr('val.emailInvalid');
                       }
                       return null;
                     },
@@ -232,10 +232,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     keyboardType: TextInputType.phone,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your phone number';
+                        return tr('val.phoneRequired');
                       }
                       if (value.length < 9) {
-                        return 'Please enter a valid phone number';
+                        return tr('val.phoneInvalid');
                       }
                       return null;
                     },
@@ -467,7 +467,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       onTap: _selectDate,
       child: InputDecorator(
         decoration: InputDecoration(
-          labelText: 'Date of Birth',
+          labelText: tr('profile.dob'),
           prefixIcon: const Icon(Icons.calendar_today, color: Color(0xFFFFDC71)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -563,7 +563,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ Profile updated successfully'),
+          content: Text(tr('profile.updated')),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),

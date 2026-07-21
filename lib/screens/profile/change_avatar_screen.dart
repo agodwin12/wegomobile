@@ -530,7 +530,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ Profile picture updated'),
+          content: Text(tr('avatar.updated')),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -587,7 +587,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ Profile picture removed'),
+          content: Text(tr('avatar.removed')),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),

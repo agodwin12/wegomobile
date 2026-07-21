@@ -10,6 +10,7 @@ import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../profile/support_screens.dart';
 import '../../../l10n/tr.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -702,7 +703,12 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                     horizontal: 16, vertical: 12),
                 child: Row(children: [
                   _TopBarBtn(
-                      icon: Icons.support_agent_rounded, onTap: () {}),
+                      icon: Icons.support_agent_rounded,
+                      onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const ContactSupportScreen()),
+                          )),
                   const Spacer(),
                   AnimatedBuilder(
                     animation: _pulseAnimation,
