@@ -323,7 +323,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
                 title: Text(tr('driver.connTimeout')),
-                content: const Text(
+                content: Text(
                   'The request is taking longer than expected. '
                   'The trip may have started on the server. '
                   'Do you want to try again?',
@@ -632,7 +632,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)),
             title:   Text(tr('driver.leaveScreen')),
-            content: const Text(
+            content: Text(
                 'You are waiting for the passenger. Go back?'),
             actions: [
               TextButton(
@@ -1007,7 +1007,7 @@ class _SheetContent extends StatelessWidget {
                       onPressed: onNoShow,
                       icon: const Icon(Icons.person_off_rounded,
                           color: _kWarning),
-                      label: const Text('Report Passenger No-Show',
+                      label: Text(tr('driver.reportNoShowFull'),
                           style: TextStyle(
                               color:      _kWarning,
                               fontWeight: FontWeight.w700,
@@ -1209,12 +1209,12 @@ class _RouteSummary extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AddrLine(label: 'Pickup',   address: pickup),
+              _AddrLine(label: tr('ride.pickup'),   address: pickup),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 6),
                 child: Divider(height: 1, color: _kBorder),
               ),
-              _AddrLine(label: 'Drop-off', address: dropoff),
+              _AddrLine(label: tr('driver.dropoff'), address: dropoff),
             ],
           ),
         ),
@@ -1312,14 +1312,14 @@ class _CancelDialogState extends State<_CancelDialog> {
           child: const Icon(Icons.cancel_rounded, color: _kError, size: 24),
         ),
         const SizedBox(width: 12),
-        const Text('Cancel Trip?',
+        Text(tr('driver.cancelTripQ'),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       ]),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Please select a reason:',
+          Text(tr('driver.selectReason'),
               style: TextStyle(fontSize: 14)),
           const SizedBox(height: 12),
           ..._reasons.map((r) => RadioListTile<String>(
@@ -1345,7 +1345,7 @@ class _CancelDialogState extends State<_CancelDialog> {
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10)),
           ),
-          child: const Text('Confirm Cancel',
+          child: Text(tr('driver.confirmCancel'),
               style: TextStyle(color: Colors.white)),
         ),
       ],

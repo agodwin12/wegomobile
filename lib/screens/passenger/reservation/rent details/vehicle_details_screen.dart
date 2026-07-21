@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:wego_v1/screens/passenger/reservation/rent%20details/rental_payment_waiting_screen.dart';
@@ -232,7 +233,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
 
     if (rentalResp['success'] != true) {
       _showErrorDialog(
-        title: 'Booking Failed',
+        title: tr('booking.failed'),
         message: rentalResp['error'] ?? 'Unable to process your booking',
       );
       return;
@@ -244,7 +245,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
     // Cash — done
     if (_selectedPaymentMethod == 'CASH') {
       _showSuccessDialog(
-        title: 'Request Submitted!',
+        title: tr('booking.submitted'),
         message:
         'Your rental request is pending approval. Our team will contact you shortly to confirm and arrange cash payment on pickup.',
         onClose: () {
@@ -258,7 +259,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
     // MoMo
     if (rentalId == null) {
       _showErrorDialog(
-          title: 'Unexpected Error',
+          title: tr('booking.unexpectedError'),
           message:
           'Rental was created but ID was not returned. Please contact support.');
       return;
@@ -270,7 +271,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
     final phone = _rentalPhoneController.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
     if (phone.length < 9) {
       _showErrorDialog(
-          title: 'Mobile Money Number Required',
+          title: tr('booking.momoRequired'),
           message:
           'Enter the ${_paymentLabel(_selectedPaymentMethod)} number that will receive the payment prompt.');
       return;
@@ -278,7 +279,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
     final detectedOp = _momoOperator(phone);
     if (detectedOp == null) {
       _showErrorDialog(
-          title: 'Unrecognised Number',
+          title: tr('booking.unrecognisedNumber'),
           message:
           'That doesn\'t look like a valid MTN or Orange Cameroon number. Please check it and try again.');
       return;
@@ -307,7 +308,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
 
     if (payResp['success'] != true) {
       _showErrorDialog(
-          title: 'Payment Failed',
+          title: tr('booking.paymentFailed'),
           message:
           payResp['error'] ?? 'Could not initiate payment. Please try again.');
       return;
@@ -414,12 +415,12 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Booking Summary',
+                    Text(tr('booking.summary'),
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary)),
-                    Text('Review before confirming',
+                    Text(tr('booking.review'),
                         style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary)),
@@ -456,7 +457,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total Amount',
+                    Text(tr('booking.totalAmount'),
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -508,7 +509,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: Text('Cancel',
+                    child: Text(tr('common.cancel'),
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -528,7 +529,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Text('Confirm Booking',
+                    child: Text(tr('booking.confirmBooking'),
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -624,7 +625,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Great!',
+                child: Text(tr('booking.great'),
                     style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -697,7 +698,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Close',
+                child: Text(tr('common.close'),
                     style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -731,9 +732,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
 
   String _paymentLabel(String? method) {
     switch (method) {
-      case 'CASH':         return 'Cash on Pickup';
-      case 'ORANGE_MONEY': return 'Orange Money';
-      case 'MTN_MOMO':     return 'MTN Mobile Money';
+      case 'CASH':         return tr('pay.cashPickup');
+      case 'ORANGE_MONEY': return tr('pay.orangeTitle');
+      case 'MTN_MOMO':     return tr('pay.mtnTitle');
       default:             return 'Not selected';
     }
   }
@@ -920,7 +921,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                             shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 6),
-                      const Text('Available',
+                      Text(tr('booking.available'),
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -1374,8 +1375,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
         const SizedBox(height: 12),
         _paymentOption(
           value: 'MTN_MOMO',
-          title: 'MTN Mobile Money',
-          subtitle: 'Instant mobile payment',
+          title: tr('pay.mtnTitle'),
+          subtitle: tr('pay.mtnSub'),
           icon: Icons.phone_android_rounded,
           accent: const Color(0xFFFFCC00),
           imagePath: 'assets/images/momo.png',
@@ -1383,8 +1384,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
         const SizedBox(height: 10),
         _paymentOption(
           value: 'ORANGE_MONEY',
-          title: 'Orange Money',
-          subtitle: 'Instant mobile payment',
+          title: tr('pay.orangeTitle'),
+          subtitle: tr('pay.mtnSub'),
           icon: Icons.phone_android_rounded,
           accent: const Color(0xFFFF6600),
           imagePath: 'assets/images/om.png',
@@ -1392,8 +1393,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
         const SizedBox(height: 10),
         _paymentOption(
           value: 'CASH',
-          title: 'Cash on Pickup',
-          subtitle: 'Pay when you collect the car',
+          title: tr('pay.cashPickup'),
+          subtitle: tr('pay.cashPickupSub'),
           icon: Icons.payments_rounded,
           accent: const Color(0xFF6B7280),
           imagePath: null,
@@ -1425,7 +1426,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(children: [
-                  const Text('+237',
+                  Text('+237',
                       style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -1443,7 +1444,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
                       onChanged: (_) => setState(() {}),
                       style: const TextStyle(
                           fontSize: 15, fontWeight: FontWeight.w600),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '6XX XXX XXX',
                         border: InputBorder.none,
                         isDense: true,
@@ -1625,7 +1626,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
             // Header
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Price Breakdown',
+                  Text('Price Breakdown',
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -1667,7 +1668,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen>
             // Total
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total',
+                  Text('Total',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,

@@ -4,6 +4,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../l10n/tr.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart'; // ✅ ADDED
@@ -33,7 +34,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Profile Picture',
           style: TextStyle(
             color: Colors.white,
@@ -237,7 +238,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
                     elevation: 0,
                   ),
                   icon: const Icon(Icons.camera_alt, size: 24),
-                  label: const Text(
+                  label: Text(
                     'Upload New Photo',
                     style: TextStyle(
                       fontSize: 16,
@@ -295,8 +296,8 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
                     ),
                   ),
                   icon: const Icon(Icons.close, size: 24),
-                  label: const Text(
-                    'Cancel',
+                  label: Text(
+                    tr('common.cancel'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -322,8 +323,8 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
                     ),
                   ),
                   icon: const Icon(Icons.delete, size: 24),
-                  label: const Text(
-                    'Remove Photo',
+                  label: Text(
+                    tr('avatar.removePhoto'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -356,7 +357,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Choose Photo Source',
                 style: TextStyle(
                   fontSize: 18,
@@ -377,14 +378,14 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
                     color: Color(0xFFFFDC71),
                   ),
                 ),
-                title: const Text(
+                title: Text(
                   'Camera',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: const Text(
+                subtitle: Text(
                   'Take a new photo',
                   style: TextStyle(color: Colors.grey),
                 ),
@@ -406,14 +407,14 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
                     color: Color(0xFFFFDC71),
                   ),
                 ),
-                title: const Text(
+                title: Text(
                   'Gallery',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: const Text(
+                subtitle: Text(
                   'Choose from your photos',
                   style: TextStyle(color: Colors.grey),
                 ),
@@ -427,8 +428,8 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Cancel',
+                  child: Text(
+                    tr('common.cancel'),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -490,7 +491,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
         maxHeight: 800,
         uiSettings: [
           AndroidUiSettings(
-            toolbarTitle: 'Crop Photo',
+            toolbarTitle: tr('avatar.crop'),
             toolbarColor: Colors.black,
             toolbarWidgetColor: const Color(0xFFFFDC71),
             backgroundColor: Colors.black,
@@ -499,7 +500,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
             lockAspectRatio: true,
           ),
           IOSUiSettings(
-            title: 'Crop Photo',
+            title: tr('avatar.crop'),
             aspectRatioLockEnabled: true,
             resetAspectRatioEnabled: false,
           ),
@@ -528,7 +529,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('✓ Profile picture updated'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
@@ -555,14 +556,14 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove Photo'),
-        content: const Text(
+        title: Text(tr('avatar.removePhoto')),
+        content: Text(
           'Are you sure you want to remove your profile picture?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -572,7 +573,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Remove'),
+            child: Text(tr('common.remove')),
           ),
         ],
       ),
@@ -585,7 +586,7 @@ class _ChangeAvatarScreenState extends State<ChangeAvatarScreen> {
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('✓ Profile picture removed'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,

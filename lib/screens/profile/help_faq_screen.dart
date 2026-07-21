@@ -3,6 +3,7 @@
 // Browse FAQ categories, search questions, and get help
 
 import 'package:flutter/material.dart';
+import '../../l10n/tr.dart';
 import 'package:provider/provider.dart';
 import '../../models/support_model.dart';
 import '../../providers/profile_provider.dart';
@@ -101,7 +102,7 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Help & FAQ',
           style: TextStyle(
             color: Colors.white,
@@ -124,7 +125,7 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
         backgroundColor: const Color(0xFFFFDC71),
         foregroundColor: Colors.black,
         icon: const Icon(Icons.support_agent),
-        label: const Text(
+        label: Text(
           'Contact Support',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
@@ -155,7 +156,7 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
           });
         },
         decoration: InputDecoration(
-          hintText: 'Search for help...',
+          hintText: tr('help.searchHint'),
           prefixIcon: _isSearching
               ? const Padding(
             padding: EdgeInsets.all(14),
@@ -266,7 +267,7 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
                 backgroundColor: const Color(0xFFFFDC71),
                 foregroundColor: Colors.black,
               ),
-              child: const Text('Retry'),
+              child: Text(tr('common.retry')),
             ),
           ],
         ),
@@ -304,7 +305,7 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'How can we help you?',
           style: TextStyle(
             fontSize: 24,
@@ -321,7 +322,7 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'FAQ Categories',
           style: TextStyle(
             fontSize: 18,
@@ -531,8 +532,8 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to load FAQ items'),
+          SnackBar(
+            content: Text(tr('help.loadFailed')),
             backgroundColor: Colors.red,
           ),
         );
@@ -547,7 +548,7 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('✓ Thanks for your feedback!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
@@ -562,8 +563,8 @@ class _HelpFAQScreenState extends State<HelpFAQScreen> {
 
   void _contactSupport() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Navigate to Contact Support screen'),
+      SnackBar(
+        content: Text(tr('driver.navContactSupport')),
         backgroundColor: Color(0xFFFFDC71),
       ),
     );
@@ -748,7 +749,7 @@ class _FAQItemsScreenState extends State<FAQItemsScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('✓ Thanks for your feedback!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,

@@ -3,6 +3,7 @@
 // Allows users to change their password securely
 
 import 'package:flutter/material.dart';
+import '../../l10n/tr.dart';
 import 'package:provider/provider.dart';
 import '../../providers/profile_provider.dart';
 
@@ -63,7 +64,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Change Password',
           style: TextStyle(
             color: Colors.white,
@@ -86,7 +87,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 // Current Password
                 _buildPasswordField(
                   controller: _currentPasswordController,
-                  label: 'Current Password',
+                  label: tr('pwd.current'),
                   showPassword: _showCurrentPassword,
                   onToggleVisibility: () {
                     setState(() => _showCurrentPassword = !_showCurrentPassword);
@@ -104,7 +105,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 // New Password
                 _buildPasswordField(
                   controller: _newPasswordController,
-                  label: 'New Password',
+                  label: tr('pwd.new'),
                   showPassword: _showNewPassword,
                   onToggleVisibility: () {
                     setState(() => _showNewPassword = !_showNewPassword);
@@ -136,7 +137,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 // Confirm Password
                 _buildPasswordField(
                   controller: _confirmPasswordController,
-                  label: 'Confirm New Password',
+                  label: tr('pwd.confirmNew'),
                   showPassword: _showConfirmPassword,
                   onToggleVisibility: () {
                     setState(() => _showConfirmPassword = !_showConfirmPassword);
@@ -209,7 +210,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                       ),
                     )
-                        : const Text(
+                        : Text(
                       'Change Password',
                       style: TextStyle(
                         fontSize: 16,
@@ -262,7 +263,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Keep Your Account Safe',
                       style: TextStyle(
                         fontSize: 16,
@@ -350,7 +351,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Password Strength',
               style: TextStyle(
                 fontSize: 14,
@@ -396,7 +397,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Password Requirements',
             style: TextStyle(
               fontSize: 14,
@@ -509,7 +510,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (success && mounted) {
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('✓ Password changed successfully'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,

@@ -1,5 +1,6 @@
 // lib/screens/auth/forgot_password_screen.dart
 import 'package:flutter/material.dart';
+import '../../l10n/tr.dart';
 import 'dart:async';
 import '../../utils/utils.dart';
 import '../../widgets/common_widgets.dart';
@@ -96,7 +97,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               // Email Address Field
               WegoTextField(
                 controller: emailCtrl,
-                label: 'Email address',
+                label: tr('auth.email'),
                 hint: 'Enter your email',
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -329,7 +330,7 @@ class _ForgotPasswordOtpScreenState extends State<ForgotPasswordOtpScreen> {
               // Email Address (readonly)
               WegoTextField(
                 controller: TextEditingController(text: email),
-                label: 'Email address',
+                label: tr('auth.email'),
                 readOnly: true,
                 enabled: false,
               ),
@@ -574,7 +575,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
               // Password Field
               WegoTextField(
                 controller: passwordCtrl,
-                label: 'Password',
+                label: tr('auth.password'),
                 hint: 'Enter new password',
                 obscureText: true,
                 showPasswordToggle: true,
@@ -585,7 +586,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
               // Confirm Password Field
               WegoTextField(
                 controller: confirmPasswordCtrl,
-                label: 'Confirm password',
+                label: tr('signup.confirmPassword'),
                 hint: 'Re-enter password',
                 obscureText: true,
                 showPasswordToggle: true,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../l10n/tr.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../../../../service/rental_api_service.dart';
@@ -146,7 +147,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
 
     if (hours < 24) {
       _showErrorDialog(
-        title: 'Cannot Cancel',
+        title: tr('rent.cannotCancel'),
         message:
         'Cancellation requires at least 24 hours notice. Your rental starts in $hours hours.',
       );
@@ -204,7 +205,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               maxLines: 3,
               maxLength: 500,
               decoration: InputDecoration(
-                hintText: 'e.g., Travel plans changed...',
+                hintText: tr('rent.reasonHint'),
                 hintStyle:
                 TextStyle(color: AppColors.textLight, fontSize: 14),
                 filled: true,
@@ -231,7 +232,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Keep Rental',
+            child: Text(tr('rent.keepRental'),
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -259,7 +260,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Cancel Rental',
+            child: Text(tr('rent.cancelRental'),
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -287,7 +288,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
 
     if (response['success'] == true) {
       _showSuccessDialog(
-        title: 'Rental Cancelled',
+        title: tr('rent.cancelled'),
         message: 'Your rental has been cancelled successfully.',
         onClose: () {
           Navigator.of(context).pop();
@@ -296,7 +297,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
       );
     } else {
       _showErrorDialog(
-        title: 'Cancellation Failed',
+        title: tr('rent.cancelFailed'),
         message: response['error'] ?? 'Unable to cancel rental',
         details: response['data']?['details']?.toString(),
       );
@@ -424,7 +425,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Active'),
+                Text(tr('common.active')),
                 if (activeRentals.isNotEmpty) ...[
                   const SizedBox(width: 6),
                   Container(
@@ -821,7 +822,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
                             Icon(Icons.info_outline,
                                 size: 14, color: AppColors.error),
@@ -863,8 +864,8 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                       onPressed: () => _showCancelDialog(rental),
                       icon: const Icon(Icons.cancel_outlined,
                           color: AppColors.error, size: 18),
-                      label: const Text(
-                        'Cancel Rental',
+                      label: Text(
+                        tr('rent.cancelRental'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -1210,7 +1211,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                       borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
-                child: const Text('Done',
+                child: Text(tr('common.done'),
                     style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -1288,7 +1289,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
                       borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
-                child: const Text('Close',
+                child: Text(tr('common.close'),
                     style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,

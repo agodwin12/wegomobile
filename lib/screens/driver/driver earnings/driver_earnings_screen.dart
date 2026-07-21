@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -331,7 +332,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 'Earnings',
                 style: TextStyle(
                   fontFamily:    'LeagueSpartan',
@@ -526,7 +527,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
         Expanded(child: Text(_summaryError!, style: const TextStyle(color: _kGrey, fontSize: 13))),
         GestureDetector(
           onTap: _loadSummary,
-          child: const Text('Retry', style: TextStyle(color: _kGold, fontWeight: FontWeight.w700)),
+          child: Text(tr('common.retry'), style: TextStyle(color: _kGold, fontWeight: FontWeight.w700)),
         ),
       ],
     ),
@@ -573,7 +574,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
             const SizedBox(height: 24),
             Row(
               children: [
-                const Text(
+                Text(
                   'Active Quests',
                   style: TextStyle(
                     fontFamily: 'LeagueSpartan',
@@ -617,7 +618,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'LIFETIME SUMMARY',
             style: TextStyle(
               fontFamily:    'Quicksand',
@@ -807,11 +808,11 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
   Widget _buildEmptyQuests() => Container(
     padding:     const EdgeInsets.all(24),
     decoration:  BoxDecoration(color: _kCard, borderRadius: BorderRadius.circular(16)),
-    child: const Center(
+    child: Center(
       child: Column(children: [
         Text('🎯', style: TextStyle(fontSize: 32)),
         SizedBox(height: 8),
-        Text('No active quests right now', style: TextStyle(fontFamily: 'Quicksand', color: _kGrey, fontSize: 14)),
+        Text(tr('earn.noQuests'), style: TextStyle(fontFamily: 'Quicksand', color: _kGrey, fontSize: 14)),
       ]),
     ),
   );
@@ -1381,7 +1382,7 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
         Navigator.pop(context);
         widget.onSuccess();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content:         const Text(
+          content:         Text(
             'Payout request submitted! We\'ll process it shortly.',
             style:          TextStyle(fontFamily: 'Quicksand', fontWeight: FontWeight.w600),
           ),
@@ -1428,7 +1429,7 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
                 ),
               ),
             ),
-            const Text(
+            Text(
               'Request Payout',
               style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 22, fontWeight: FontWeight.w700, color: _kWhite),
             ),
@@ -1438,7 +1439,7 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
               style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13, color: _kGold, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 24),
-            const Text('Amount (XAF)', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
+            Text('Amount (XAF)', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(color: _kWhite, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE0E0E0))),
@@ -1452,7 +1453,7 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
                       inputFormatters:   [FilteringTextInputFormatter.digitsOnly],
                       cursorColor:       _kGold,
                       style:             const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 24, fontWeight: FontWeight.w700, color: _kBlack),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText:       '0',
                         hintStyle:      TextStyle(fontFamily: 'LeagueSpartan', fontSize: 24, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w700),
                         border:         InputBorder.none,
@@ -1466,14 +1467,14 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
                       margin:      const EdgeInsets.only(right: 12),
                       padding:     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration:  BoxDecoration(color: _kGold.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                      child: const Text('MAX', style: TextStyle(fontFamily: 'Quicksand', fontSize: 11, fontWeight: FontWeight.w700, color: _kGold)),
+                      child: Text(tr('earn.max'), style: TextStyle(fontFamily: 'Quicksand', fontSize: 11, fontWeight: FontWeight.w700, color: _kGold)),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Payment Method', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
+            Text(tr('payment.title'), style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
             const SizedBox(height: 10),
             ..._methods.map((m) {
               final isSelected = _selectedMethod == m['value'];
@@ -1508,7 +1509,7 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
               );
             }),
             const SizedBox(height: 16),
-            const Text('Note (optional)', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
+            Text(tr('earn.noteOptional'), style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: _kGrey)),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(color: _kWhite, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE0E0E0))),
@@ -1517,8 +1518,8 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
                 maxLines:   2,
                 cursorColor: _kGold,
                 style:      const TextStyle(fontFamily: 'Quicksand', fontSize: 13, color: _kBlack),
-                decoration: const InputDecoration(
-                  hintText:       'Any message for the accountant...',
+                decoration: InputDecoration(
+                  hintText:       tr('earn.noteHint'),
                   hintStyle:      TextStyle(color: Color(0xFF9E9E9E), fontSize: 13),
                   border:         InputBorder.none,
                   contentPadding: EdgeInsets.all(14),
@@ -1550,7 +1551,7 @@ class _PayoutRequestSheetState extends State<_PayoutRequestSheet> {
                 child: Center(
                   child: _loading
                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: _kBlack, strokeWidth: 2.5))
-                      : const Text('Submit Request', style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 17, fontWeight: FontWeight.w700, color: _kBlack)),
+                      : Text(tr('earn.submitRequest'), style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 17, fontWeight: FontWeight.w700, color: _kBlack)),
                 ),
               ),
             ),

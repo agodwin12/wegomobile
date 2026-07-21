@@ -626,7 +626,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
                     fontSize: 18, fontWeight: FontWeight.w700)),
           ),
         ]),
-        content: const Text(
+        content: Text(
             'You\'re within 50 meters of the pickup location. '
             'Have you arrived?'),
         actions: [
@@ -642,7 +642,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
                 backgroundColor: AppColors.success,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8))),
-            child: const Text('Yes, I\'ve Arrived',
+            child: Text('Yes, I\'ve Arrived',
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -1034,7 +1034,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
             Positioned.fill(
               child: Container(
                 color: Colors.black26,
-                child: const Center(
+                child: Center(
                   child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation(
                           AppColors.primaryGold)),
@@ -1352,7 +1352,7 @@ class _BottomSheetContent extends StatelessWidget {
                         onPressed: onArrived,
                         icon:  const Icon(Icons.check_circle_rounded,
                             color: Colors.black, size: 20),
-                        label: const Text("I've Arrived",
+                        label: Text("I've Arrived",
                             style: TextStyle(
                                 fontSize:   16,
                                 fontWeight: FontWeight.w800,
@@ -1437,7 +1437,7 @@ class _PassengerCard extends StatelessWidget {
                           color: AppColors.textSecondary)),
               ])
             else
-              Text('Your passenger',
+              Text(tr('driver.yourPassenger'),
                   style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textSecondary)),
           ],
@@ -1612,13 +1612,13 @@ class _CancelDialogState extends State<_CancelDialog> {
     return AlertDialog(
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20)),
-      title: const Text('Cancel Trip?',
+      title: Text(tr('driver.cancelTripQ'),
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Please select a reason:',
+          Text(tr('driver.selectReason'),
               style: TextStyle(fontSize: 14, color: Colors.black54)),
           const SizedBox(height: 12),
           ..._reasons.map((r) => RadioListTile<String>(
@@ -1634,7 +1634,7 @@ class _CancelDialogState extends State<_CancelDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Go Back')),
+            child: Text(tr('common.goBack'))),
         ElevatedButton(
           onPressed: _selected != null
               ? () => Navigator.pop(context, _selected)
@@ -1644,7 +1644,7 @@ class _CancelDialogState extends State<_CancelDialog> {
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10)),
           ),
-          child: const Text('Confirm Cancel',
+          child: Text(tr('driver.confirmCancel'),
               style: TextStyle(color: Colors.white)),
         ),
       ],
