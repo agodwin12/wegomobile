@@ -16,8 +16,6 @@ import 'package:provider/provider.dart';
 import '../../../providers/trip_provider.dart';
 import '../../../utils/app_colors.dart';
 
-// ─── Tip presets ──────────────────────────────────────────────────────────────
-const _kTipAmounts = [0, 500, 1000, 2000]; // XAF
 
 class TripCompletedScreen extends StatefulWidget {
   final String tripId;
@@ -43,7 +41,6 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
   late AnimationController _checkCtrl;
   late AnimationController _celebrationCtrl;
   late AnimationController _starCtrl;
-  late AnimationController _tipCtrl;
 
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -52,7 +49,6 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
 
   // ── State ─────────────────────────────────────────────────────────────────
   int  _selectedRating  = 0;
-  int  _selectedTipIdx  = 1;        // default: 500 XAF
   bool _isSubmitting    = false;
   String? _errorMessage;
 
@@ -96,10 +92,6 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
     _starCtrl = AnimationController(
         duration: const Duration(milliseconds: 400), vsync: this);
 
-    _tipCtrl = AnimationController(
-        duration: const Duration(milliseconds: 200), vsync: this)
-      ..forward();
-
     _entryCtrl.forward().then((_) {
       _checkCtrl.forward().then((_) => _celebrationCtrl.forward());
     });
@@ -111,7 +103,6 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
     _checkCtrl.dispose();
     _celebrationCtrl.dispose();
     _starCtrl.dispose();
-    _tipCtrl.dispose();
     _commentCtrl.dispose();
     super.dispose();
   }
@@ -170,8 +161,10 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
       _field(widget.tripDetails, ['dropoff_address', 'dropoffAddress', 'dropoff']) ?? tr('ride.destination');
 
   int get _baseFare {
-    final f = widget.tripDetails['fare_estimate'] ?? widget.tripDetails['fareEstimate'] ??
-        widget.tripDetails['final_fare'] ?? widget.tripDetails['finalFare'] ?? 3500;
+    // The server-resolved final fare is authoritative once the ride ends;
+    // fall back to the estimate only if the final never arrived.
+    final f = widget.tripDetails['final_fare'] ?? widget.tripDetails['finalFare'] ??
+        widget.tripDetails['fare_estimate'] ?? widget.tripDetails['fareEstimate'] ?? 3500;
     if (f is int) return f;
     if (f is double) return f.toInt();
     if (f is String) return int.tryParse(f) ?? 3500;
@@ -209,8 +202,10 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
     }
   }
 
-  int get _tipAmount => _kTipAmounts[_selectedTipIdx];
-  int get _totalAmount => _baseFare + _tipAmount;
+  // Rides settle in cash directly to the driver, so there is no in-app tip to
+  // charge — the amount due is simply the fare. (The old tip selector added a
+  // "tip" to a total that was never collected.)
+  int get _totalAmount => _baseFare;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ACTIONS
@@ -337,8 +332,6 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
                     _buildRouteCard(),
                     const SizedBox(height: 24),
                     _buildRatingCard(),
-                    const SizedBox(height: 16),
-                    _buildTipCard(),
                     const SizedBox(height: 16),
                     _buildPaymentCard(),
                     const SizedBox(height: 24),
@@ -717,89 +710,6 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Tip card ─────────────────────────────────────────────────────────────
-
-  Widget _buildTipCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(
-            color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 3))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(tr('trip.leaveTip'),
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
-          const SizedBox(height: 14),
-          // Tip buttons
-          Row(
-            children: List.generate(_kTipAmounts.length, (i) {
-              final selected = _selectedTipIdx == i;
-              final amount   = _kTipAmounts[i];
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: i < _kTipAmounts.length - 1 ? 8 : 0),
-                  child: GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _selectedTipIdx = i);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: selected ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: selected ? const Color(0xFF1A1A1A) : Colors.grey.shade200),
-                      ),
-                      child: Center(
-                        child: Text(
-                          amount == 0 ? '0 XAF' : '${amount ~/ 100 == 0 ? amount : "${(amount / 1000).toStringAsFixed(0)}k"} XAF',
-                          style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w700,
-                            color: selected ? Colors.white : const Color(0xFF1A1A1A),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Tip amount: ${_tipAmount == 0 ? "0 XAF" : "$_tipAmount XAF"}',
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)),
-              ),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _selectedTipIdx = 0);
-                },
-                child: Text(tr('common.remove'),
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600,
-                        color: AppColors.primaryGold)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(tr('trip.tipNote'),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
         ],
       ),
     );

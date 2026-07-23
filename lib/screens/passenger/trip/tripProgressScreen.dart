@@ -21,6 +21,7 @@ import '../../../utils/car_marker_painter.dart';
 import '../../../utils/map_style.dart';
 import '../../../widgets/map_style_button.dart';
 import '../../chat/trip_chat_screen.dart';
+import 'trip_completed_screen.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const _kSheetMinFrac = 0.14;
@@ -279,10 +280,9 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
           HapticFeedback.mediumImpact();
           _pulseCtrl?.stop();
           _elapsedTimer?.cancel();
-          _completedCtrl?.forward();
-          Future.delayed(const Duration(milliseconds: 400), () {
-            if (mounted && _sheetCtrl.isAttached) _sheetCtrl.animateTo(_kSheetMidFrac, duration: const Duration(milliseconds: 400), curve: Curves.easeOut);
-          });
+          // Hand off to the real end-of-ride screen: final fare, cash-to-pay
+          // prompt, and the rating flow (previously unreachable dead code).
+          _goToCompletion(tp);
         }
         break;
       case TripStatus.canceled:
@@ -362,6 +362,36 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
   void _goHome() {
     _hasNavigated = true;
     Navigator.of(context).popUntil((r) => r.isFirst);
+  }
+
+  // Replace this in-trip screen with the end-of-ride screen (final fare,
+  // cash-to-pay, rating). The server-resolved finalFare arrives on the
+  // trip:completed event and is merged into the details we pass along.
+  void _goToCompletion(TripProvider tp) {
+    if (_hasNavigated) return;
+    _hasNavigated = true;
+
+    final trip = tp.currentTrip ?? <String, dynamic>{};
+    final details = <String, dynamic>{
+      ...trip,
+      'finalFare': trip['finalFare'] ?? trip['final_fare'] ?? trip['fareEstimate'] ?? trip['fare_estimate'],
+      'paymentMethod': trip['paymentMethod'] ?? trip['payment_method'] ?? 'cash',
+      'pickupAddress': widget.pickupAddress,
+      'dropoffAddress': widget.dropoffAddress,
+    };
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => TripCompletedScreen(
+            tripId: widget.tripId,
+            driver: widget.driver,
+            tripDetails: details,
+          ),
+        ),
+      );
+    });
   }
 
   // ═════════════════════════════════════════════════════════════════════════
