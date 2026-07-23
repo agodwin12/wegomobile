@@ -446,7 +446,7 @@ class _ProviderAvatar extends StatelessWidget {
         child: Text(
           initial,
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: size * 0.45,
             fontWeight: FontWeight.w700,
             color: SvcColors.primaryDark,

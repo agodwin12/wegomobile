@@ -1375,7 +1375,7 @@ class _VideoPreviewState extends State<_VideoPreview> {
                   Text(
                     '$mins:$secs',
                     style: const TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 11,
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

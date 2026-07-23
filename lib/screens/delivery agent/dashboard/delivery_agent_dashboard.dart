@@ -779,7 +779,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
   void _showSnack(String msg, {required bool isError}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: const TextStyle(fontFamily: 'Roboto')),
+      content: Text(msg, style: const TextStyle(fontFamily: 'Quicksand')),
       backgroundColor: isError ? AppColors.error : AppColors.success,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -889,7 +889,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   SizedBox(width: 4),
                   Text(tr('agent.switch'),
                       style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'LeagueSpartan',
                           fontSize:   11,
                           fontWeight: FontWeight.w700,
                           color:      AppColors.primaryGold)),
@@ -977,7 +977,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         ? 'Delivery Agent'
                         : '$_firstName $_lastName',
                     style: const TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize:   14,
                         fontWeight: FontWeight.w700,
                         color:      Colors.white),
@@ -1005,7 +1005,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     Text(
                       _isOnline ? 'Online — Delivery Mode' : 'Offline',
                       style: TextStyle(
-                          fontFamily: 'Roboto',
+                          fontFamily: 'Quicksand',
                           fontSize:   10,
                           color: _isOnline
                               ? AppColors.success
@@ -1044,7 +1044,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
     return Center(
       child: Text(initial,
           style: const TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'LeagueSpartan',
               fontSize:   15,
               fontWeight: FontWeight.w800,
               color:      AppColors.primaryGold)),
@@ -1111,7 +1111,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                       child: Text(
                         d.deliveryType == 'express' ? '⚡ EXPRESS' : '📦 REGULAR',
                         style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'LeagueSpartan',
                             fontSize:   9,
                             fontWeight: FontWeight.w700,
                             color:      d.statusColor),
@@ -1121,7 +1121,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     Expanded(
                       child: Text(d.deliveryCode,
                           style: const TextStyle(
-                              fontFamily: 'Roboto',
+                              fontFamily: 'Quicksand',
                               fontSize:   11,
                               color:      Colors.white60),
                           overflow: TextOverflow.ellipsis),
@@ -1130,7 +1130,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   const SizedBox(height: 5),
                   Text(d.statusLabel,
                       style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'LeagueSpartan',
                           fontSize:   13,
                           fontWeight: FontWeight.w700,
                           color:      d.statusColor)),
@@ -1140,7 +1140,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize:   11,
                         color:      Colors.white60),
                   ),
@@ -1162,7 +1162,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               ),
               child: Text(tr('agent.resume'),
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize:   12,
                       fontWeight: FontWeight.w700,
                       color:      AppColors.primaryDark)),
@@ -1229,7 +1229,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   Text(
                     _isOnline ? "You're Online" : "You're Offline",
                     style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize:   17,
                         fontWeight: FontWeight.w800,
                         color: _isOnline
@@ -1242,7 +1242,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         ? 'Delivery requests will appear here'
                         : 'Tap to go online and start earning',
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize:   12,
                         color: _isOnline
                             ? AppColors.success.withOpacity(0.7)
@@ -1322,7 +1322,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               const SizedBox(width: 8),
               Text(tr('agent.wallet'),
                   style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize:   12,
                       fontWeight: FontWeight.w500,
                       color:      AppColors.primaryGold)),
@@ -1348,7 +1348,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     SizedBox(width: 3),
                     Text(tr('agent.topUp'),
                         style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'LeagueSpartan',
                             fontSize:   11,
                             fontWeight: FontWeight.w700,
                             color:      AppColors.primaryGold)),
@@ -1362,7 +1362,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
             Text(
               _fmt(_wallet.availableBalance),
               style: const TextStyle(
-                  fontFamily:    'Poppins',
+                  fontFamily:    'LeagueSpartan',
                   fontSize:      32,
                   fontWeight:    FontWeight.w800,
                   color:         AppColors.primaryGold,
@@ -1370,7 +1370,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
             ),
             Text(tr('agent.availableBalance'),
                 style: TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize:   11,
                     color: Colors.white.withOpacity(0.4))),
 
@@ -1410,7 +1410,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                       _wallet.frozenReason ??
                           'Wallet ${_wallet.status}. Contact support.',
                       style: const TextStyle(
-                          fontFamily: 'Roboto',
+                          fontFamily: 'Quicksand',
                           fontSize:   11,
                           color:      AppColors.error),
                     ),
@@ -1428,7 +1428,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
     return Column(children: [
       Text(value,
           style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'LeagueSpartan',
               fontSize:   12,
               fontWeight: FontWeight.w700,
               color:      color),
@@ -1437,7 +1437,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       const SizedBox(height: 2),
       Text(label,
           style: TextStyle(
-              fontFamily: 'Roboto',
+              fontFamily: 'Quicksand',
               fontSize:   9,
               color: Colors.white.withOpacity(0.38))),
     ]);
@@ -1485,7 +1485,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
             child:  CircularProgressIndicator(strokeWidth: 2, color: color))
             : Text(value,
             style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'LeagueSpartan',
                 fontSize:   12,
                 fontWeight: FontWeight.w800,
                 color:      color),
@@ -1495,7 +1495,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         Text(label,
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontFamily: 'Roboto',
+                fontFamily: 'Quicksand',
                 fontSize:   9,
                 color:      AppColors.textSecondary,
                 height:     1.3)),
@@ -1513,7 +1513,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       children: [
         Text(tr('agent.quickActions'),
             style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'LeagueSpartan',
                 fontSize:   14,
                 fontWeight: FontWeight.w700,
                 color:      AppColors.textPrimary)),
@@ -1577,7 +1577,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
           const SizedBox(height: 6),
           Text(label,
               style: TextStyle(
-                  fontFamily: 'Roboto',
+                  fontFamily: 'Quicksand',
                   fontSize:   10,
                   fontWeight: FontWeight.w600,
                   color:      AppColors.textSecondary)),
@@ -1612,7 +1612,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               children: [
                 Text(tr('agent.balanceTooLow'),
                     style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize:   13,
                         fontWeight: FontWeight.w700,
                         color:      AppColors.warning)),
@@ -1621,7 +1621,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     'You need sufficient balance to cover the delivery commission '
                         'before accepting jobs. Top up to go online.',
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize:   11,
                         color:      AppColors.warning,
                         height:     1.5)),
@@ -1640,7 +1640,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     ),
                     child: Text(tr('agent.topUpWallet'),
                         style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'LeagueSpartan',
                             fontSize:   12,
                             fontWeight: FontWeight.w700,
                             color:      Colors.white)),
@@ -1677,7 +1677,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               children: [
                 Text(tr('agent.howEarningsWork'),
                     style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize:   12,
                         fontWeight: FontWeight.w700,
                         color:      AppColors.info)),
@@ -1687,7 +1687,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         '2. After successful delivery, your payout is credited to your wallet.\n'
                         '3. Request a cashout anytime from the Wallet screen.',
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize:   11,
                         color:      AppColors.info,
                         height:     1.55)),
@@ -1765,7 +1765,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                                 ? 'Express Delivery'
                                 : 'New Delivery Request',
                             style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'LeagueSpartan',
                                 fontSize:   16,
                                 fontWeight: FontWeight.w800,
                                 color: isExpress
@@ -1775,7 +1775,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                           Text(
                             offer['deliveryCode'] as String? ?? '',
                             style: TextStyle(
-                                fontFamily: 'Roboto',
+                                fontFamily: 'Quicksand',
                                 fontSize:   11,
                                 color: isExpress
                                     ? Colors.white.withOpacity(0.5)
@@ -1800,7 +1800,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         ),
                         Text('$_offerSecondsLeft',
                             style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'LeagueSpartan',
                                 fontSize:   16,
                                 fontWeight: FontWeight.w800,
                                 color:      countdownColor)),
@@ -1821,14 +1821,14 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                           children: [
                             Text(_fmt(payout),
                                 style: const TextStyle(
-                                    fontFamily:    'Poppins',
+                                    fontFamily:    'LeagueSpartan',
                                     fontSize:      28,
                                     fontWeight:    FontWeight.w800,
                                     color:         AppColors.success,
                                     letterSpacing: -0.5)),
                             Text(tr('agent.yourPayout'),
                                 style: TextStyle(
-                                    fontFamily: 'Roboto',
+                                    fontFamily: 'Quicksand',
                                     fontSize:   11,
                                     color:      AppColors.textSecondary)),
                           ],
@@ -1838,13 +1838,13 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                           children: [
                             Text('- ${_fmt(commission)}',
                                 style: const TextStyle(
-                                    fontFamily: 'Poppins',
+                                    fontFamily: 'LeagueSpartan',
                                     fontSize:   15,
                                     fontWeight: FontWeight.w700,
                                     color:      AppColors.warning)),
                             Text(tr('agent.commission'),
                                 style: TextStyle(
-                                    fontFamily: 'Roboto',
+                                    fontFamily: 'Quicksand',
                                     fontSize:   11,
                                     color:      AppColors.textSecondary)),
                           ],
@@ -1864,14 +1864,14 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                           '$catLabel${size.isNotEmpty ? ' · ${size[0].toUpperCase()}${size.substring(1)}' : ''}'
                               '${isFragile ? ' · 🏺 Fragile' : ''}',
                           style: const TextStyle(
-                              fontFamily: 'Roboto',
+                              fontFamily: 'Quicksand',
                               fontSize:   13,
                               fontWeight: FontWeight.w600),
                         ),
                       ),
                       Text('${distance.toStringAsFixed(1)} km',
                           style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'LeagueSpartan',
                               fontSize:   13,
                               fontWeight: FontWeight.w700,
                               color:      AppColors.textSecondary)),
@@ -1916,7 +1916,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         ),
                         child: Text(tr('agent.decline'),
                             style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'LeagueSpartan',
                                 fontSize:   14,
                                 fontWeight: FontWeight.w600)),
                       ),
@@ -1947,7 +1947,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                             SizedBox(width: 6),
                             Text(tr('agent.accept'),
                                 style: TextStyle(
-                                    fontFamily: 'Poppins',
+                                    fontFamily: 'LeagueSpartan',
                                     fontSize:   14,
                                     fontWeight: FontWeight.w700)),
                           ],
@@ -1991,7 +1991,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize:   12,
                       color:      AppColors.textPrimary)),
               const SizedBox(height: 16),
@@ -1999,7 +1999,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize:   12,
                       color:      AppColors.textPrimary)),
             ],
@@ -2021,7 +2021,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         const SizedBox(width: 5),
         Text(label,
             style: TextStyle(
-                fontFamily: 'Roboto',
+                fontFamily: 'Quicksand',
                 fontSize:   11,
                 color:      color,
                 fontWeight: FontWeight.w500)),

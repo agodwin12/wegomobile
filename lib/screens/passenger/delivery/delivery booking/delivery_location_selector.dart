@@ -427,7 +427,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
           Text(
             _isExpress ? 'Express Delivery' : 'Regular Delivery',
             style: const TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'LeagueSpartan',
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: Colors.white,
@@ -491,7 +491,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                             : Text(
                           '$step',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'LeagueSpartan',
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: active
@@ -505,7 +505,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                     Text(
                       steps[i],
                       style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 10,
                         fontWeight:
                         active ? FontWeight.w600 : FontWeight.w400,
@@ -576,7 +576,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                 Text(
                   'Set Your Route',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
@@ -599,7 +599,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                         Text(
                           'Route ready',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'LeagueSpartan',
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             color: AppColors.primaryDark,
@@ -740,7 +740,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
         Text(
           'PICKUP',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: 10,
             fontWeight: FontWeight.w700,
             color: AppColors.textLight,
@@ -799,7 +799,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                   Text(
                     'Current Location',
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: AppColors.success,
@@ -811,7 +811,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 12,
                       color: AppColors.textSecondary,
                       height: 1.35,
@@ -876,7 +876,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
             Text(
               'Use my current location',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'LeagueSpartan',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -900,7 +900,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
         Text(
           'DROPOFF',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: 10,
             fontWeight: FontWeight.w700,
             color: AppColors.textLight,
@@ -944,7 +944,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                       Text(
                         'Destination Set',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'LeagueSpartan',
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: _isExpress
@@ -958,7 +958,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontFamily: 'Roboto',
+                          fontFamily: 'Quicksand',
                           fontSize: 12,
                           color: AppColors.textSecondary,
                           height: 1.35,
@@ -1066,7 +1066,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
               Text(
                 'Offline — showing Douala landmarks',
                 style: TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize: 11,
                     color: AppColors.warning),
               ),
@@ -1142,7 +1142,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                       Text(
                         s.mainText,
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'LeagueSpartan',
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -1155,7 +1155,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontFamily: 'Roboto',
+                            fontFamily: 'Quicksand',
                             fontSize: 11,
                             color: AppColors.textSecondary,
                           ),
@@ -1202,13 +1202,13 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
             children: [
               Text(text,
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: textColor)),
               Text(subtext,
                   style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 11,
                       color: AppColors.textLight)),
             ],
@@ -1259,7 +1259,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                       ? 'Continue to Package Details'
                       : 'Set both locations first',
                   style: const TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.1,

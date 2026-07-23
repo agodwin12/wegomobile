@@ -18,10 +18,10 @@ import '../../utils/app_typography.dart';
 import '../../widgets/services/service_card_widget.dart';
 
 // ─── Local design tokens ──────────────────────────────────────────────────────
-const _kPrimary      = AppColors.primaryGold;       // #FFD700
+const _kPrimary      = AppColors.primaryGold;       // #FFDC71 (Jaune Or charte)
 const _kPrimaryLight = Color(0xFFFFFDE7);
 const _kPrimaryMid   = Color(0xFFFFECB3);
-const _kPrimaryDark  = AppColors.primaryGoldDark;   // #FFC107
+const _kPrimaryDark  = AppColors.primaryGoldDark;   // #F5C844
 Color get _kSurface => AppColors.backgroundWhite;
 Color get _kPageBg => AppColors.backgroundLight;
 Color get _kInputBg => AppColors.inputBackground;

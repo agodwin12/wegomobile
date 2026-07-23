@@ -236,12 +236,12 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         labelColor: _kPrimary,
         unselectedLabelColor: _kTextSecond,
         labelStyle: const TextStyle(
-          fontFamily: 'Poppins',
+          fontFamily: 'LeagueSpartan',
           fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontFamily: 'Poppins',
+          fontFamily: 'LeagueSpartan',
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
@@ -280,7 +280,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                     child: Text(
                       '$count',
                       style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         color: isSelected ? _kTextPrimary : _kTextSecond,
@@ -739,7 +739,7 @@ class _StatItem extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'LeagueSpartan',
               fontSize: 22,
               fontWeight: FontWeight.w800,
               color: Colors.black87,
@@ -750,7 +750,7 @@ class _StatItem extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Roboto',
+              fontFamily: 'Quicksand',
               fontSize: 11,
               color: Colors.black54,
             ),
@@ -809,7 +809,7 @@ class _StatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Roboto',
+          fontFamily: 'Quicksand',
           fontSize: 9,
           fontWeight: FontWeight.w800,
           color: fg,
@@ -890,7 +890,7 @@ class _OutlineBtn extends StatelessWidget {
         side: BorderSide(color: color),
         padding: const EdgeInsets.symmetric(vertical: 10),
         textStyle: const TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: 12,
             fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(

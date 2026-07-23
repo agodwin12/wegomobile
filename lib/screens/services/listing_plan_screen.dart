@@ -621,7 +621,7 @@ class _ListingPlanScreenState extends State<ListingPlanScreen> {
                           child: Text(
                             '${_selected?.priceXaf ?? 0} XAF',
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'LeagueSpartan',
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
@@ -881,7 +881,7 @@ class _PlanCard extends StatelessWidget {
                                 child: Text(
                                   plan.highlightLabelFr!,
                                   style: const TextStyle(
-                                    fontFamily: 'Poppins',
+                                    fontFamily: 'LeagueSpartan',
                                     fontSize: 9,
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,

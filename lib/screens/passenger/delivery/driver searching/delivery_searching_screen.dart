@@ -457,7 +457,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                                 ? '❌ No drivers found'
                                 : 'Searching${'.' * _dots}',
                             style: const TextStyle(
-                                fontFamily:  'Poppins',
+                                fontFamily:  'LeagueSpartan',
                                 fontSize:    13,
                                 fontWeight:  FontWeight.w700,
                                 color:       Colors.white),
@@ -482,7 +482,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                             const SizedBox(width: 5),
                             Text('$_nearbyCount nearby',
                                 style: TextStyle(
-                                    fontFamily:  'Roboto',
+                                    fontFamily:  'Quicksand',
                                     fontSize:    12,
                                     fontWeight:  FontWeight.w600,
                                     color:       AppColors.textPrimary)),
@@ -737,7 +737,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
           ),
           child: Text(
               _isExpress ? 'EXPRESS' : 'REGULAR',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 9,
+              style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 9,
                   fontWeight: FontWeight.w800,
                   color: _isExpress
                       ? AppColors.primaryDark
@@ -775,7 +775,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 12,
                     fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)),
             Text(_recipientPhone,
                 style: const TextStyle(fontSize: 11,
@@ -786,7 +786,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
           Icon(Icons.check_circle_rounded, color: AppColors.success, size: 14),
           SizedBox(width: 4),
           Text(tr('delivery.pinSent'),
-              style: TextStyle(fontFamily: 'Roboto', fontSize: 10,
+              style: TextStyle(fontFamily: 'Quicksand', fontSize: 10,
                   color: AppColors.success)),
         ]),
       ]),
@@ -803,7 +803,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
           children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(_totalPrice,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 22,
+                  style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color:       AppColors.darkTextPrimary,
                       letterSpacing: -0.5)),

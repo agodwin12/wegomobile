@@ -8,8 +8,11 @@ import 'app_colors.dart';
 /// fixed brand colors stay const.
 class AppTypography {
   // Font Family
-  static const String primaryFont = 'Poppins';
-  static const String secondaryFont = 'Roboto';
+  // Charte graphique WEGO (p.11) : League Spartan est la typographie
+  // principale — obligatoire pour les titres et sous-titres — et Quicksand
+  // l'accompagnement pour le texte courant et les usages contraints.
+  static const String primaryFont = 'LeagueSpartan';
+  static const String secondaryFont = 'Quicksand';
 
   // Display Text Styles
   static TextStyle get displayLarge => TextStyle(

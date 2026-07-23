@@ -545,7 +545,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'LeagueSpartan',
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           // FIX: dark text on gold (correct contrast)
@@ -1152,7 +1152,7 @@ class _NewVideoPreviewState extends State<_NewVideoPreview> {
                   Text(
                     label,
                     style: const TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 10,
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

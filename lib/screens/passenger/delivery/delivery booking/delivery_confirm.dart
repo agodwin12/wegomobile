@@ -310,15 +310,15 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
             ),
             const SizedBox(height: 16),
             Text(tr('delivery.booked'),
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 18,
+                style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 18,
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             Text('Code: ${delivery['deliveryCode']}',
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 14,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 14,
                     color: AppColors.textSecondary)),
             const SizedBox(height: 8),
             Text(tr('ride.searchingDriver'),
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                     color: AppColors.textSecondary)),
           ],
         ),
@@ -337,7 +337,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                     borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(tr('delivery.track'),
-                  style: TextStyle(fontFamily: 'Poppins',
+                  style: TextStyle(fontFamily: 'LeagueSpartan',
                       fontWeight: FontWeight.w700)),
             ),
           ),
@@ -409,7 +409,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
       elevation: 0,
       title: Text(
         _isExpress ? '⚡ Express Delivery' : '📦 Regular Delivery',
-        style: TextStyle(fontFamily: 'Poppins', fontSize: 17,
+        style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 17,
             fontWeight: FontWeight.w800,
             color: _isExpress ? Colors.white : AppColors.textPrimary),
       ),
@@ -442,14 +442,14 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                         ? const Icon(Icons.check_rounded, size: 14,
                         color: Colors.white)
                         : Text('$step',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                        style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: active ? Colors.white : AppColors.textLight)),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Text(['Location', 'Package', 'Confirm'][i],
-                    style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                    style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                         fontWeight: active ? FontWeight.w700 : FontWeight.w400,
                         color: active ? AppColors.textPrimary : AppColors.textLight)),
                 if (i < 2) ...[
@@ -519,17 +519,17 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                             '${widget.packageCategory.substring(1)} · '
                             '${widget.packageSize[0].toUpperCase()}'
                             '${widget.packageSize.substring(1)}',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13,
+                        style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 13,
                             fontWeight: FontWeight.w700)),
                     if (widget.isFragile)
                       Text('🏺 Fragile',
-                          style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                          style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                               color: AppColors.warning,
                               fontWeight: FontWeight.w500)),
                     if (widget.description.isNotEmpty)
                       Text(widget.description,
                           maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                          style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                               color: AppColors.textSecondary)),
                   ],
                 ),
@@ -543,7 +543,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(tr('delivery.expressBadge'),
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 10,
+                      style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 10,
                           fontWeight: FontWeight.w800,
                           color: AppColors.primaryDark)),
                 ),
@@ -567,13 +567,13 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
           Text(label,
-              style: TextStyle(fontFamily: 'Roboto', fontSize: 10,
+              style: TextStyle(fontFamily: 'Quicksand', fontSize: 10,
                   fontWeight: FontWeight.w600, color: color)),
         ]),
         const SizedBox(height: 4),
         Text(address,
             maxLines: 2, overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+            style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                 color: AppColors.textPrimary)),
       ],
     );
@@ -598,7 +598,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                     strokeWidth: 2, color: AppColors.primaryDark)),
             const SizedBox(width: 12),
             Text(tr('delivery.calculatingFare'),
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                     color: AppColors.textSecondary)),
           ],
         ),
@@ -651,13 +651,13 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                   children: [
                     Text('${e.totalPrice.toStringAsFixed(0)} XAF',
                         style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 32,
+                          fontFamily: 'LeagueSpartan', fontSize: 32,
                           fontWeight: FontWeight.w800,
                           color: AppColors.primaryGold,
                           letterSpacing: -1,
                         )),
                     Text(tr('delivery.totalFare'),
-                        style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                        style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                             color: Colors.white.withOpacity(0.5))),
                   ],
                 ),
@@ -674,7 +674,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                       const Icon(Icons.bolt_rounded, size: 13, color: Colors.white),
                       const SizedBox(width: 3),
                       Text('Surge ×${e.surgeMultiplier.toStringAsFixed(1)}',
-                          style: const TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                          style: const TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                               fontWeight: FontWeight.w700, color: Colors.white)),
                     ]),
                   ),
@@ -716,10 +716,10 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label,
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                     color: Colors.white.withOpacity(0.5))),
             Text(value,
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: highlight ? AppColors.primaryGold : Colors.white)),
           ],
@@ -734,7 +734,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(tr('delivery.recipientDetails'),
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
+              style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 14),
           _input(_nameCtrl,  'Full name *',
@@ -754,7 +754,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
               'Select the recipient\'s country, then enter the number '
               'without the country code.',
               style: TextStyle(
-                  fontFamily: 'Roboto', fontSize: 11,
+                  fontFamily: 'Quicksand', fontSize: 11,
                   color: AppColors.textLight),
             ),
           ),
@@ -775,7 +775,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 child: Text(
                     'A 4-digit PIN will be sent to the recipient\'s number '
                         'to confirm delivery.',
-                    style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                    style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                         color: AppColors.info, height: 1.4)),
               ),
             ]),
@@ -878,7 +878,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(tr('payment.title'),
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
+              style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 14),
           ...methods.map((m) {
@@ -905,7 +905,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                   const SizedBox(width: 12),
                   Expanded(
                       child: Text(m.$2,
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
+                          style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: selected
                                   ? Colors.white
@@ -964,7 +964,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                   price != null
                       ? 'Confirm Booking · $price XAF'
                       : 'Confirm Booking',
-                  style: const TextStyle(fontFamily: 'Poppins',
+                  style: const TextStyle(fontFamily: 'LeagueSpartan',
                       fontSize: 15, fontWeight: FontWeight.w700,
                       letterSpacing: 0.1)),
             ],

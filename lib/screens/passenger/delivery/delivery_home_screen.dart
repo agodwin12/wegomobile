@@ -203,7 +203,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
           children: [
             Text(tr('del.sendPackage'),
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'LeagueSpartan',
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
@@ -212,7 +212,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
             const SizedBox(height: 2),
             Text(tr('delivery.chooseType'),
                 style: TextStyle(
-                  fontFamily: 'Roboto',
+                  fontFamily: 'Quicksand',
                   fontSize: 12,
                   color: Colors.white.withOpacity(0.6),
                 )),
@@ -287,7 +287,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                         children: [
                           Text(tr('delivery.regular'),
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'LeagueSpartan',
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.darkTextPrimary,
@@ -296,7 +296,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                           const SizedBox(height: 3),
                           Text(tr('delivery.regularSub'),
                               style: TextStyle(
-                                fontFamily: 'Roboto',
+                                fontFamily: 'Quicksand',
                                 fontSize: 13,
                                 color: AppColors.darkTextSecondary,
                               )),
@@ -319,7 +319,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                       'Track your delivery through clear status updates. '
                           'Perfect for non-urgent packages at standard pricing.',
                       style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 13,
                         height: 1.55,
                         color: AppColors.darkTextSecondary,
@@ -361,7 +361,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                       children: [
                         Text(tr('delivery.bookRegular'),
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'LeagueSpartan',
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                             )),
@@ -423,7 +423,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                             children: [
                               Text(tr('delivery.express'),
                                   style: TextStyle(
-                                    fontFamily: 'Poppins',
+                                    fontFamily: 'LeagueSpartan',
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,
@@ -436,7 +436,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                           const SizedBox(height: 3),
                           Text(tr('delivery.expressSub'),
                               style: TextStyle(
-                                fontFamily: 'Roboto',
+                                fontFamily: 'Quicksand',
                                 fontSize: 13,
                                 color: Colors.white.withOpacity(0.55),
                               )),
@@ -460,7 +460,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                           'your door. Ideal for urgent or high-value packages. '
                           'A small surcharge applies — configured by the operator.',
                       style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 13,
                         height: 1.55,
                         color: Colors.white.withOpacity(0.65),
@@ -502,7 +502,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                       children: [
                         Text(tr('delivery.bookExpress'),
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'LeagueSpartan',
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                             )),
@@ -554,7 +554,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
       ),
       child: Text(_surchargeLabel!,
           style: const TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: 11,
             fontWeight: FontWeight.w700,
             color: AppColors.primaryDark,
@@ -613,7 +613,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
           const SizedBox(width: 5),
           Text(label,
               style: TextStyle(
-                fontFamily: 'Roboto',
+                fontFamily: 'Quicksand',
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: isExpress

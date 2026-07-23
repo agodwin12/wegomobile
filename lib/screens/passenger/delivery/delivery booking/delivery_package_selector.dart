@@ -300,7 +300,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
       title: Text(
         _isExpress ? '⚡ Express Delivery' : '📦 Regular Delivery',
         style: TextStyle(
-          fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w800,
+          fontFamily: 'LeagueSpartan', fontSize: 17, fontWeight: FontWeight.w800,
           color: _isExpress ? Colors.white : AppColors.textPrimary,
         ),
       ),
@@ -334,7 +334,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
                     child: done
                         ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
                         : Text('$step', style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12,
+                        fontFamily: 'LeagueSpartan', fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: active ? Colors.white : AppColors.textLight)),
                   ),
@@ -342,7 +342,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
                 const SizedBox(width: 6),
                 Text(['Location', 'Package', 'Confirm'][i],
                     style: TextStyle(
-                      fontFamily: 'Roboto', fontSize: 11,
+                      fontFamily: 'Quicksand', fontSize: 11,
                       fontWeight: active ? FontWeight.w700 : FontWeight.w400,
                       color: active ? AppColors.textPrimary : AppColors.textLight,
                     )),
@@ -398,11 +398,11 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
               Text(dot, style: const TextStyle(fontSize: 22)),
               const SizedBox(height: 6),
               Text(label, style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700,
+                  fontFamily: 'LeagueSpartan', fontSize: 13, fontWeight: FontWeight.w700,
                   color: selected ? Colors.white : AppColors.textPrimary)),
               const SizedBox(height: 2),
               Text(weight, style: TextStyle(
-                  fontFamily: 'Roboto', fontSize: 10,
+                  fontFamily: 'Quicksand', fontSize: 10,
                   color: selected ? Colors.white.withOpacity(0.6) : AppColors.textLight)),
             ],
           ),
@@ -457,7 +457,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontFamily: 'Roboto', fontSize: 10,
+                          fontFamily: 'Quicksand', fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: selected ? Colors.white : AppColors.textSecondary)),
                 ],
@@ -498,10 +498,10 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Photo uploaded ✓',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13,
+                  style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 13,
                       fontWeight: FontWeight.w600, color: AppColors.success)),
               Text(tr('pkg.driverWillSee'),
-                  style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                  style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                       color: AppColors.textSecondary)),
             ],
           ),
@@ -584,7 +584,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
                 children: [
                   Text(tr('pkg.fragile'),
                       style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700,
+                          fontFamily: 'LeagueSpartan', fontSize: 14, fontWeight: FontWeight.w700,
                           color: _isFragile ? AppColors.warning : AppColors.textPrimary)),
                   Text(tr('pkg.extraCare'),
                       style: AppTypography.caption.copyWith(fontSize: 11)),
@@ -677,7 +677,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
                       : _packageCategory == null
                       ? 'Select what you are sending'
                       : 'Upload a photo to continue',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14,
+                  style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                       fontWeight: FontWeight.w700)),
               if (_canProceed) ...[
                 const SizedBox(width: 8),
@@ -706,7 +706,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
+          Text(title, style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
               fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           if (subtitle != null) ...[
             const SizedBox(height: 3),

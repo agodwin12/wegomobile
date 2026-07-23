@@ -297,7 +297,7 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
                                   widget.category
                                       .getLocalizedName(useFrench: true),
                                   style: const TextStyle(
-                                    fontFamily: 'Poppins',
+                                    fontFamily: 'LeagueSpartan',
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
                                     // FIX: dark text on gold (correct contrast)
@@ -311,7 +311,7 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
                                 Text(
                                   '$count service${count == 1 ? '' : 's'} disponible${count == 1 ? '' : 's'}',
                                   style: const TextStyle(
-                                    fontFamily: 'Roboto',
+                                    fontFamily: 'Quicksand',
                                     fontSize: 13,
                                     color: Colors.black54,
                                   ),

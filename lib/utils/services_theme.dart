@@ -131,7 +131,7 @@ class SvcText {
 
   // ── Headings ─────────────────────────────────────────────────────────────
   static TextStyle sectionTitle({double fontSize = 18}) => TextStyle(
-    fontFamily: 'Poppins',
+    fontFamily: 'LeagueSpartan',
     fontSize: fontSize,
     fontWeight: FontWeight.w700,
     color: SvcColors.textPrimary,
@@ -139,7 +139,7 @@ class SvcText {
   );
 
   static TextStyle cardTitle({double fontSize = 13}) => TextStyle(
-    fontFamily: 'Poppins',
+    fontFamily: 'LeagueSpartan',
     fontSize: fontSize,
     fontWeight: FontWeight.w600,
     color: SvcColors.textPrimary,
@@ -148,7 +148,7 @@ class SvcText {
 
   // ── Price ─────────────────────────────────────────────────────────────────
   static TextStyle price({double fontSize = 15, Color? color}) => TextStyle(
-    fontFamily: 'Poppins',
+    fontFamily: 'LeagueSpartan',
     fontSize: fontSize,
     fontWeight: FontWeight.w700,
     color: color ?? SvcColors.primary,
@@ -156,7 +156,7 @@ class SvcText {
   );
 
   static TextStyle priceStrikethrough({double fontSize = 12}) => TextStyle(
-    fontFamily: 'Roboto',
+    fontFamily: 'Quicksand',
     fontSize: fontSize,
     fontWeight: FontWeight.w400,
     color: SvcColors.textLight,
@@ -166,7 +166,7 @@ class SvcText {
 
   // ── Badges ────────────────────────────────────────────────────────────────
   static TextStyle badge({Color? color}) => TextStyle(
-    fontFamily: 'Poppins',
+    fontFamily: 'LeagueSpartan',
     fontSize: 10,
     fontWeight: FontWeight.w700,
     color: color ?? Colors.white,
@@ -176,7 +176,7 @@ class SvcText {
 
   // ── Body ──────────────────────────────────────────────────────────────────
   static TextStyle body({double fontSize = 13, Color? color}) => TextStyle(
-    fontFamily: 'Roboto',
+    fontFamily: 'Quicksand',
     fontSize: fontSize,
     fontWeight: FontWeight.w400,
     color: color ?? SvcColors.textSecondary,
@@ -185,7 +185,7 @@ class SvcText {
 
   // ── Labels ────────────────────────────────────────────────────────────────
   static TextStyle label({double fontSize = 11, Color? color}) => TextStyle(
-    fontFamily: 'Roboto',
+    fontFamily: 'Quicksand',
     fontSize: fontSize,
     fontWeight: FontWeight.w500,
     color: color ?? SvcColors.textSecondary,
@@ -337,7 +337,7 @@ class SvcWidgets {
             Text(
               label,
               style: const TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'LeagueSpartan',
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,

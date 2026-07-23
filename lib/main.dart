@@ -338,6 +338,9 @@ class _WegoAppState extends State<WegoApp> {
         theme: ThemeData(
           useMaterial3: true,
           brightness: AppSettings.instance.isDark ? Brightness.dark : Brightness.light,
+          // Charte graphique WEGO : Quicksand pour le texte courant,
+          // League Spartan pour les titres (via AppTypography/AppTextStyles).
+          fontFamily: 'Quicksand',
           colorScheme: ColorScheme.fromSeed(
             seedColor:  const Color(0xFFFFDC71),
             primary:    const Color(0xFFFFDC71),
@@ -353,6 +356,7 @@ class _WegoAppState extends State<WegoApp> {
             backgroundColor: AppColors.surface,
             foregroundColor: AppColors.textPrimary,
             titleTextStyle: TextStyle(
+              fontFamily: 'LeagueSpartan',
               color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -391,7 +395,7 @@ class _WegoAppState extends State<WegoApp> {
           textSelectionTheme: TextSelectionThemeData(
             cursorColor: AppColors.textPrimary,
             selectionColor: const Color(0xFFFFDC71).withOpacity(0.35),
-            selectionHandleColor: const Color(0xFFFFC107),
+            selectionHandleColor: const Color(0xFFF5C844),
           ),
           inputDecorationTheme: InputDecorationTheme(
             filled: true,

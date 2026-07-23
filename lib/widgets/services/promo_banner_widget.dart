@@ -253,7 +253,7 @@ class _BannerCard extends StatelessWidget {
                           Text(
                             banner.title,
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'LeagueSpartan',
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
                               color: banner.textColor,
@@ -267,7 +267,7 @@ class _BannerCard extends StatelessWidget {
                           Text(
                             banner.subtitle,
                             style: TextStyle(
-                              fontFamily: 'Roboto',
+                              fontFamily: 'Quicksand',
                               fontSize: 11,
                               fontWeight: FontWeight.w400,
                               color: banner.textColor.withOpacity(0.75),
@@ -346,7 +346,7 @@ class _CtaButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: 11,
             fontWeight: FontWeight.w700,
             // FIX: dark text on gold button (correct contrast)

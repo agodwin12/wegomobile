@@ -491,7 +491,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   const SizedBox(height: 16),
                   Text(tr('agent.enterPin'),
                       style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'LeagueSpartan',
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           color: AppColors.darkTextPrimary)),
@@ -500,7 +500,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     'Ask ${_delivery.recipientName} for the 4-digit PIN sent to their phone.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 12,
                         color: AppColors.textSecondary,
                         height: 1.4),
@@ -513,7 +513,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     textAlign: TextAlign.center,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     style: const TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 12,
@@ -546,7 +546,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                               borderRadius: BorderRadius.circular(12)),
                         ),
                         child: Text(tr('agent.back'),
-                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                            style: TextStyle(fontFamily: 'LeagueSpartan', fontWeight: FontWeight.w600)),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -585,7 +585,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                                 strokeWidth: 2.5, color: Colors.white))
                             : Text(tr('common.confirm'),
                             style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'LeagueSpartan',
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14)),
                       ),
@@ -679,7 +679,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             children: [
               Text(tr('agent.cancelDeliveryQ'),
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: AppColors.darkTextPrimary)),
@@ -687,7 +687,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
               Text(
                 'You will lose the commission fee as a penalty for cancelling an accepted delivery.',
                 style: TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize: 12,
                     color: AppColors.textSecondary,
                     height: 1.5),
@@ -710,7 +710,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   ),
                   child: Text(tr('agent.yesCancelDelivery'),
                       style: TextStyle(
-                          fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+                          fontFamily: 'LeagueSpartan', fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(height: 10),
@@ -727,7 +727,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   ),
                   child: Text(tr('agent.keepDelivery'),
                       style: TextStyle(
-                          fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                          fontFamily: 'LeagueSpartan', fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -773,7 +773,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
   void _showSnack(String msg, {required bool isError}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: const TextStyle(fontFamily: 'Roboto')),
+      content: Text(msg, style: const TextStyle(fontFamily: 'Quicksand')),
       backgroundColor: isError ? AppColors.error : AppColors.success,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -868,7 +868,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
               Text(
                 _delivery.deliveryCode,
                 style: const TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: Colors.white),
@@ -880,7 +880,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   child: Text(
                     _stage.statusLabel,
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 10,
                         color: _stage.color),
                   ),
@@ -901,7 +901,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
           child: Text(
             _fmt(_delivery.driverPayout),
             style: const TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'LeagueSpartan',
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primaryGold),
@@ -1016,7 +1016,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 Text(
                   _stageTitle(),
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: _stage.color),
@@ -1025,7 +1025,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 Text(
                   _stage.statusLabel,
                   style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 11,
                       color: _stage.color.withOpacity(0.8),
                       height: 1.3),
@@ -1074,7 +1074,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             SizedBox(width: 6),
             Text(tr('delivery.route'),
                 style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: AppColors.darkTextSecondary)),
@@ -1130,20 +1130,20 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             children: [
               Text(label,
                   style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 9,
                       fontWeight: FontWeight.w600,
                       color: isActive ? AppColors.primaryDark : AppColors.textSecondary)),
               Text(address,
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: isActive ? AppColors.textPrimary : AppColors.textSecondary)),
               if (landmark != null)
                 Text(landmark,
                     style: const TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 10,
                         color: AppColors.darkTextSecondary)),
             ],
@@ -1195,7 +1195,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   const SizedBox(width: 6),
                   Text(_delivery.categoryLabel,
                       style: const TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'LeagueSpartan',
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: AppColors.darkTextPrimary)),
@@ -1209,7 +1209,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                           borderRadius: BorderRadius.circular(4)),
                       child: Text(tr('agent.fragile'),
                           style: TextStyle(
-                              fontFamily: 'Roboto',
+                              fontFamily: 'Quicksand',
                               fontSize: 9,
                               color: AppColors.error,
                               fontWeight: FontWeight.w700)),
@@ -1220,7 +1220,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 Text(
                   '${_delivery.packageSize[0].toUpperCase()}${_delivery.packageSize.substring(1)} package',
                   style: const TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 11,
                       color: AppColors.darkTextSecondary),
                 ),
@@ -1229,7 +1229,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   Text(
                     _delivery.packageDescription!,
                     style: const TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 11,
                         color: AppColors.darkTextSecondary),
                     maxLines: 2,
@@ -1280,7 +1280,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             SizedBox(width: 6),
             Text(tr('delivery.recipient'),
                 style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: AppColors.darkTextSecondary)),
@@ -1301,7 +1301,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         ? _delivery.recipientName[0].toUpperCase()
                         : 'R',
                     style: const TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppColors.primaryGold),
@@ -1315,13 +1315,13 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   children: [
                     Text(_delivery.recipientName,
                         style: const TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'LeagueSpartan',
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppColors.darkTextPrimary)),
                     Text(_delivery.recipientPhone,
                         style: const TextStyle(
-                            fontFamily: 'Roboto',
+                            fontFamily: 'Quicksand',
                             fontSize: 11,
                             color: AppColors.darkTextSecondary)),
                   ],
@@ -1365,7 +1365,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   Expanded(
                     child: Text(_delivery.recipientNote!,
                         style: const TextStyle(
-                            fontFamily: 'Roboto',
+                            fontFamily: 'Quicksand',
                             fontSize: 11,
                             color: AppColors.info,
                             height: 1.4)),
@@ -1420,7 +1420,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     children: [
       Text(value,
           style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'LeagueSpartan',
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: color),
@@ -1429,7 +1429,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
       const SizedBox(height: 3),
       Text(label,
           style: TextStyle(
-              fontFamily: 'Roboto',
+              fontFamily: 'Quicksand',
               fontSize: 9,
               color: Colors.white.withOpacity(0.4))),
     ],
@@ -1459,7 +1459,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             children: [
               Text(tr('agent.pickupPhoto'),
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.darkTextPrimary)),
@@ -1472,7 +1472,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 ),
                 child: Text(tr('agent.optional'),
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 9,
                         color: AppColors.info,
                         fontWeight: FontWeight.w600)),
@@ -1482,7 +1482,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
           const SizedBox(height: 4),
           Text('Take a photo before collecting the package',
               style: TextStyle(
-                  fontFamily: 'Roboto',
+                  fontFamily: 'Quicksand',
                   fontSize: 11,
                   color: AppColors.darkTextSecondary)),
           const SizedBox(height: 10),
@@ -1543,7 +1543,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   SizedBox(width: 8),
                   Text(tr('agent.tapToPhoto'),
                       style: TextStyle(
-                          fontFamily: 'Roboto',
+                          fontFamily: 'Quicksand',
                           fontSize: 12,
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w500)),
@@ -1577,7 +1577,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
               children: [
                 Text(tr('agent.getPin'),
                     style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppColors.warning)),
@@ -1586,7 +1586,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   'Ask ${_delivery.recipientName} for the 4-digit PIN sent to ${_delivery.recipientPhone}. '
                       'Do not hand over the package before entering the correct PIN.',
                   style: const TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 11,
                       color: AppColors.warning,
                       height: 1.4),
@@ -1640,7 +1640,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
               const SizedBox(width: 8),
               Text(_stage.actionLabel,
                   style: const TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 15,
                       fontWeight: FontWeight.w800)),
             ],
@@ -1677,7 +1677,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
               const SizedBox(height: 20),
               Text(tr('agent.deliveryComplete'),
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: AppColors.darkTextPrimary)),
@@ -1685,7 +1685,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
               Text(
                 _delivery.deliveryCode,
                 style: const TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize: 13,
                     color: AppColors.darkTextSecondary,
                     letterSpacing: 1),
@@ -1736,7 +1736,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                     children: [
                       Text('💵 Cash payment received?',
                           style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'LeagueSpartan',
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: AppColors.warning)),
@@ -1744,7 +1744,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       Text(
                         'Confirm you received ${_fmt(_delivery.totalPrice)} from ${_delivery.recipientName}.',
                         style: const TextStyle(
-                            fontFamily: 'Roboto',
+                            fontFamily: 'Quicksand',
                             fontSize: 11,
                             color: AppColors.warning,
                             height: 1.4),
@@ -1772,7 +1772,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                                   color: Colors.white))
                               : Text(tr('agent.confirmCashReceived'),
                               style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'LeagueSpartan',
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700)),
                         ),
@@ -1800,7 +1800,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       SizedBox(width: 6),
                       Text(tr('agent.cashConfirmed'),
                           style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'LeagueSpartan',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.success)),
@@ -1826,7 +1826,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   ),
                   child: Text(tr('agent.backToDashboard'),
                       style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'LeagueSpartan',
                           fontSize: 15,
                           fontWeight: FontWeight.w700)),
                 ),
@@ -1843,12 +1843,12 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     children: [
       Text(label,
           style: const TextStyle(
-              fontFamily: 'Roboto',
+              fontFamily: 'Quicksand',
               fontSize: 12,
               color: AppColors.darkTextSecondary)),
       Text(value,
           style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'LeagueSpartan',
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: color)),
@@ -1880,7 +1880,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 const SizedBox(height: 20),
                 Text(tr('agent.deliveryCancelled'),
                     style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         color: AppColors.darkTextPrimary)),
@@ -1889,7 +1889,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   'This delivery was cancelled. Your commission fee has been released.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 13,
                       color: AppColors.textSecondary,
                       height: 1.5),
@@ -1907,7 +1907,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   ),
                   child: Text(tr('agent.backToDashboard'),
                       style: TextStyle(
-                          fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+                          fontFamily: 'LeagueSpartan', fontWeight: FontWeight.w700)),
                 ),
               ],
             ),

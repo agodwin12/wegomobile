@@ -83,21 +83,27 @@ flutter:
     - .env
     - assets/sounds/trip_notification.mp3
 
+  # Charte graphique WEGO: League Spartan est la typographie principale
+  # (titres, sous-titres, boutons), Quicksand l'accompagnement (texte courant).
   fonts:
-    - family: Poppins
+    - family: LeagueSpartan
       fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-        - asset: assets/fonts/Poppins-Medium.ttf
+        - asset: assets/fonts/LeagueSpartan-400.ttf
+        - asset: assets/fonts/LeagueSpartan-500.ttf
           weight: 500
-        - asset: assets/fonts/Poppins-SemiBold.ttf
+        - asset: assets/fonts/LeagueSpartan-600.ttf
           weight: 600
-        - asset: assets/fonts/Poppins-Bold.ttf
+        - asset: assets/fonts/LeagueSpartan-700.ttf
           weight: 700
+        - asset: assets/fonts/LeagueSpartan-800.ttf
+          weight: 800
 
-    - family: Roboto
+    - family: Quicksand
       fonts:
-        - asset: assets/fonts/Roboto-Regular.ttf
-        - asset: assets/fonts/Roboto-Medium.ttf
+        - asset: assets/fonts/Quicksand-400.ttf
+        - asset: assets/fonts/Quicksand-500.ttf
           weight: 500
-        - asset: assets/fonts/Roboto-Bold.ttf
+        - asset: assets/fonts/Quicksand-600.ttf
+          weight: 600
+        - asset: assets/fonts/Quicksand-700.ttf
           weight: 700

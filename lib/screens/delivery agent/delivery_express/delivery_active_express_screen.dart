@@ -573,13 +573,13 @@ class _DeliveryActiveExpressScreenState
                 ),
                 const SizedBox(height: 16),
                 Text(tr('agent.enterPin'),
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 17,
+                    style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 17,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
                 Text(
                   'Ask ${widget.delivery.recipientName} for the 4-digit PIN.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                  style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                       color: AppColors.textSecondary, height: 1.4),
                 ),
                 const SizedBox(height: 20),
@@ -589,7 +589,7 @@ class _DeliveryActiveExpressScreenState
                   maxLength:      4,
                   textAlign:      TextAlign.center,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 32,
+                  style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 32,
                       fontWeight: FontWeight.w800, letterSpacing: 12),
                   decoration: InputDecoration(
                     counterText: '',
@@ -620,7 +620,7 @@ class _DeliveryActiveExpressScreenState
                             borderRadius: BorderRadius.circular(12)),
                       ),
                       child: Text(tr('agent.back'),
-                          style: TextStyle(fontFamily: 'Poppins',
+                          style: TextStyle(fontFamily: 'LeagueSpartan',
                               fontWeight: FontWeight.w600)),
                     ),
                   ),
@@ -649,7 +649,7 @@ class _DeliveryActiveExpressScreenState
                               child: CircularProgressIndicator(
                                   strokeWidth: 2.5, color: Colors.white))
                           : Text(tr('common.confirm'),
-                              style: TextStyle(fontFamily: 'Poppins',
+                              style: TextStyle(fontFamily: 'LeagueSpartan',
                                   fontWeight: FontWeight.w700, fontSize: 14)),
                     ),
                   ),
@@ -707,12 +707,12 @@ class _DeliveryActiveExpressScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(tr('agent.cancelDeliveryQ'),
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 16,
+                    style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 16,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                 Text(
                   'You will lose the commission fee as a cancellation penalty.',
-                  style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                  style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                       color: AppColors.textSecondary, height: 1.5),
                 ),
                 const SizedBox(height: 20),
@@ -730,7 +730,7 @@ class _DeliveryActiveExpressScreenState
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14))),
                     child: Text(tr('delivery.yesCancel'),
-                        style: TextStyle(fontFamily: 'Poppins',
+                        style: TextStyle(fontFamily: 'LeagueSpartan',
                             fontWeight: FontWeight.w700)),
                   ),
                 ),
@@ -747,7 +747,7 @@ class _DeliveryActiveExpressScreenState
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14))),
                     child: Text(tr('agent.keepDelivery'),
-                        style: TextStyle(fontFamily: 'Poppins',
+                        style: TextStyle(fontFamily: 'LeagueSpartan',
                             fontWeight: FontWeight.w600,
                             color:      AppColors.textSecondary)),
                   ),
@@ -815,7 +815,7 @@ class _DeliveryActiveExpressScreenState
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content:         Text(msg,
-          style: const TextStyle(fontFamily: 'Roboto')),
+          style: const TextStyle(fontFamily: 'Quicksand')),
       backgroundColor: isError ? AppColors.error : AppColors.success,
       behavior:        SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
@@ -945,12 +945,12 @@ class _DeliveryActiveExpressScreenState
                     color: AppColors.primaryGold, size: 14),
                 const SizedBox(width: 4),
                 Text(widget.delivery.deliveryCode,
-                    style: const TextStyle(fontFamily: 'Poppins',
+                    style: const TextStyle(fontFamily: 'LeagueSpartan',
                         fontSize: 13, fontWeight: FontWeight.w700,
                         color:    Colors.white)),
                 const SizedBox(width: 6),
                 Text(_stage.statusLabel,
-                    style: TextStyle(fontFamily: 'Roboto',
+                    style: TextStyle(fontFamily: 'Quicksand',
                         fontSize: 10, color: _stage.color)),
               ]),
             ),
@@ -1133,7 +1133,7 @@ class _DeliveryActiveExpressScreenState
                   const Icon(Icons.bolt_rounded, size: 18),
                   const SizedBox(width: 6),
                   Text(_stage.actionLabel,
-                      style: const TextStyle(fontFamily: 'Poppins',
+                      style: const TextStyle(fontFamily: 'LeagueSpartan',
                           fontSize: 15, fontWeight: FontWeight.w800)),
                 ],
               ),
@@ -1162,7 +1162,7 @@ class _DeliveryActiveExpressScreenState
             children: [
               Text(widget.delivery.pickupAddress,
                   maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                  style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                       color: _stage.isPrePickup
                           ? AppColors.textPrimary
                           : AppColors.textSecondary,
@@ -1171,7 +1171,7 @@ class _DeliveryActiveExpressScreenState
               const SizedBox(height: 20),
               Text(widget.delivery.dropoffAddress,
                   maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                  style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                       color: !_stage.isPrePickup
                           ? AppColors.textPrimary
                           : AppColors.textSecondary,
@@ -1196,13 +1196,13 @@ class _DeliveryActiveExpressScreenState
             '${widget.delivery.packageSize[0].toUpperCase()}'
             '${widget.delivery.packageSize.substring(1)}'
             '${widget.delivery.isFragile ? ' · 🏺 Fragile' : ''}',
-            style: const TextStyle(fontFamily: 'Roboto', fontSize: 12,
+            style: const TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                 fontWeight: FontWeight.w600),
           ),
           if (widget.delivery.packageDescription != null)
             Text(widget.delivery.packageDescription!,
                 maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                     color: AppColors.textSecondary)),
         ]),
       ),
@@ -1220,7 +1220,7 @@ class _DeliveryActiveExpressScreenState
             widget.delivery.recipientName.isNotEmpty
                 ? widget.delivery.recipientName[0].toUpperCase()
                 : 'R',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14,
+            style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color:      AppColors.primaryGold),
           ),
@@ -1230,10 +1230,10 @@ class _DeliveryActiveExpressScreenState
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(widget.delivery.recipientName,
-              style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
+              style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                   fontWeight: FontWeight.w600)),
           Text(widget.delivery.recipientPhone,
-              style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+              style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                   color: AppColors.textSecondary)),
         ]),
       ),
@@ -1268,12 +1268,12 @@ class _DeliveryActiveExpressScreenState
   Widget _finStat(String label, String value, Color color) => Expanded(
     child: Column(children: [
       Text(value,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11,
+          style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 11,
               fontWeight: FontWeight.w700, color: color),
           maxLines: 1, overflow: TextOverflow.ellipsis),
       const SizedBox(height: 2),
       Text(label,
-          style: TextStyle(fontFamily: 'Roboto', fontSize: 9,
+          style: TextStyle(fontFamily: 'Quicksand', fontSize: 9,
               color: AppColors.textSecondary)),
     ]),
   );
@@ -1283,7 +1283,7 @@ class _DeliveryActiveExpressScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(tr('agent.pickupPhotoOpt'),
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+            style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 12,
                 fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         GestureDetector(
@@ -1320,7 +1320,7 @@ class _DeliveryActiveExpressScreenState
                           color: AppColors.textSecondary, size: 18),
                       SizedBox(width: 8),
                       Text(tr('agent.takePickupPhoto'),
-                          style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                          style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                               color: AppColors.textSecondary)),
                     ],
                   ),
@@ -1345,7 +1345,7 @@ class _DeliveryActiveExpressScreenState
           child: Text(
             'Ask ${widget.delivery.recipientName} for the 4-digit PIN '
             'before handing over the package.',
-            style: const TextStyle(fontFamily: 'Roboto', fontSize: 11,
+            style: const TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                 color: AppColors.warning, height: 1.4),
           ),
         ),
@@ -1376,11 +1376,11 @@ class _DeliveryActiveExpressScreenState
             ),
             const SizedBox(height: 20),
             Text('⚡ Express Delivery Complete!',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 20,
+                style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 20,
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             Text(widget.delivery.deliveryCode,
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                     color: AppColors.textSecondary, letterSpacing: 1)),
             const SizedBox(height: 24),
             Container(
@@ -1415,14 +1415,14 @@ class _DeliveryActiveExpressScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('💵 Confirm cash received',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                          style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color:      AppColors.warning)),
                       const SizedBox(height: 4),
                       Text(
                         'Confirm you received ${_fmt(widget.delivery.totalPrice)} '
                         'from ${widget.delivery.recipientName}.',
-                        style: const TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                        style: const TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                             color: AppColors.warning, height: 1.4),
                       ),
                       const SizedBox(height: 10),
@@ -1440,7 +1440,7 @@ class _DeliveryActiveExpressScreenState
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2.5, color: Colors.white))
                               : Text(tr('agent.confirmCash'),
-                                  style: TextStyle(fontFamily: 'Poppins',
+                                  style: TextStyle(fontFamily: 'LeagueSpartan',
                                       fontWeight: FontWeight.w700)),
                         ),
                       ),
@@ -1465,7 +1465,7 @@ class _DeliveryActiveExpressScreenState
                         color: AppColors.success, size: 15),
                     SizedBox(width: 6),
                     Text(tr('agent.cashConfirmed'),
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                        style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color:      AppColors.success)),
                   ],
@@ -1484,7 +1484,7 @@ class _DeliveryActiveExpressScreenState
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16))),
                 child: Text(tr('agent.backToDashboard'),
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 15,
+                    style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 15,
                         fontWeight: FontWeight.w700)),
               ),
             ),
@@ -1497,10 +1497,10 @@ class _DeliveryActiveExpressScreenState
   Widget _completionStat(String label, String value, Color color) =>
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text(label,
-            style: TextStyle(fontFamily: 'Roboto', fontSize: 12,
+            style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                 color: AppColors.textSecondary)),
         Text(value,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 13,
+            style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 13,
                 fontWeight: FontWeight.w700, color: color)),
       ]);
 
@@ -1526,14 +1526,14 @@ class _DeliveryActiveExpressScreenState
               ),
               const SizedBox(height: 20),
               Text(tr('agent.deliveryCancelled'),
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 20,
+                  style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 20,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
               Text(
                 'This express delivery was cancelled. '
                 'Your commission has been released.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 13,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                     color: AppColors.textSecondary, height: 1.5),
               ),
               const SizedBox(height: 28),
@@ -1547,7 +1547,7 @@ class _DeliveryActiveExpressScreenState
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14))),
                 child: Text(tr('agent.backToDashboard'),
-                    style: TextStyle(fontFamily: 'Poppins',
+                    style: TextStyle(fontFamily: 'LeagueSpartan',
                         fontWeight: FontWeight.w700)),
               ),
             ]),

@@ -2,10 +2,11 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Colors
-  static const Color primary = Color(0xFFFDD835); // Yellow 600
-  static const Color primaryDark = Color(0xFFF9A825); // Yellow 700
-  static const Color primaryLight = Color(0xFFFFF176); // Yellow 300
+  // Primary Colors — Jaune Or de la charte graphique WEGO (#FFDC71) et ses
+  // déclinaisons foncée/claire. Aligné avec lib/utils/app_colors.dart.
+  static const Color primary = Color(0xFFFFDC71); // Jaune Or (charte)
+  static const Color primaryDark = Color(0xFFF5C844); // déclinaison foncée
+  static const Color primaryLight = Color(0xFFFFEDB3); // déclinaison claire
 
   // Neutral Colors
   static const Color black = Color(0xFF000000);
@@ -34,18 +35,19 @@ class AppColors {
   // Text Colors
   static const Color textPrimary = Color(0xFF212121);
   static const Color textSecondary = Color(0xFF757575);
-  static const Color textHint = Color(0xFFBDBDBD);
+  static const Color textHint = Color(0xFFA9A9A9); // Gris neutre (charte)
   static const Color textDisabled = Color(0xFFE0E0E0);
 
   // Border Colors
   static const Color borderPrimary = Color(0xFFE0E0E0);
   static const Color borderSecondary = Color(0xFFF5F5F5);
-  static const Color borderFocus = Color(0xFFFDD835);
+  static const Color borderFocus = Color(0xFFFFDC71); // Jaune Or (charte)
 }
 
 class AppTextStyles {
   // Display Styles
   static const TextStyle displayLarge = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 32,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
@@ -53,6 +55,7 @@ class AppTextStyles {
   );
 
   static const TextStyle displayMedium = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 28,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
@@ -60,6 +63,7 @@ class AppTextStyles {
   );
 
   static const TextStyle displaySmall = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 24,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
@@ -68,6 +72,7 @@ class AppTextStyles {
 
   // Heading Styles
   static const TextStyle headingLarge = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 20,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
@@ -75,6 +80,7 @@ class AppTextStyles {
   );
 
   static const TextStyle headingMedium = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 18,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
@@ -82,6 +88,7 @@ class AppTextStyles {
   );
 
   static const TextStyle headingSmall = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
@@ -90,6 +97,7 @@ class AppTextStyles {
 
   // Body Styles
   static const TextStyle bodyLarge = TextStyle(
+    fontFamily: 'Quicksand',
     fontSize: 16,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
@@ -97,6 +105,7 @@ class AppTextStyles {
   );
 
   static const TextStyle bodyMedium = TextStyle(
+    fontFamily: 'Quicksand',
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
@@ -104,6 +113,7 @@ class AppTextStyles {
   );
 
   static const TextStyle bodySmall = TextStyle(
+    fontFamily: 'Quicksand',
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
@@ -112,6 +122,7 @@ class AppTextStyles {
 
   // Label Styles
   static const TextStyle labelLarge = TextStyle(
+    fontFamily: 'Quicksand',
     fontSize: 14,
     fontWeight: FontWeight.w500,
     color: AppColors.textPrimary,
@@ -119,6 +130,7 @@ class AppTextStyles {
   );
 
   static const TextStyle labelMedium = TextStyle(
+    fontFamily: 'Quicksand',
     fontSize: 12,
     fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
@@ -126,6 +138,7 @@ class AppTextStyles {
   );
 
   static const TextStyle labelSmall = TextStyle(
+    fontFamily: 'Quicksand',
     fontSize: 10,
     fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
@@ -134,18 +147,21 @@ class AppTextStyles {
 
   // Button Styles
   static const TextStyle buttonLarge = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.2,
   );
 
   static const TextStyle buttonMedium = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 14,
     fontWeight: FontWeight.w600,
     height: 1.2,
   );
 
   static const TextStyle buttonSmall = TextStyle(
+    fontFamily: 'LeagueSpartan',
     fontSize: 12,
     fontWeight: FontWeight.w600,
     height: 1.2,
@@ -153,6 +169,7 @@ class AppTextStyles {
 
   // Caption and Hint
   static const TextStyle caption = TextStyle(
+    fontFamily: 'Quicksand',
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
@@ -160,6 +177,7 @@ class AppTextStyles {
   );
 
   static const TextStyle hint = TextStyle(
+    fontFamily: 'Quicksand',
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.textHint,
@@ -232,7 +250,11 @@ class AppTheme {
       seedColor: AppColors.primary,
       brightness: Brightness.light,
     ),
-    fontFamily: 'Inter',
+    // Quicksand est le texte courant par défaut (charte p.11) ; les titres et
+    // boutons passent en League Spartan via AppTextStyles/AppTypography.
+    // ('Inter' n'a jamais été embarqué — chaque Text sans style retombait sur
+    // la police système.)
+    fontFamily: 'Quicksand',
     scaffoldBackgroundColor: AppColors.white,
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.white,

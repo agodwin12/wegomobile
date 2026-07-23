@@ -11,11 +11,14 @@ import 'package:flutter/material.dart';
 /// full Theme.of() refactor.
 class AppColors {
   // ── Primary (fixed — brand) ───────────────────────────────────────────────
-  static const Color primaryGold     = Color(0xFFFFD700);
-  static const Color primaryGoldDark = Color(0xFFFFC107); // darker gold for gradients
-  static const Color primaryYellow   = Color(0xFFFFC107);
+  // Charte graphique WEGO (p.6) : Jaune Or #FFDC71 (RVB 255 220 113) est la
+  // couleur accent officielle — boutons, liens, détails visuels. #F5C844 est
+  // sa déclinaison foncée pour les dégradés (déjà présente dans l'app).
+  static const Color primaryGold     = Color(0xFFFFDC71);
+  static const Color primaryGoldDark = Color(0xFFF5C844); // darker gold for gradients
+  static const Color primaryYellow   = Color(0xFFF5C844);
   static const Color primaryDark     = Color(0xFF1A1A1A);
-  static const Color primaryBlack    = Color(0xFF000000);
+  static const Color primaryBlack    = Color(0xFF000000); // Noir profond (charte)
 
   // ── Secondary ─────────────────────────────────────────────────────────────
   static const Color secondaryGrey     = Color(0xFF757575);
@@ -35,12 +38,15 @@ class AppColors {
 
   // ── Text (mutable — theme-aware) ──────────────────────────────────────────
   static Color textPrimary   = const Color(0xFF1A1A1A);
+  // textSecondary reste plus foncé que le Gris neutre de la charte (#A9A9A9)
+  // pour préserver la lisibilité sur fonds clairs (contraste AA) ; le gris
+  // charte est appliqué aux textes tertiaires/indicatifs ci-dessous.
   static Color textSecondary = const Color(0xFF757575);
-  static Color textLight     = const Color(0xFF9E9E9E);
+  static Color textLight     = const Color(0xFFA9A9A9); // Gris neutre (charte)
   static const Color textWhite = Color(0xFFFFFFFF);
 
   /// Semantic alias — placeholder / hint text
-  static Color textHint = const Color(0xFF9E9E9E);
+  static Color textHint = const Color(0xFFA9A9A9); // Gris neutre (charte)
 
   // ── Border (mutable — theme-aware) ────────────────────────────────────────
   static Color borderLight  = const Color(0xFFE0E0E0);
@@ -63,11 +69,11 @@ class AppColors {
   // ── Input (mutable — theme-aware) ─────────────────────────────────────────
   static Color inputBackground = const Color(0xFFFAFAFA);
   static Color inputBorder     = const Color(0xFFE0E0E0);
-  static const Color inputFocused = Color(0xFFFFD700);
+  static const Color inputFocused = Color(0xFFFFDC71); // Jaune Or (charte)
   static const Color inputError   = Color(0xFFE53935);
 
   // ── Button ────────────────────────────────────────────────────────────────
-  static const Color buttonPrimary       = Color(0xFFFFD700);
+  static const Color buttonPrimary       = Color(0xFFFFDC71); // Jaune Or (charte)
   static const Color buttonSecondary     = Color(0xFF424242);
   static Color buttonDisabled            = const Color(0xFFE0E0E0);
   static const Color buttonTextPrimary   = Color(0xFF1A1A1A);
@@ -91,7 +97,7 @@ class AppColors {
 
   // ── Gradients (fixed) ─────────────────────────────────────────────────────
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFFFFD700), Color(0xFFFFC107)],
+    colors: [Color(0xFFFFDC71), Color(0xFFF5C844)], // Jaune Or charte → foncé
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -142,8 +148,8 @@ class AppColors {
       surface           = const Color(0xFFFFFFFF);
       textPrimary       = const Color(0xFF1A1A1A);
       textSecondary     = const Color(0xFF757575);
-      textLight         = const Color(0xFF9E9E9E);
-      textHint          = const Color(0xFF9E9E9E);
+      textLight         = const Color(0xFFA9A9A9); // Gris neutre (charte)
+      textHint          = const Color(0xFFA9A9A9); // Gris neutre (charte)
       borderLight       = const Color(0xFFE0E0E0);
       borderMedium      = const Color(0xFFBDBDBD);
       border            = const Color(0xFFE0E0E0);

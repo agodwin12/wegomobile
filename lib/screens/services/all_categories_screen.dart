@@ -347,7 +347,7 @@ class _CategoryCard extends StatelessWidget {
                 child: Text(
                   '${category.subcategories!.length} sous-catégories',
                   style: const TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize: 8,
                     fontWeight: FontWeight.w600,
                     color: _kPrimaryDark,

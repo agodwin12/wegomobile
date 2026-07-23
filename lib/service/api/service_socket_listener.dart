@@ -247,7 +247,7 @@ class _ServiceBannerState extends State<_ServiceBanner>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(widget.message,
-                          style: const TextStyle(fontFamily: 'Roboto', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white, height: 1.4),
+                          style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white, height: 1.4),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                     ),
                     const SizedBox(width: 8),

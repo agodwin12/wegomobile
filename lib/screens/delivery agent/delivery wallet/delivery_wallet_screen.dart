@@ -539,7 +539,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
   void _showSnack(String msg, {required bool isError}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: const TextStyle(fontFamily: 'Roboto')),
+      content: Text(msg, style: const TextStyle(fontFamily: 'Quicksand')),
       backgroundColor: isError ? AppColors.error : AppColors.success,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -614,9 +614,9 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         indicatorColor: AppColors.primaryGold,
         indicatorWeight: 3,
         labelStyle: const TextStyle(
-            fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700),
+            fontFamily: 'LeagueSpartan', fontSize: 12, fontWeight: FontWeight.w700),
         unselectedLabelStyle: const TextStyle(
-            fontFamily: 'Poppins', fontSize: 12),
+            fontFamily: 'LeagueSpartan', fontSize: 12),
         labelColor: AppColors.primaryGold,
         unselectedLabelColor: Colors.white54,
         tabs: const [
@@ -635,14 +635,14 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           children: [
             Text(_fmt(_wallet.availableBalance),
                 style: const TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: AppColors.primaryGold,
                     letterSpacing: -0.5)),
             Text(tr('agent.availableBalance'),
                 style: TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize: 10,
                     color: Colors.white.withOpacity(0.5))),
           ],
@@ -713,18 +713,18 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('Wallet ${_wallet.status}',
                 style: const TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppColors.error)),
             if (_wallet.frozenReason != null)
               Text(_wallet.frozenReason!,
                   style: const TextStyle(
-                      fontFamily: 'Roboto', fontSize: 11, color: AppColors.error)),
+                      fontFamily: 'Quicksand', fontSize: 11, color: AppColors.error)),
             const SizedBox(height: 4),
             Text(tr('agent.contactSupportResolve'),
                 style: TextStyle(
-                    fontFamily: 'Roboto', fontSize: 11, color: AppColors.error)),
+                    fontFamily: 'Quicksand', fontSize: 11, color: AppColors.error)),
           ]),
         ),
       ]),
@@ -747,14 +747,14 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(tr('agent.tooLowAccept'),
                 style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppColors.warning)),
             const SizedBox(height: 3),
             Text(tr('agent.topUpToAccept'),
                 style: TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize: 11,
                     color: AppColors.warning,
                     height: 1.4)),
@@ -769,7 +769,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                     borderRadius: BorderRadius.circular(8)),
                 child: Text(tr('agent.topUpNow'),
                     style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: Colors.white)),
@@ -822,7 +822,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 Expanded(
                   child: Text(label,
                       style: TextStyle(
-                          fontFamily: 'Roboto',
+                          fontFamily: 'Quicksand',
                           fontSize: 10,
                           color: AppColors.textSecondary),
                       maxLines: 1,
@@ -831,7 +831,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
               ]),
               Text(_fmt(value),
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: color),
@@ -875,13 +875,13 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(tr('agent.reloadWallet'),
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'LeagueSpartan',
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: Colors.white)),
               Text(tr('agent.payMethods'),
                   style: TextStyle(
-                      fontFamily: 'Roboto', fontSize: 11, color: Colors.white54)),
+                      fontFamily: 'Quicksand', fontSize: 11, color: Colors.white54)),
             ]),
           ),
           const Icon(Icons.arrow_forward_ios_rounded,
@@ -906,7 +906,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text(tr('agent.recentRequests'),
             style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'LeagueSpartan',
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary)),
@@ -914,7 +914,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           onTap: () => _tabs.animateTo(2),
           child: Text(tr('common.seeAll'),
               style: TextStyle(
-                  fontFamily: 'Roboto',
+                  fontFamily: 'Quicksand',
                   fontSize: 12,
                   color: AppColors.primaryGold,
                   fontWeight: FontWeight.w600)),
@@ -998,7 +998,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           const SizedBox(height: 14),
           Text(tr('agent.checkPhone'),
               style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'LeagueSpartan',
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary)),
@@ -1008,7 +1008,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 'Enter your PIN to confirm the payment.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontFamily: 'Roboto',
+                fontFamily: 'Quicksand',
                 fontSize: 13,
                 color: AppColors.textSecondary,
                 height: 1.5),
@@ -1025,7 +1025,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             ),
             child: Text(_fmt(topUp.amount),
                 style: const TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     color: AppColors.success)),
@@ -1045,13 +1045,13 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
               child: Column(children: [
                 Text(tr('agent.ussdCode'),
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 10,
                         color: AppColors.info)),
                 const SizedBox(height: 4),
                 Text(_pendingUssdCode!,
                     style: const TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                         color: AppColors.info,
@@ -1073,7 +1073,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             const SizedBox(width: 10),
             Text(tr('agent.waitingConfirm'),
                 style: TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize: 12,
                     color: color,
                     fontWeight: FontWeight.w500)),
@@ -1082,7 +1082,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           const SizedBox(height: 8),
           Text('Ref: ${topUp.topupCode}',
               style: TextStyle(
-                  fontFamily: 'Roboto',
+                  fontFamily: 'Quicksand',
                   fontSize: 11,
                   color: AppColors.textSecondary,
                   letterSpacing: 0.5)),
@@ -1094,7 +1094,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             onPressed: _resetTopUpForm,
             child: Text(tr('wallet.cancelTryDifferent'),
                 style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 12,
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w500)),
@@ -1125,7 +1125,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           const SizedBox(height: 12),
           Text(tr('agent.walletToppedUp'),
               style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'LeagueSpartan',
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary)),
@@ -1134,7 +1134,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             'Your payment was confirmed and the balance has been added to your wallet.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontFamily: 'Roboto',
+                fontFamily: 'Quicksand',
                 fontSize: 13,
                 color: AppColors.textSecondary,
                 height: 1.5),
@@ -1154,13 +1154,13 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
               child: Column(children: [
                 Text(tr('agent.newBalance'),
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 11,
                         color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 Text(_fmt(_wallet.availableBalance),
                     style: const TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'LeagueSpartan',
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
                         color: AppColors.success)),
@@ -1182,14 +1182,14 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             ),
             child: Text(tr('agent.viewWallet'),
                 style: TextStyle(
-                    fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+                    fontFamily: 'LeagueSpartan', fontWeight: FontWeight.w700)),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: _resetTopUpForm,
             child: Text(tr('agent.topUpAgain'),
                 style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     color: AppColors.primaryGold,
                     fontWeight: FontWeight.w600)),
           ),
@@ -1218,7 +1218,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           const SizedBox(height: 20),
           Text(tr('agent.requestSubmitted'),
               style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'LeagueSpartan',
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary)),
@@ -1228,7 +1228,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 'A WeGo agent will verify and credit your wallet shortly.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontFamily: 'Roboto',
+                fontFamily: 'Quicksand',
                 fontSize: 13,
                 color: AppColors.textSecondary,
                 height: 1.5),
@@ -1249,14 +1249,14 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             ),
             child: Text(tr('agent.viewInHistory'),
                 style: TextStyle(
-                    fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+                    fontFamily: 'LeagueSpartan', fontWeight: FontWeight.w700)),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: _resetTopUpForm,
             child: Text(tr('agent.submitAnother'),
                 style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     color: AppColors.primaryGold,
                     fontWeight: FontWeight.w600)),
           ),
@@ -1271,7 +1271,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(tr('payment.title'),
           style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'LeagueSpartan',
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary)),
@@ -1321,7 +1321,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                     ch['label']!,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 9,
                         fontWeight: FontWeight.w600,
                         color: selected
@@ -1354,7 +1354,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
               SizedBox(width: 4),
               Text(tr('agent.instantNoScreenshot'),
                   style: TextStyle(
-                      fontFamily: 'Roboto',
+                      fontFamily: 'Quicksand',
                       fontSize: 10,
                       color: AppColors.success,
                       fontWeight: FontWeight.w600)),
@@ -1369,7 +1369,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(tr('wallet.amountXaf'),
           style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'LeagueSpartan',
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary)),
@@ -1399,7 +1399,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                     ? '${(p / 1000).toStringAsFixed(p % 1000 == 0 ? 0 : 1)}k'
                     : '$p',
                 style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: selected
@@ -1416,7 +1416,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         style: const TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: 18,
             fontWeight: FontWeight.w700),
         decoration: _inputDecoration('Enter amount', suffix: 'XAF'),
@@ -1435,7 +1435,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
     return TextFormField(
       controller: _phoneCtrl,
       keyboardType: TextInputType.phone,
-      style: const TextStyle(fontFamily: 'Roboto', fontSize: 14),
+      style: const TextStyle(fontFamily: 'Quicksand', fontSize: 14),
       decoration: _inputDecoration(
         isMtn
             ? 'MTN number to charge (e.g. 670000000)'
@@ -1457,7 +1457,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
     return TextFormField(
       controller: _noteCtrl,
       maxLines: 2,
-      style: const TextStyle(fontFamily: 'Roboto', fontSize: 13),
+      style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13),
       decoration: _inputDecoration('Note (optional)'),
     );
   }
@@ -1491,7 +1491,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           const SizedBox(width: 8),
           Text(label,
               style: const TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'LeagueSpartan',
                   fontSize: 15,
                   fontWeight: FontWeight.w700)),
         ]),
@@ -1519,7 +1519,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 : 'Submit this form after making your cash deposit at a WeGo office. '
                 'A staff member will verify and credit your wallet within 30 minutes.',
             style: const TextStyle(
-                fontFamily: 'Roboto',
+                fontFamily: 'Quicksand',
                 fontSize: 11,
                 color: AppColors.info,
                 height: 1.5),
@@ -1546,7 +1546,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           const SizedBox(height: 12),
           Text(tr('agent.noTopUps'),
               style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'LeagueSpartan',
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary)),
@@ -1555,7 +1555,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             onPressed: () => _tabs.animateTo(1),
             child: Text(tr('agent.topUpNow'),
                 style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'LeagueSpartan',
                     color: AppColors.primaryGold,
                     fontWeight: FontWeight.w600)),
           ),
@@ -1624,7 +1624,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                         children: [
                           Text(_fmt(t.amount),
                               style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'LeagueSpartan',
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.textPrimary)),
@@ -1638,7 +1638,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                             child: Text(
                               t.statusLabel ?? t.status.label,
                               style: TextStyle(
-                                  fontFamily: 'Roboto',
+                                  fontFamily: 'Quicksand',
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: t.status.color),
@@ -1649,7 +1649,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                     Text(
                       '${t.channelLabel}  ·  ${_dateLabel(t.submittedAt)}',
                       style: TextStyle(
-                          fontFamily: 'Roboto',
+                          fontFamily: 'Quicksand',
                           fontSize: 11,
                           color: AppColors.textSecondary),
                     ),
@@ -1667,7 +1667,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             const SizedBox(width: 4),
             Text(t.topupCode,
                 style: TextStyle(
-                    fontFamily: 'Roboto',
+                    fontFamily: 'Quicksand',
                     fontSize: 11,
                     color: AppColors.textSecondary,
                     letterSpacing: 0.5)),
@@ -1683,7 +1683,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                 ),
                 child: Text(tr('agent.instant'),
                     style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: 'Quicksand',
                         fontSize: 9,
                         color: AppColors.info,
                         fontWeight: FontWeight.w600)),
@@ -1726,7 +1726,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
               Expanded(
                   child: Text(t.rejectionReason!,
                       style: const TextStyle(
-                          fontFamily: 'Roboto',
+                          fontFamily: 'Quicksand',
                           fontSize: 11,
                           color: AppColors.error,
                           height: 1.4))),
@@ -1740,7 +1740,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
   Widget _miniStat(String label, String value, Color color) => Column(children: [
     Text(value,
         style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: 11,
             fontWeight: FontWeight.w700,
             color: color),
@@ -1748,7 +1748,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         overflow: TextOverflow.ellipsis),
     Text(label,
         style: TextStyle(
-            fontFamily: 'Roboto',
+            fontFamily: 'Quicksand',
             fontSize: 9,
             color: AppColors.textSecondary)),
   ]);
@@ -1759,12 +1759,12 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(
-            fontFamily: 'Roboto',
+            fontFamily: 'Quicksand',
             fontSize: 13,
             color: AppColors.textSecondary),
         suffixText: suffix,
         suffixStyle: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'LeagueSpartan',
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: AppColors.textSecondary),

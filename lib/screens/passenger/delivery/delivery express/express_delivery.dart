@@ -318,10 +318,10 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20)),
         title: Text(tr('delivery.cancelQ'),
-            style: TextStyle(fontFamily: 'Poppins',
+            style: TextStyle(fontFamily: 'LeagueSpartan',
                 fontWeight: FontWeight.w700)),
         content: Text(tr('delivery.areYouSure'),
-            style: TextStyle(fontFamily: 'Roboto', fontSize: 14)),
+            style: TextStyle(fontFamily: 'Quicksand', fontSize: 14)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -429,7 +429,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                           widget.delivery['deliveryCode'] as String?
                               ?? 'Express',
                           style: const TextStyle(
-                              fontFamily:  'Poppins',
+                              fontFamily:  'LeagueSpartan',
                               fontSize:    13,
                               fontWeight:  FontWeight.w700,
                               color:       Colors.white)),
@@ -488,7 +488,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                   Expanded(
                     child: Text(stageInfo.$2,
                         style: const TextStyle(
-                            fontFamily:  'Poppins',
+                            fontFamily:  'LeagueSpartan',
                             fontSize:    16,
                             fontWeight:  FontWeight.w800)),
                   ),
@@ -501,7 +501,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                           borderRadius: BorderRadius.circular(20)),
                       child: Text(tr('delivery.delivered'),
                           style: TextStyle(
-                              fontFamily:  'Poppins',
+                              fontFamily:  'LeagueSpartan',
                               fontSize:    12,
                               fontWeight:  FontWeight.w700,
                               color:       AppColors.success)),
@@ -515,7 +515,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                 Row(children: [
                   Text('${widget.delivery['totalPrice']} XAF',
                       style: const TextStyle(
-                          fontFamily:  'Poppins',
+                          fontFamily:  'LeagueSpartan',
                           fontSize:    18,
                           fontWeight:  FontWeight.w800,
                           color:       AppColors.primaryGold)),
@@ -527,7 +527,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                         onPressed: _cancelDelivery,
                         child: Text(tr('common.cancel'),
                             style: TextStyle(
-                                fontFamily: 'Roboto',
+                                fontFamily: 'Quicksand',
                                 fontSize:   13,
                                 color:      AppColors.error))),
                 ]),
@@ -554,7 +554,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
       const SizedBox(width: 10),
       Expanded(
         child: Text(_driver!['name'] as String? ?? 'Driver',
-            style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
+            style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                 fontWeight: FontWeight.w600)),
       ),
       if (_driver!['rating'] != null) ...[
@@ -562,7 +562,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
             color: AppColors.primaryGold, size: 14),
         const SizedBox(width: 3),
         Text(_driver!['rating'].toString(),
-            style: const TextStyle(fontFamily: 'Roboto', fontSize: 12,
+            style: const TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                 fontWeight: FontWeight.w600)),
       ],
       const SizedBox(width: 10),
@@ -587,7 +587,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('TO',
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 10,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color:      AppColors.textSecondary)),
             const SizedBox(height: 2),
@@ -595,7 +595,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                 widget.delivery['dropoffAddress'] as String? ?? '—',
                 maxLines:  1,
                 overflow:  TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Roboto', fontSize: 13,
+                style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                     fontWeight: FontWeight.w500)),
           ],
         ),
@@ -621,7 +621,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
               ),
               const SizedBox(height: 24),
               Text(tr('delivery.cancelled'),
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 22,
+                  style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 22,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
               Text(_cancelReason ?? tr('del.cancelledMsg'),
@@ -641,7 +641,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14))),
                   child: Text(tr('delivery.backHome'),
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 15,
+                      style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 15,
                           fontWeight: FontWeight.w700)),
                 ),
               ),

@@ -44,7 +44,7 @@ const Color _kShadow        = Color(0x1A000000);
 const Color _kTextSecondary = Color(0xFF6B7280);
 
 const LinearGradient _kGoldGradient = LinearGradient(
-  colors: [AppColors.primaryGold, Color(0xFFFFD000)],
+  colors: [AppColors.primaryGold, Color(0xFFF5C844)],
   begin:  Alignment.topLeft,
   end:    Alignment.bottomRight,
 );

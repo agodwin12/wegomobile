@@ -128,9 +128,9 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(tr('delivery.cancelQ'),
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+            style: TextStyle(fontFamily: 'LeagueSpartan', fontWeight: FontWeight.w700)),
         content: Text(tr('delivery.cancelConfirm'),
-            style: TextStyle(fontFamily: 'Roboto', fontSize: 14)),
+            style: TextStyle(fontFamily: 'Quicksand', fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -177,10 +177,10 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(tr('delivery.tracking'),
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 16,
+                style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 16,
                     fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             Text(widget.delivery['deliveryCode'] as String? ?? '',
-                style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                     color: AppColors.textSecondary)),
           ],
         ),
@@ -238,7 +238,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15,
+                    style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 15,
                         fontWeight: FontWeight.w700, color: Colors.white)),
                 if (rating != null)
                   Row(children: [
@@ -246,7 +246,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
                         color: AppColors.primaryGold, size: 14),
                     const SizedBox(width: 3),
                     Text(rating.toString(),
-                        style: const TextStyle(fontFamily: 'Roboto', fontSize: 12,
+                        style: const TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                             color: AppColors.primaryGold,
                             fontWeight: FontWeight.w500)),
                   ]),
@@ -291,7 +291,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(tr('delivery.progress'),
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
+              style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           ...List.generate(_stages.length, (i) => _buildStageRow(i)),
@@ -355,14 +355,14 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
                 const SizedBox(height: 6),
                 Text(stage.$3,
                     style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13,
+                      fontFamily: 'LeagueSpartan', fontSize: 13,
                       fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                       color: isUpcoming ? AppColors.textLight : AppColors.textPrimary,
                     )),
                 if (isActive) ...[
                   const SizedBox(height: 3),
                   Text(stage.$4,
-                      style: TextStyle(fontFamily: 'Roboto', fontSize: 11,
+                      style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                           color: AppColors.textSecondary)),
                 ],
               ],
@@ -405,11 +405,11 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
         SizedBox(
           width: 80,
           child: Text(label, style: TextStyle(
-              fontFamily: 'Roboto', fontSize: 12, color: AppColors.textSecondary)),
+              fontFamily: 'Quicksand', fontSize: 12, color: AppColors.textSecondary)),
         ),
         Expanded(
           child: Text(value, style: TextStyle(
-              fontFamily: 'Roboto', fontSize: 12, fontWeight: FontWeight.w600,
+              fontFamily: 'Quicksand', fontSize: 12, fontWeight: FontWeight.w600,
               color: AppColors.textPrimary)),
         ),
       ],
@@ -444,7 +444,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         child: Text(tr('delivery.cancelBtn'),
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14,
+            style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                 fontWeight: FontWeight.w600)),
       ),
     );
@@ -470,7 +470,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
               ),
               const SizedBox(height: 24),
               Text(tr('delivery.cancelled'),
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 22,
+                  style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 22,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
               Text(
@@ -490,7 +490,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14))),
                   child: Text(tr('delivery.backHome'),
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 15,
+                      style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 15,
                           fontWeight: FontWeight.w700)),
                 ),
               ),
