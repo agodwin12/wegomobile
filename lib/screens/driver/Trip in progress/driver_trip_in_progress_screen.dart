@@ -28,6 +28,7 @@ import 'package:wego_v1/utils/map_style.dart';
 import 'package:wego_v1/widgets/map_style_button.dart';
 import '../../../service/chat_service.dart';
 import '../../../service/socket_service.dart';
+import '../../../service/safety_service.dart';
 import '../../chat/trip_chat_screen.dart';
 import '../trip complete/trip_complete.dart';
 
@@ -723,6 +724,25 @@ class _DriverTripInProgressScreenState
     );
   }
 
+  // Real SOS: records the alert with live location (server notifies the
+  // passenger + ops) and dials the local emergency number. Best-effort — the
+  // dial happens even if the network is down.
+  Future<void> _triggerSos() async {
+    _showSnackBar('Alerte de sécurité en cours…', isError: false);
+    final r = await SafetyService.raiseSos(widget.tripId);
+    if (!mounted) return;
+    if (r.dialled) {
+      _showSnackBar('Appel des secours (${r.emergencyNumber}) en cours…', isError: false);
+    } else {
+      _showSnackBar(
+        r.alertSent
+            ? 'Alerte enregistrée. Appelez le ${r.emergencyNumber}.'
+            : 'Appelez immédiatement le ${r.emergencyNumber}.',
+        isError: true,
+      );
+    }
+  }
+
   void _showEmergencyDialog() {
     showDialog(
       context: context,
@@ -752,8 +772,7 @@ class _DriverTripInProgressScreenState
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _showSnackBar('Emergency services notified',
-                  isError: false);
+              _triggerSos();
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error),

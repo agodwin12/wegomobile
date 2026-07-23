@@ -733,6 +733,9 @@ const Map<String, String> _fr = {
   'trip.resumeInProgress': 'Course en cours',
   'trip.resumeWith': 'avec {name}',
 
+  'trip.share': 'Partager le trajet',
+  'trip.sos': 'SOS',
+
 };
 
 const Map<String, String> _en = {
@@ -1464,5 +1467,8 @@ const Map<String, String> _en = {
   'trip.resumeArrived': 'Your driver has arrived',
   'trip.resumeInProgress': 'Trip in progress',
   'trip.resumeWith': 'with {name}',
+
+  'trip.share': 'Share trip',
+  'trip.sos': 'SOS',
 
 };

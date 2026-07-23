@@ -22,6 +22,7 @@ import '../../../utils/map_style.dart';
 import '../../../widgets/map_style_button.dart';
 import '../../chat/trip_chat_screen.dart';
 import 'trip_completed_screen.dart';
+import '../../../service/safety_service.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const _kSheetMinFrac = 0.14;
@@ -413,6 +414,32 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
     )));
   }
 
+  // Real SOS during the ride: records the alert with live location (server
+  // notifies the driver + ops) and dials the local emergency number.
+  Future<void> _triggerSos() async {
+    _snack('Alerte de sécurité en cours…');
+    final r = await SafetyService.raiseSos(widget.tripId);
+    if (!mounted) return;
+    if (r.dialled) {
+      _snack('Appel des secours (${r.emergencyNumber})…');
+    } else {
+      _snack(
+        r.alertSent
+            ? 'Alerte enregistrée. Appelez le ${r.emergencyNumber}.'
+            : 'Appelez immédiatement le ${r.emergencyNumber}.',
+        isError: true,
+      );
+    }
+  }
+
+  // Share a live tracking link (copied + SMS composer).
+  Future<void> _shareTrip() async {
+    final url = await SafetyService.shareTrip(widget.tripId);
+    if (!mounted) return;
+    _snack(url != null ? 'Lien de suivi copié et prêt à partager.' : 'Partage indisponible.',
+        isError: url == null);
+  }
+
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -609,6 +636,38 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
                             ]),
                             const SizedBox(height: 16),
                             _VehicleStrip(vehicleInfo: _vehicleInfo),
+                            const SizedBox(height: 16),
+                            // Safety row — Uber-standard: share the live trip
+                            // and an emergency SOS during the ride.
+                            Row(children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _shareTrip,
+                                  icon: const Icon(Icons.ios_share_rounded, size: 18),
+                                  label: Text(tr('trip.share')),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.darkTextPrimary,
+                                    side: const BorderSide(color: AppColors.darkBorder),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _triggerSos,
+                                  icon: const Icon(Icons.sos_rounded, size: 18),
+                                  label: Text(tr('trip.sos')),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.error,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                ),
+                              ),
+                            ]),
                             const SizedBox(height: 20),
                             _RouteTimeline(pickup: widget.pickupAddress, dropoff: widget.dropoffAddress),
                           ],
