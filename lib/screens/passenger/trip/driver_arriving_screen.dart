@@ -88,6 +88,9 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
   bool   _driverHasArrived   = false;
   String _eta      = '--';
   double _distance = 0.0;
+  // True once we have a real road-network ETA from the directions API. While
+  // set, the straight-line fallback in _calcDistETA does not overwrite it.
+  bool   _hasRouteEta = false;
 
   int    _freeCancelSecondsLeft = _kFreeCancelSeconds;
   Timer? _freeCancelTimer;
@@ -244,9 +247,16 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
         final data   = json.decode(res.body);
         final routes = data['routes'] as List? ?? [];
         if (routes.isNotEmpty) {
-          final points = _decodePolyline(routes[0]['geometry'] as String);
+          final route  = routes[0] as Map<String, dynamic>;
+          final points = _decodePolyline(route['geometry'] as String);
           _lastPolylineOrigin = _animatedDriverLocation;
           _applyPolyline(points);
+          // Real road ETA/distance from the directions API — not a straight
+          // line at an assumed speed.
+          _setRouteEta(
+            (route['duration'] as num?)?.toDouble(),
+            (route['distance'] as num?)?.toDouble(),
+          );
           return;
         }
       }
@@ -256,8 +266,24 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
     _drawStraightLine();
   }
 
+  // Set ETA + distance from a real driving route (seconds / metres).
+  void _setRouteEta(double? seconds, double? meters) {
+    if (!mounted) return;
+    setState(() {
+      if (meters != null) _distance = meters / 1000.0;
+      if (seconds != null) {
+        _hasRouteEta = true;
+        final mins = (seconds / 60).ceil();
+        _eta = seconds < 30 ? 'Arrive' : (mins < 1 ? '< 1 min' : '$mins min');
+      }
+    });
+  }
+
   void _drawStraightLine() {
     if (_animatedDriverLocation == null || !mounted) return;
+    // No route available — fall back to the straight-line estimate.
+    _hasRouteEta = false;
+    _calcDistETA();
     _applyPolyline([_animatedDriverLocation!, widget.pickupLocation]);
   }
 
@@ -377,10 +403,14 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
 
   void _calcDistETA() {
     if (_animatedDriverLocation == null) return;
+    // A real road ETA from the directions API wins; don't overwrite it with the
+    // straight-line estimate on every location tick.
+    if (_hasRouteEta) return;
     final d = _haversineKm(_animatedDriverLocation!.latitude, _animatedDriverLocation!.longitude, widget.pickupLocation.latitude, widget.pickupLocation.longitude);
     if (mounted) setState(() {
       _distance = d;
-      final mins = (d / 30.0 * 60).ceil();
+      // Straight-line fallback only (no route). ~25 km/h city average.
+      final mins = (d / 25.0 * 60).ceil();
       _eta = d < 0.05 ? 'Arrive' : (mins < 1 ? '< 1 min' : '$mins min');
     });
   }
