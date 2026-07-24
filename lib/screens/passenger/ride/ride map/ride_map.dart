@@ -20,6 +20,7 @@ import '../../../../utils/map_style.dart';
 import '../../../../widgets/map_style_button.dart';
 import '../../../../utils/app_colors.dart';
 import '../../../../utils/app_typography.dart';
+import '../../../../l10n/tr.dart';
 import '../../trip/active_trip_resume.dart';
 import '../../trip/searching_driver_screen.dart';
 // ride_payment_screen removed — rides are paid directly to the driver (P2P).
@@ -256,7 +257,7 @@ class _RideMapScreenState extends State<RideMapScreen>
       await _resumeActiveTripIfAny();
     } catch (e) {
       debugPrint('❌ [RIDE_MAP] Init error: $e');
-      _snack('Certaines fonctionnalités peuvent être limitées', isError: true);
+      _snack(tr('ride.limitedFeatures'), isError: true);
     }
   }
 
@@ -352,7 +353,7 @@ class _RideMapScreenState extends State<RideMapScreen>
     try {
       final key = dotenv.env['LOCATIONIQ_KEY'] ?? '';
       if (key.isEmpty) {
-        if (mounted) setState(() => _pickupCtrl.text = 'Position actuelle');
+        if (mounted) setState(() => _pickupCtrl.text = tr('ride.currentLocation'));
         return;
       }
       // LocationIQ reverse (OSM) — accurate Cameroon addresses.
@@ -371,11 +372,11 @@ class _RideMapScreenState extends State<RideMapScreen>
         final display = name.isNotEmpty
             ? name
             : (data['display_name']?.toString().split(',').take(2).join(',') ?? '');
-        if (mounted) setState(() => _pickupCtrl.text = display.isNotEmpty ? display : 'Position actuelle');
+        if (mounted) setState(() => _pickupCtrl.text = display.isNotEmpty ? display : tr('ride.currentLocation'));
         return;
       }
     } catch (_) {}
-    if (mounted) setState(() => _pickupCtrl.text = 'Position actuelle');
+    if (mounted) setState(() => _pickupCtrl.text = tr('ride.currentLocation'));
   }
 
   void _fallbackToDouala() {
@@ -547,11 +548,11 @@ class _RideMapScreenState extends State<RideMapScreen>
           _selectedVehicle = _vehicleTypes.firstWhere((v) => v.fareEstimate != null, orElse: () => _vehicleTypes[0]);
         });
       } else {
-        _snack('Impossible de charger les tarifs. Réessayez.', isError: true);
+        _snack(tr('ride.faresLoadFailed'), isError: true);
       }
     } catch (e) {
       debugPrint('❌ [RIDE_MAP] Price fetch: $e');
-      _snack('Impossible de charger les tarifs. Réessayez.', isError: true);
+      _snack(tr('ride.faresLoadFailed'), isError: true);
     } finally {
       if (mounted) setState(() => _loadingPrices = false);
     }
@@ -640,9 +641,9 @@ class _RideMapScreenState extends State<RideMapScreen>
 
   Future<void> _applyPromoCode() async {
     final code = _promoCtrl.text.trim().toUpperCase();
-    if (code.isEmpty) { setState(() => _promoError = 'Entrez d\'abord un code promo'); return; }
+    if (code.isEmpty) { setState(() => _promoError = tr('ride.enterPromoFirst')); return; }
     if (_accessToken == null) return;
-    if (_selectedVehicle?.fareEstimate == null) { setState(() => _promoError = 'Sélectionnez d\'abord un véhicule'); return; }
+    if (_selectedVehicle?.fareEstimate == null) { setState(() => _promoError = tr('ride.selectVehicleFirst')); return; }
 
     setState(() { _promoLoading = true; _promoError = null; });
     try {
@@ -658,7 +659,7 @@ class _RideMapScreenState extends State<RideMapScreen>
         });
         HapticFeedback.lightImpact();
       } else {
-        setState(() { _promoError = response['message'] ?? 'Code promo invalide'; _promoLoading = false; });
+        setState(() { _promoError = response['message'] ?? tr('ride.invalidPromo'); _promoLoading = false; });
       }
     } catch (e) {
       setState(() { _promoError = e.toString().replaceFirst('Exception: ', ''); _promoLoading = false; });
@@ -749,19 +750,19 @@ class _RideMapScreenState extends State<RideMapScreen>
   Future<void> _removeFavorite(int index) async {
     setState(() => _favoritePlaces.removeAt(index));
     await _saveFavoritePlaces();
-    _snack('Retiré des favoris');
+    _snack(tr('ride.removedFromFavorites'));
   }
 
   void _showAddToFavoritesOption(String name, String address) {
     final already = _favoritePlaces.any((f) => f.name.toLowerCase() == name.toLowerCase() || f.address.toLowerCase() == address.toLowerCase());
     if (!already) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Ajouter « $name » aux favoris ?', style: const TextStyle(color: AppColors.darkTextPrimary)),
+        content: Text(tr('ride.addNamedToFavorites', {'name': name}), style: const TextStyle(color: AppColors.darkTextPrimary)),
         backgroundColor: AppColors.darkSurfaceAlt,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 4),
-        action: SnackBarAction(label: 'Ajouter', textColor: AppColors.primaryGold, onPressed: () => _showAddFavoriteDialog(name, address)),
+        action: SnackBarAction(label: tr('common.add'), textColor: AppColors.primaryGold, onPressed: () => _showAddFavoriteDialog(name, address)),
       ));
     }
   }
@@ -781,11 +782,11 @@ class _RideMapScreenState extends State<RideMapScreen>
   // ═════════════════════════════════════════════════════════════════════════
 
   Future<void> _requestRide() async {
-    if (_pickup == null || _dropoff == null || _selectedVehicle == null) { _snack('Veuillez compléter les détails de la réservation', isError: true); return; }
-    if (_accessToken == null || _accessToken!.isEmpty) { _snack('Session expirée. Veuillez vous reconnecter.', isError: true); Navigator.pushReplacementNamed(context, '/login'); return; }
+    if (_pickup == null || _dropoff == null || _selectedVehicle == null) { _snack(tr('ride.completeBookingDetails'), isError: true); return; }
+    if (_accessToken == null || _accessToken!.isEmpty) { _snack(tr('auth.sessionExpired'), isError: true); Navigator.pushReplacementNamed(context, '/login'); return; }
     if (!_socketService.isConnected) {
       await _connectSocket();
-      if (!_socketService.isConnected) { _snack('Erreur de connexion. Réessayez.', isError: true); return; }
+      if (!_socketService.isConnected) { _snack(tr('common.connectionError'), isError: true); return; }
     }
 
     setState(() => _requesting = true);
@@ -805,7 +806,7 @@ class _RideMapScreenState extends State<RideMapScreen>
 
       if (!mounted) return;
       final tripData = response['data']?['trip'];
-      if (tripData == null) throw Exception('Réponse invalide du serveur');
+      if (tripData == null) throw Exception(tr('common.invalidServerResponse'));
 
       Provider.of<TripProvider>(context, listen: false).setCurrentTrip(tripData);
 
@@ -824,7 +825,7 @@ class _RideMapScreenState extends State<RideMapScreen>
       final lower = msg.toLowerCase();
       _snack(msg, isError: true, isWarning: lower.contains('no driver') || lower.contains('chauffeur'));
     } catch (_) {
-      _snack('Une erreur inattendue s\'est produite', isError: true);
+      _snack(tr('common.unexpectedError'), isError: true);
     } finally {
       if (mounted) setState(() => _requesting = false);
     }
@@ -848,19 +849,19 @@ class _RideMapScreenState extends State<RideMapScreen>
 
   void _showLocationServiceSnack() {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Services de localisation désactivés', style: TextStyle(color: AppColors.darkTextPrimary)),
+      content: Text(tr('ride.locationDisabled'), style: const TextStyle(color: AppColors.darkTextPrimary)),
       backgroundColor: AppColors.darkSurfaceAlt,
       behavior: SnackBarBehavior.floating,
-      action: SnackBarAction(label: 'Activer', textColor: AppColors.primaryGold, onPressed: Geolocator.openLocationSettings),
+      action: SnackBarAction(label: tr('common.enable'), textColor: AppColors.primaryGold, onPressed: Geolocator.openLocationSettings),
     ));
   }
 
   void _showLocationPermissionSnack() {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Autorisation de localisation requise', style: TextStyle(color: AppColors.darkTextPrimary)),
+      content: Text(tr('ride.locationPermissionRequired'), style: const TextStyle(color: AppColors.darkTextPrimary)),
       backgroundColor: AppColors.darkSurfaceAlt,
       behavior: SnackBarBehavior.floating,
-      action: SnackBarAction(label: 'Paramètres', textColor: AppColors.primaryGold, onPressed: Geolocator.openAppSettings),
+      action: SnackBarAction(label: tr('profile.settings'), textColor: AppColors.primaryGold, onPressed: Geolocator.openAppSettings),
     ));
   }
 
@@ -1002,14 +1003,14 @@ class _RideMapScreenState extends State<RideMapScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Planifiez votre course', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary)),
+          Text(tr('ride.planYourRide'), style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary)),
           const SizedBox(height: 20),
           Row(
             children: [
               Expanded(child: Column(children: [
-                _CompactInput(controller: _pickupCtrl, focusNode: _pickupFocus, hint: 'Point de départ', icon: Icons.my_location_rounded, iconColor: const Color(0xFF4C8DFF), onChanged: (q) => _onQueryChanged(q, forPickup: true)),
+                _CompactInput(controller: _pickupCtrl, focusNode: _pickupFocus, hint: tr('trip.pickupPoint'), icon: Icons.my_location_rounded, iconColor: const Color(0xFF4C8DFF), onChanged: (q) => _onQueryChanged(q, forPickup: true)),
                 const SizedBox(height: 8),
-                _CompactInput(controller: _destCtrl, focusNode: _destFocus, hint: 'Où allez-vous ?', icon: Icons.location_on_rounded, iconColor: AppColors.error, onChanged: (q) => _onQueryChanged(q, forPickup: false)),
+                _CompactInput(controller: _destCtrl, focusNode: _destFocus, hint: tr('ride.whereTo'), icon: Icons.location_on_rounded, iconColor: AppColors.error, onChanged: (q) => _onQueryChanged(q, forPickup: false)),
               ])),
               const SizedBox(width: 10),
               GestureDetector(onTap: _swapLocations, child: Container(
@@ -1022,11 +1023,11 @@ class _RideMapScreenState extends State<RideMapScreen>
           const SizedBox(height: 24),
           if (_favoritePlaces.isNotEmpty) ...[
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Lieux favoris', style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
+              Text(tr('ride.favoritePlaces'), style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
               TextButton.icon(
                 onPressed: _showManageFavoritesDialog,
                 icon: const Icon(Icons.edit_outlined, size: 14, color: AppColors.darkTextTertiary),
-                label: Text('Gérer', style: AppTypography.caption.copyWith(color: AppColors.darkTextTertiary)),
+                label: Text(tr('common.manage'), style: AppTypography.caption.copyWith(color: AppColors.darkTextTertiary)),
                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
               ),
             ]),
@@ -1050,9 +1051,9 @@ class _RideMapScreenState extends State<RideMapScreen>
       child: Column(children: [
         Icon(Icons.star_border_rounded, size: 42, color: AppColors.darkTextTertiary),
         const SizedBox(height: 10),
-        Text('Aucun lieu favori', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)),
+        Text(tr('ride.noFavorites'), style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)),
         const SizedBox(height: 6),
-        Text('Ajoutez vos destinations fréquentes pour un accès rapide', textAlign: TextAlign.center, style: AppTypography.bodySmall.copyWith(color: AppColors.darkTextSecondary)),
+        Text(tr('ride.noFavoritesHint'), textAlign: TextAlign.center, style: AppTypography.bodySmall.copyWith(color: AppColors.darkTextSecondary)),
       ]),
     );
   }
@@ -1099,9 +1100,9 @@ class _RideMapScreenState extends State<RideMapScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Où allez-vous ?', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary)),
+          Text(tr('ride.whereTo'), style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary)),
           const SizedBox(height: 20),
-          _FullInput(controller: _pickupCtrl, focusNode: _pickupFocus, label: 'Départ', icon: Icons.my_location_rounded, iconColor: const Color(0xFF4C8DFF), onChanged: (q) => _onQueryChanged(q, forPickup: true)),
+          _FullInput(controller: _pickupCtrl, focusNode: _pickupFocus, label: tr('ride.pickup'), icon: Icons.my_location_rounded, iconColor: const Color(0xFF4C8DFF), onChanged: (q) => _onQueryChanged(q, forPickup: true)),
           const SizedBox(height: 6),
           Row(children: [
             const SizedBox(width: 20),
@@ -1114,12 +1115,12 @@ class _RideMapScreenState extends State<RideMapScreen>
             const SizedBox(width: 20),
           ]),
           const SizedBox(height: 6),
-          _FullInput(controller: _destCtrl, focusNode: _destFocus, label: 'Destination', icon: Icons.location_on_rounded, iconColor: AppColors.error, onChanged: (q) => _onQueryChanged(q, forPickup: false)),
+          _FullInput(controller: _destCtrl, focusNode: _destFocus, label: tr('ride.destination'), icon: Icons.location_on_rounded, iconColor: AppColors.error, onChanged: (q) => _onQueryChanged(q, forPickup: false)),
           if (_searching)
             Padding(padding: const EdgeInsets.all(24), child: Center(child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGold))))
           else if (_suggestions.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Text('Suggestions', style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
+            Text(tr('ride.suggestions'), style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
             const SizedBox(height: 8),
             ..._suggestions.map(_buildSuggestionTile),
           ],
@@ -1152,7 +1153,7 @@ class _RideMapScreenState extends State<RideMapScreen>
           Row(children: [
             GestureDetector(onTap: _backToLocation, child: Container(width: 38, height: 38, decoration: BoxDecoration(color: AppColors.darkSurfaceAlt, borderRadius: BorderRadius.circular(11), border: Border.all(color: AppColors.darkBorder)), child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.darkTextPrimary))),
             const SizedBox(width: 12),
-            Expanded(child: Text('Choisissez une course', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary))),
+            Expanded(child: Text(tr('ride.chooseRide'), style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w900, color: AppColors.darkTextPrimary))),
           ]),
           const SizedBox(height: 16),
           if (_pickup != null && _dropoff != null)
@@ -1162,7 +1163,7 @@ class _RideMapScreenState extends State<RideMapScreen>
           const SizedBox(height: 8),
           Divider(height: 1, color: AppColors.darkDivider),
           const SizedBox(height: 16),
-          Text('Mode de paiement', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
+          Text(tr('ride.paymentMethod'), style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
           const SizedBox(height: 10),
           _buildPaymentCards(),
           const SizedBox(height: 16),
@@ -1183,7 +1184,7 @@ class _RideMapScreenState extends State<RideMapScreen>
                   : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Icon(Icons.local_taxi_rounded, color: AppColors.textPrimary, size: 20),
                 const SizedBox(width: 10),
-                Text('Commander', style: AppTypography.buttonLarge.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w800)),
+                Text(tr('ride.order'), style: AppTypography.buttonLarge.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w800)),
               ]),
             ),
           ),
@@ -1207,7 +1208,7 @@ class _RideMapScreenState extends State<RideMapScreen>
             ),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Vous avez un code promo ?', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
+              Text(tr('ride.havePromo'), style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary)),
               if (_promoApplied && _promoLabel != null)
                 Text('$_promoLabel appliqué', style: AppTypography.caption.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
             ])),
@@ -1248,7 +1249,7 @@ class _RideMapScreenState extends State<RideMapScreen>
                     style: ElevatedButton.styleFrom(backgroundColor: _promoApplied ? AppColors.darkSurfaceHigh : AppColors.primaryGold, disabledBackgroundColor: AppColors.darkSurfaceHigh, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 16)),
                     child: _promoLoading
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGold)))
-                        : Text(_promoApplied ? 'Retirer' : 'Appliquer', style: TextStyle(color: _promoApplied ? AppColors.darkTextPrimary : AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+                        : Text(_promoApplied ? tr('common.remove') : tr('common.apply'), style: TextStyle(color: _promoApplied ? AppColors.darkTextPrimary : AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
                   ),
                 ),
               ]),
@@ -1268,7 +1269,7 @@ class _RideMapScreenState extends State<RideMapScreen>
                   child: Row(children: [
                     Icon(Icons.celebration_outlined, size: 16, color: AppColors.success),
                     const SizedBox(width: 8),
-                    Expanded(child: Text('Vous économisez ${_promoDiscount!.toInt()} XAF sur cette course !', style: AppTypography.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.w600))),
+                    Expanded(child: Text(tr('ride.youSave', {'n': _promoDiscount!.toInt().toString()}), style: AppTypography.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.w600))),
                   ]),
                 ),
               ],
@@ -1321,7 +1322,7 @@ class _RideMapScreenState extends State<RideMapScreen>
           )),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Text(vehicle.name, style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w800, color: hasPrice ? AppColors.darkTextPrimary : AppColors.darkTextTertiary), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(tr('ride.tier_${vehicle.id}'), style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w800, color: hasPrice ? AppColors.darkTextPrimary : AppColors.darkTextTertiary), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 3),
             Row(children: [
               Icon(Icons.access_time_rounded, size: 11, color: AppColors.darkTextTertiary), const SizedBox(width: 3),
@@ -1347,8 +1348,8 @@ class _RideMapScreenState extends State<RideMapScreen>
                     Flexible(
                       child: Text(
                         vehicle.surgeMultiplier != null
-                            ? 'Tarif majoré ×${vehicle.surgeMultiplier!.toStringAsFixed(1)}${vehicle.surgeReason != null ? ' · ${vehicle.surgeReason}' : ''}'
-                            : 'Tarif majoré',
+                            ? tr('ride.surgeBadge', {'x': vehicle.surgeMultiplier!.toStringAsFixed(1)}) + (vehicle.surgeReason != null ? ' · ${vehicle.surgeReason}' : '')
+                            : tr('ride.surgeFare'),
                         style: AppTypography.caption.copyWith(color: AppColors.warning, fontWeight: FontWeight.w700),
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                       ),
@@ -1373,9 +1374,9 @@ class _RideMapScreenState extends State<RideMapScreen>
 
   Widget _buildPaymentCards() {
     final methods = [
-      _PaymentMethod(value: 'cash', label: 'Espèces', subtitle: 'En personne', icon: Icons.payments_outlined, iconColor: AppColors.success),
-      _PaymentMethod(value: 'om',   label: 'Orange Money', subtitle: 'Paiement mobile', assetImage: 'assets/images/om.png', iconColor: Colors.orange),
-      _PaymentMethod(value: 'momo', label: 'MTN MoMo', subtitle: 'Paiement mobile', assetImage: 'assets/images/momo.png', iconColor: AppColors.primaryGold),
+      _PaymentMethod(value: 'cash', label: tr('payment.cash'), subtitle: tr('payment.inPerson'), icon: Icons.payments_outlined, iconColor: AppColors.success),
+      _PaymentMethod(value: 'om',   label: 'Orange Money', subtitle: tr('payment.mobile'), assetImage: 'assets/images/om.png', iconColor: Colors.orange),
+      _PaymentMethod(value: 'momo', label: 'MTN MoMo', subtitle: tr('payment.mobile'), assetImage: 'assets/images/momo.png', iconColor: AppColors.primaryGold),
     ];
 
     return Row(children: methods.map((m) {
@@ -1414,20 +1415,20 @@ class _RideMapScreenState extends State<RideMapScreen>
     showDialog(context: context, builder: (_) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
       backgroundColor: AppColors.darkSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text('Ajouter aux favoris', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
+      title: Text(tr('ride.addToFavorites'), style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
       content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         TextField(
           controller: nameCtrl,
           style: const TextStyle(color: AppColors.darkTextPrimary),
           decoration: InputDecoration(
-            labelText: 'Nom du lieu',
+            labelText: tr('ride.placeName'),
             labelStyle: const TextStyle(color: AppColors.darkTextSecondary),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.darkBorder)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryGold)),
           ),
         ),
         const SizedBox(height: 16),
-        Text('Choisissez une icône', style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)),
+        Text(tr('ride.chooseIcon'), style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)),
         const SizedBox(height: 12),
         Wrap(spacing: 10, runSpacing: 10, children: [Icons.home, Icons.work, Icons.local_movies, Icons.local_cafe, Icons.shopping_cart, Icons.restaurant, Icons.local_hospital, Icons.school, Icons.location_on].map((icon) => GestureDetector(
           onTap: () => setS(() => selectedIcon = icon),
@@ -1435,16 +1436,16 @@ class _RideMapScreenState extends State<RideMapScreen>
         )).toList()),
       ]),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Annuler', style: AppTypography.bodyLarge.copyWith(color: AppColors.darkTextSecondary))),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('common.cancel'), style: AppTypography.bodyLarge.copyWith(color: AppColors.darkTextSecondary))),
         ElevatedButton(
           onPressed: () async {
             setState(() { _favoritePlaces.add(FavoritePlace(name: nameCtrl.text.trim(), address: address, time: '', icon: selectedIcon)); });
             await _saveFavoritePlaces();
             Navigator.pop(ctx);
-            _snack('Ajouté aux favoris');
+            _snack(tr('ride.addedToFavorites'));
           },
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGold, foregroundColor: AppColors.textPrimary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-          child: const Text('Ajouter', style: TextStyle(fontWeight: FontWeight.w700)),
+          child: Text(tr('common.add'), style: const TextStyle(fontWeight: FontWeight.w700)),
         ),
       ],
     )));
@@ -1454,9 +1455,9 @@ class _RideMapScreenState extends State<RideMapScreen>
     showDialog(context: context, builder: (_) => AlertDialog(
       backgroundColor: AppColors.darkSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text('Gérer les favoris', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
+      title: Text(tr('ride.manageFavorites'), style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
       content: SizedBox(width: double.maxFinite, child: _favoritePlaces.isEmpty
-          ? Padding(padding: const EdgeInsets.all(24), child: Text('Aucun favori à gérer', textAlign: TextAlign.center, style: AppTypography.bodyMedium.copyWith(color: AppColors.darkTextSecondary)))
+          ? Padding(padding: const EdgeInsets.all(24), child: Text(tr('ride.noFavoritesToManage'), textAlign: TextAlign.center, style: AppTypography.bodyMedium.copyWith(color: AppColors.darkTextSecondary)))
           : ListView.builder(shrinkWrap: true, itemCount: _favoritePlaces.length, itemBuilder: (ctx, i) {
         final p = _favoritePlaces[i];
         return ListTile(
@@ -1466,7 +1467,7 @@ class _RideMapScreenState extends State<RideMapScreen>
           trailing: IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.error), onPressed: () { _removeFavorite(i); Navigator.pop(context); }),
         );
       })),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Fermer', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('common.close'), style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)))],
     ));
   }
 }
@@ -1665,9 +1666,9 @@ class _ReferralCard extends StatelessWidget {
         ),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Parrainez & gagnez', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+          Text(tr('ride.referEarn'), style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
           const SizedBox(height: 4),
-          Text('Invitez un ami ou un chauffeur et recevez 1 000 XAF de bonus pour chaque inscription !', style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary.withOpacity(0.85))),
+          Text(tr('ride.referEarnHint'), style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary.withOpacity(0.85))),
         ])),
       ]),
     );
@@ -1698,7 +1699,7 @@ class _TopSearchBar extends StatelessWidget {
         child: Row(children: [
           const Icon(Icons.search_rounded, color: AppColors.darkTextPrimary, size: 22),
           const SizedBox(width: 12),
-          Expanded(child: Text('Où allez-vous ?', style: AppTypography.bodyLarge.copyWith(color: AppColors.darkTextSecondary, fontWeight: FontWeight.w500))),
+          Expanded(child: Text(tr('ride.whereTo'), style: AppTypography.bodyLarge.copyWith(color: AppColors.darkTextSecondary, fontWeight: FontWeight.w500))),
           ClipOval(child: (avatarUrl != null && avatarUrl.isNotEmpty)
               ? CachedNetworkImage(imageUrl: avatarUrl, width: 38, height: 38, fit: BoxFit.cover, placeholder: (_, __) => _InitialCircle(initial: initial, size: 38), errorWidget: (_, __, ___) => _InitialCircle(initial: initial, size: 38))
               : _InitialCircle(initial: initial, size: 38)),
@@ -1811,21 +1812,21 @@ class _FareSummaryRow extends StatelessWidget {
       decoration: BoxDecoration(color: AppColors.primaryGold.withOpacity(0.08), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primaryGold.withOpacity(0.35))),
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('Tarif estimé', style: AppTypography.bodyMedium.copyWith(color: AppColors.darkTextSecondary)),
+          Text(tr('ride.estimatedFare'), style: AppTypography.bodyMedium.copyWith(color: AppColors.darkTextSecondary)),
           Text('${base.toInt()} XAF', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: discount != null ? AppColors.darkTextTertiary : AppColors.darkTextPrimary, decoration: discount != null ? TextDecoration.lineThrough : null)),
         ]),
         if (discount != null) ...[
           const SizedBox(height: 6),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Row(children: [
-              Text('Réduction promo', style: AppTypography.bodyMedium.copyWith(color: AppColors.success)),
+              Text(tr('ride.promoDiscount'), style: AppTypography.bodyMedium.copyWith(color: AppColors.success)),
               if (label != null) ...[const SizedBox(width: 6), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: AppColors.success.withOpacity(0.18), borderRadius: BorderRadius.circular(4)), child: Text(label!, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.success)))],
             ]),
             Text('-${discount!.toInt()} XAF', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.success)),
           ]),
           const SizedBox(height: 8), Divider(height: 1, color: AppColors.primaryGold.withOpacity(0.2)), const SizedBox(height: 8),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Total', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w800, color: AppColors.darkTextPrimary)),
+            Text(tr('common.total'), style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w800, color: AppColors.darkTextPrimary)),
             Text('${effective.toInt()} XAF', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.primaryGold)),
           ]),
         ],
