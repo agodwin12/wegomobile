@@ -25,11 +25,12 @@ const _kSheetMinFrac = 0.18;
 const _kSheetMidFrac = 0.48;
 const _kSheetMaxFrac = 0.85;
 
-const _kTips = [
-  'Cela prend généralement 1 à 2 minutes',
-  'Votre sécurité est notre priorité',
-  'Le chauffeur vous appellera si besoin',
-  'Annulation gratuite pendant la recherche',
+// i18n keys — resolved via tr() at render time so the language switcher works.
+const _kTipKeys = [
+  'trip.searchTip1',
+  'trip.searchTip2',
+  'trip.searchTip3',
+  'trip.searchTip4',
 ];
 
 class SearchingDriverScreen extends StatefulWidget {
@@ -163,7 +164,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
       if (!mounted) return;
       _tipFadeController.reverse().then((_) {
         if (mounted) {
-          setState(() => _tipIndex = (_tipIndex + 1) % _kTips.length);
+          setState(() => _tipIndex = (_tipIndex + 1) % _kTipKeys.length);
           _tipFadeController.forward();
         }
       });
@@ -302,14 +303,14 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.darkSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Annuler la recherche ?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
-        content: const Text('Êtes-vous sûr de vouloir annuler cette demande de course ?', style: TextStyle(fontSize: 15, color: AppColors.darkTextSecondary)),
+        title: Text(tr('trip.cancelSearchTitle'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
+        content: Text(tr('trip.cancelSearchBody'), style: const TextStyle(fontSize: 15, color: AppColors.darkTextSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Non', style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 16, fontWeight: FontWeight.w600))),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(tr('common.no'), style: const TextStyle(color: AppColors.darkTextSecondary, fontSize: 16, fontWeight: FontWeight.w600))),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
-            child: const Text('Oui, annuler', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+            child: Text(tr('trip.yesCancel'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
           ),
         ],
       ),
@@ -319,14 +320,14 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
       // Only leave the screen if the SERVER confirms the cancel — otherwise
       // the passenger would think they cancelled while a driver is still being
       // matched. On failure we stay put and surface the reason.
-      final ok = await provider.cancelTrip(widget.tripId, 'Annulée par le passager');
+      final ok = await provider.cancelTrip(widget.tripId, tr('trip.canceledByPassenger'));
       if (!mounted) return;
       if (ok) {
         Navigator.of(context).pop();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(provider.errorMessage ?? 'Impossible d\'annuler. Réessayez.'),
+            content: Text(provider.errorMessage ?? tr('trip.cancelFailed')),
             backgroundColor: AppColors.error,
           ),
         );
@@ -455,7 +456,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                                 children: [
                                   Icon(Icons.info_outline_rounded, size: 13, color: AppColors.darkTextTertiary),
                                   const SizedBox(width: 5),
-                                  Flexible(child: Text(_kTips[_tipIndex], textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.darkTextSecondary, fontWeight: FontWeight.w500))),
+                                  Flexible(child: Text(tr(_kTipKeys[_tipIndex]), textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.darkTextSecondary, fontWeight: FontWeight.w500))),
                                 ],
                               ),
                             ),
@@ -601,7 +602,7 @@ class _RadarSweepPainter extends CustomPainter {
 
 String _paymentLabel(String m) {
   switch (m.toLowerCase()) {
-    case 'cash': return 'Espèces';
+    case 'cash': return tr('payment.cash');
     case 'om':   return 'Orange Money';
     case 'momo': return 'MTN MoMo';
     default:     return m;
@@ -682,9 +683,9 @@ class _RouteCard extends StatelessWidget {
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AddrLine(label: 'Départ', address: pickup),
+              _AddrLine(label: tr('ride.pickup'), address: pickup),
               Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: AppColors.darkBorder)),
-              _AddrLine(label: 'Destination', address: dropoff),
+              _AddrLine(label: tr('ride.destination'), address: dropoff),
             ],
           )),
         ],
@@ -729,7 +730,7 @@ class _TimerPill extends StatelessWidget {
         children: [
           const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2.0, valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGold))),
           const SizedBox(width: 10),
-          Text('Recherche  $elapsed', style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+          Text('${tr('trip.searching')}  $elapsed', style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
         ],
       ),
     );
@@ -774,7 +775,7 @@ class _SearchingPromoBanner extends StatelessWidget {
         const Icon(Icons.bolt_rounded, color: Colors.black, size: 18),
         const SizedBox(width: 10),
         Expanded(child: Text(
-          '$vehicleType · Matching you with nearby drivers',
+          '$vehicleType · ${tr('trip.matchingNearby')}',
           style: const TextStyle(
             fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black,
           ),
@@ -796,7 +797,7 @@ class _CancelButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.darkBorder, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-        child: const Text('Annuler la course', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)),
+        child: Text(tr('ride.cancelRide'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary)),
       ),
     );
   }
