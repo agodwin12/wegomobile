@@ -504,7 +504,7 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
     final src = v ?? widget.driver;
     return {
       'plate':     _getField(src, ['plate', 'vehiclePlate', 'license_plate']) ?? 'N/A',
-      'makeModel': _getField(src, ['makeModel', 'vehicle_make_model', 'make_model']) ?? 'Vehicle',
+      'makeModel': _getField(src, ['makeModel', 'vehicle_make_model', 'make_model']) ?? tr('ride.vehicle'),
       'color':     _getField(src, ['color', 'vehicleColor', 'vehicle_color']) ?? '',
     };
   }
@@ -849,7 +849,7 @@ class _CompletedCard extends StatelessWidget {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(tr('trip.arrived'), style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w900)),
               const SizedBox(height: 2),
-              Text('Trip time: $elapsedLabel', style: TextStyle(color: Colors.black.withOpacity(0.65), fontSize: 12, fontWeight: FontWeight.w500)),
+              Text(tr('trip.tripTime', {'t': elapsedLabel}), style: TextStyle(color: Colors.black.withOpacity(0.65), fontSize: 12, fontWeight: FontWeight.w500)),
             ])),
           ]),
           const SizedBox(height: 16),
@@ -875,7 +875,7 @@ class _VehicleStrip extends StatelessWidget {
       decoration: BoxDecoration(color: AppColors.darkSurfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.darkBorder)),
       child: Row(children: [
         const Icon(Icons.directions_car_rounded, size: 16, color: AppColors.darkTextTertiary), const SizedBox(width: 8),
-        Expanded(child: Text(vehicleInfo['makeModel'] ?? 'Vehicle', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary))),
+        Expanded(child: Text(vehicleInfo['makeModel'] ?? tr('ride.vehicle'), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary))),
         if ((vehicleInfo['color'] ?? '').isNotEmpty) ...[
           Text(vehicleInfo['color']!, style: const TextStyle(fontSize: 13, color: AppColors.darkTextSecondary)), const SizedBox(width: 10),
         ],

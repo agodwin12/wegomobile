@@ -437,7 +437,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.darkSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Course annulée', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
+        title: Text(tr('trip.rideCanceled'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
         content: Text(message, style: const TextStyle(fontSize: 15, color: AppColors.darkTextSecondary)),
         actions: [SizedBox(
           width: double.infinity,
@@ -472,7 +472,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
 
   void _shareTrip() {
     final name  = _getDriverName();
-    final plate = _vehicleInfo['plate'] ?? 'N/D';
+    final plate = _vehicleInfo['plate'] ?? tr('common.notAvailable');
     _snack('Course partagée : $name · $plate · arrivée $_eta');
   }
 
@@ -483,9 +483,9 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.darkSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Annuler la course ?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
+        title: Text(tr('trip.cancelRideTitle'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Le chauffeur est en route.', style: TextStyle(fontSize: 15, color: AppColors.darkTextSecondary)),
+          Text(tr('trip.driverEnRoute'), style: const TextStyle(fontSize: 15, color: AppColors.darkTextSecondary)),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -502,11 +502,11 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Garder la course', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.darkTextSecondary))),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(tr('trip.keepRide'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.darkTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Oui, annuler', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+            child: Text(tr('trip.yesCancel'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
           ),
         ],
       ),
@@ -563,8 +563,8 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
     final src = v ?? widget.driver;
     return {
       'type':      _getField(src, ['type', 'vehicleType']) ?? 'Standard',
-      'plate':     _getField(src, ['plate', 'vehiclePlate', 'license_plate']) ?? 'N/D',
-      'makeModel': _getField(src, ['makeModel', 'vehicle_make_model', 'make_model']) ?? 'Véhicule',
+      'plate':     _getField(src, ['plate', 'vehiclePlate', 'license_plate']) ?? tr('common.notAvailable'),
+      'makeModel': _getField(src, ['makeModel', 'vehicle_make_model', 'make_model']) ?? tr('ride.vehicle'),
       'color':     _getField(src, ['color', 'vehicleColor', 'vehicle_color']) ?? 'Inconnu',
       'year':      _getField(src, ['year', 'vehicleYear', 'vehicle_year']) ?? '',
       'photo':     _getField(src, ['photo', 'vehicle_photo_url', 'vehiclePhoto']) ?? '',
@@ -922,9 +922,9 @@ class _ArrivedPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(50), boxShadow: [BoxShadow(color: AppColors.success.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 4))]),
-      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.check_circle, color: Colors.white, size: 18), SizedBox(width: 8),
-        Text('Votre chauffeur est arrivé !', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+        Text(tr('trip.driverArrivedBang'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
       ]),
     );
   }
@@ -1029,7 +1029,7 @@ class _PickupRow extends StatelessWidget {
         Container(width: 38, height: 38, decoration: BoxDecoration(color: AppColors.success.withOpacity(0.16), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.location_on, color: AppColors.success, size: 22)),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Point de départ', style: TextStyle(fontSize: 11, color: AppColors.darkTextTertiary)),
+          Text(tr('trip.pickupPoint'), style: const TextStyle(fontSize: 11, color: AppColors.darkTextTertiary)),
           const SizedBox(height: 2),
           Text(address.length > 35 ? '${address.substring(0, 35)}…' : address, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
         ])),
@@ -1089,7 +1089,7 @@ class _VehicleDetailCard extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Icon(Icons.directions_car, size: 16, color: AppColors.darkTextSecondary), const SizedBox(width: 8),
-          const Text('Votre véhicule', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.darkTextSecondary)),
+          Text(tr('trip.yourVehicle'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.darkTextSecondary)),
           const Spacer(),
           Container(width: 14, height: 14, decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: AppColors.darkBorder, width: 1))),
           const SizedBox(width: 6),
@@ -1100,13 +1100,13 @@ class _VehicleDetailCard extends StatelessWidget {
           vehiclePhoto(vehicleInfo['photo'] ?? '', size: hasPhoto ? 100 : 72),
           const SizedBox(width: 14),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(vehicleInfo['makeModel'] ?? 'Véhicule', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
+            Text(vehicleInfo['makeModel'] ?? tr('ride.vehicle'), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary)),
             if ((vehicleInfo['year'] ?? '').isNotEmpty) ...[const SizedBox(height: 2), Text(vehicleInfo['year']!, style: TextStyle(fontSize: 13, color: AppColors.darkTextTertiary))],
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(color: AppColors.darkSurfaceHigh, borderRadius: BorderRadius.circular(7), border: Border.all(color: AppColors.primaryGold, width: 2)),
-              child: Text(vehicleInfo['plate'] ?? 'N/D', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 3, color: AppColors.darkTextPrimary, fontFamily: 'Courier')),
+              child: Text(vehicleInfo['plate'] ?? tr('common.notAvailable'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 3, color: AppColors.darkTextPrimary, fontFamily: 'Courier')),
             ),
           ])),
         ]),
@@ -1129,7 +1129,7 @@ class _CancelButton extends StatelessWidget {
         child: OutlinedButton(
           onPressed: onTap,
           style: OutlinedButton.styleFrom(side: BorderSide(color: isExpired ? AppColors.error.withOpacity(0.6) : AppColors.darkBorder, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
-          child: Text('Annuler la course', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: isExpired ? AppColors.error : AppColors.darkTextPrimary)),
+          child: Text(tr('ride.cancelRide'), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: isExpired ? AppColors.error : AppColors.darkTextPrimary)),
         ),
       ),
       if (label.isNotEmpty) ...[
