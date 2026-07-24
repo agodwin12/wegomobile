@@ -158,9 +158,13 @@ class SocketService {
             .setTransports(['websocket'])
             .disableAutoConnect()
             .enableReconnection()
-            .setReconnectionAttempts(5)
+            // Mobile networks drop constantly (tunnels, lifts, cell↔wifi
+            // handoff). Giving up after 5 tries stranded an active ride with
+            // no path back except an app restart. Keep trying indefinitely
+            // with a capped backoff — the reconnect resync then heals state.
+            .setReconnectionAttempts(999999)
             .setReconnectionDelay(2000)
-            .setReconnectionDelayMax(5000)
+            .setReconnectionDelayMax(10000)
             .setTimeout(20000)
             .setAuth({
           'token':    accessToken,
@@ -539,6 +543,10 @@ class SocketService {
       }
     });
 
+    // Re-bind consumer handlers (ChatService, etc.) onto this socket so they
+    // survive the reconnect that just rebuilt it.
+    _reapplyCustomHandlers();
+
     debugPrint('✅ [SOCKET] All event listeners registered\n');
   }
 
@@ -706,12 +714,27 @@ class SocketService {
     _socket!.emit(event, data);
   }
 
+  // Custom handlers registered by consumers via on() — e.g. ChatService.
+  // Remembered so they can be re-applied to every freshly-built socket. Without
+  // this, a handler registered before connect (socket null) never binds, and
+  // one registered on the current socket is lost the moment a token-refresh
+  // reconnect replaces it — which silently killed realtime chat.
+  final Map<String, Function(dynamic)> _customHandlers = {};
+
   void on(String event, Function(dynamic) handler) {
+    _customHandlers[event] = handler;
+    _socket?.on(event, handler);
     if (_socket == null) {
-      debugPrint('⚠️ [SOCKET] Cannot register listener — socket null');
-      return;
+      debugPrint('ℹ️ [SOCKET] Handler for "$event" stored; binds on connect');
     }
-    _socket!.on(event, handler);
+  }
+
+  /// Re-binds every remembered custom handler onto the current socket. Called
+  /// after each (re)connect so consumers using on() survive reconnects.
+  void _reapplyCustomHandlers() {
+    if (_socket == null || _customHandlers.isEmpty) return;
+    _customHandlers.forEach((event, handler) => _socket!.on(event, handler));
+    debugPrint('🔁 [SOCKET] Re-applied ${_customHandlers.length} custom handler(s)');
   }
 
   void off(String event) {

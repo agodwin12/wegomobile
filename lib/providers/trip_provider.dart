@@ -41,6 +41,10 @@ class TripProvider with ChangeNotifier {
   StreamSubscription? _noDriversSub;
   StreamSubscription? _driverLocationSub;
   StreamSubscription? _errorSub;
+  StreamSubscription<bool>? _connectionSub;
+
+  // Guards a resync so a flapping connection can't stack refetches.
+  bool _resyncing = false;
 
   // Getters
   TripStatus get status => _status;
@@ -59,11 +63,33 @@ class TripProvider with ChangeNotifier {
     _initializeSocketListeners();
   }
 
-  /// Initialize all socket event listeners
+  /// Cancels every stream subscription. Safe to call repeatedly.
+  void _cancelSubs() {
+    _driverAssignedSub?.cancel();
+    _statusChangedSub?.cancel();
+    _canceledSub?.cancel();
+    _noDriversSub?.cancel();
+    _driverLocationSub?.cancel();
+    _errorSub?.cancel();
+    _connectionSub?.cancel();
+  }
+
+  /// (Re)initialize all socket event listeners. Idempotent — cancels any
+  /// existing subscriptions first — so it can be called again after logout or
+  /// a mode switch to bring a dead pipeline back to life.
   void _initializeSocketListeners() {
-    debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('🎧 [TRIP_PROVIDER] Initializing socket listeners...');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    _cancelSubs();
+    debugPrint('🎧 [TRIP_PROVIDER] (Re)initializing socket listeners...');
+
+    // On every reconnect, the events that fired while we were offline are
+    // gone. Re-fetch the authoritative trip state so the screen can't sit on
+    // a stale "searching" or miss a driver-arrived it never received.
+    _connectionSub = _socketService.connectionStream.listen((connected) {
+      if (connected && hasActiveTrip) {
+        debugPrint('🔌 [TRIP_PROVIDER] Reconnected — resyncing active trip');
+        resyncActiveTrip();
+      }
+    });
 
     // ═══════════════════════════════════════════════════════════════
     // DRIVER ASSIGNED (PASSENGER)
@@ -115,77 +141,28 @@ class TripProvider with ChangeNotifier {
     });
 
     // ═══════════════════════════════════════════════════════════════
-    // DRIVER ARRIVED AT PICKUP
-    // This is the key fix — trip:driver_arrived was never listened to
+    // TRIP LIFECYCLE (driver arrived / started / completed / any status)
     // ═══════════════════════════════════════════════════════════════
-    _socketService.socket?.on('trip:driver_arrived', (data) {
-      debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('📍 [TRIP_PROVIDER] Driver arrived at pickup!');
-      debugPrint('📦 [TRIP_PROVIDER] Data: $data');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-      _status = TripStatus.arrivedPickup;
-
-      if (data is Map && _currentTrip != null) {
-        _currentTrip!['arrivedAt'] = data['arrivedAt'];
-        _currentTrip!['status'] = 'DRIVER_ARRIVED';
-      }
-
-      notifyListeners();
-    });
-
-    // ═══════════════════════════════════════════════════════════════
-    // TRIP STARTED
-    // ═══════════════════════════════════════════════════════════════
-    _socketService.socket?.on('trip:started', (data) {
-      debugPrint('\n🚀 [TRIP_PROVIDER] Trip started!');
-      debugPrint('📦 [TRIP_PROVIDER] Data: $data\n');
-
-      _status = TripStatus.inProgress;
-
-      if (data is Map && _currentTrip != null) {
-        _currentTrip!['startedAt'] = data['startedAt'];
-        _currentTrip!['status'] = 'IN_PROGRESS';
-      }
-
-      notifyListeners();
-    });
-
-    // ═══════════════════════════════════════════════════════════════
-    // TRIP COMPLETED
-    // ═══════════════════════════════════════════════════════════════
-    _socketService.socket?.on('trip:completed', (data) {
-      debugPrint('\n✅ [TRIP_PROVIDER] Trip completed!');
-      debugPrint('📦 [TRIP_PROVIDER] Data: $data\n');
-
-      _status = TripStatus.completed;
-
-      if (data is Map && _currentTrip != null) {
-        _currentTrip!['completedAt'] = data['completedAt'];
-        _currentTrip!['finalFare'] = data['finalFare'];
-        _currentTrip!['status'] = 'COMPLETED';
-      }
-
-      notifyListeners();
-    });
-
-
-    // ═══════════════════════════════════════════════════════════════
-    // GENERIC STATUS CHANGES (fallback for anything not handled above)
-    // ═══════════════════════════════════════════════════════════════
+    // SocketService funnels trip:driver_arrived, trip:started, trip:completed
+    // and trip:status_changed all into tripStatusStream (with the full payload
+    // spread in), and RE-REGISTERS them on every reconnect. Listening to the
+    // broadcast stream — instead of the raw socket, which is null at startup
+    // and replaced on every token-refresh reconnect — is what makes these
+    // events survive a reconnect. Timestamps and finalFare ride along in the
+    // same payload, so they are captured here too.
     _statusChangedSub = _socketService.tripStatusStream.listen((data) {
-      debugPrint('\n🔄 [TRIP_PROVIDER] Status changed event received');
-      debugPrint('📦 [TRIP_PROVIDER] Data: $data\n');
-
       final newStatus = data['status']?.toString() ?? '';
-
-      // Skip statuses handled by dedicated listeners above
       if (newStatus.isEmpty) return;
 
+      debugPrint('🔄 [TRIP_PROVIDER] Lifecycle status: $newStatus');
       _updateStatus(newStatus);
 
       if (_currentTrip != null) {
         _currentTrip!['status'] = newStatus;
+        // Capture the fields the dedicated handlers used to grab.
+        for (final key in ['arrivedAt', 'startedAt', 'completedAt', 'finalFare']) {
+          if (data[key] != null) _currentTrip![key] = data[key];
+        }
       }
 
       notifyListeners();
@@ -293,18 +270,14 @@ class TripProvider with ChangeNotifier {
     }
   }
 
+  /// Clears trip state (called on logout). Crucially it then RE-SUBSCRIBES:
+  /// the provider is a single app-root instance that survives logout→login, so
+  /// if it left the streams cancelled the next ride in the same app run would
+  /// never receive driver-assigned / status / cancel events and would hang on
+  /// "searching" forever.
   void reset() {
-    debugPrint('🔄 [TRIP_PROVIDER] Resetting all state...');
+    debugPrint('🔄 [TRIP_PROVIDER] Resetting state and re-arming listeners...');
 
-    // Cancel all stream subscriptions
-    _driverAssignedSub?.cancel();
-    _statusChangedSub?.cancel();
-    _canceledSub?.cancel();
-    _noDriversSub?.cancel();
-    _driverLocationSub?.cancel();
-    _errorSub?.cancel();
-
-    // Clear all state
     _status         = TripStatus.idle;
     _currentTrip    = null;
     _driver         = null;
@@ -313,10 +286,56 @@ class TripProvider with ChangeNotifier {
     _isLoading      = false;
     onDriverAssigned = null;
 
+    _initializeSocketListeners(); // cancels + re-subscribes
     notifyListeners();
-    debugPrint('✅ [TRIP_PROVIDER] Reset complete');
+    debugPrint('✅ [TRIP_PROVIDER] Reset complete (pipeline live)');
   }
 
+  /// Re-fetches the authoritative trip state from the server and reconciles it
+  /// into the provider. Used after a socket reconnect so events missed while
+  /// offline (driver-arrived, started, completed, cancel) don't leave the UI
+  /// stale. Never throws — a failed resync simply leaves current state.
+  Future<void> resyncActiveTrip() async {
+    if (_resyncing) return;
+    _resyncing = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      if (token == null || token.isEmpty) return;
+
+      final resp = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/trips/active'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 12));
+
+      if (resp.statusCode != 200) return;
+      final body = jsonDecode(resp.body);
+      final trip = body['data']?['trip'];
+
+      if (trip == null) {
+        // The server says there is no live trip — it ended while we were
+        // offline. Settle to a terminal state instead of spinning forever.
+        if (hasActiveTrip) {
+          _status = TripStatus.completed;
+          notifyListeners();
+        }
+        return;
+      }
+
+      final status = (trip['status'] ?? '').toString();
+      _currentTrip = Map<String, dynamic>.from(trip as Map);
+      if (trip['driver'] is Map) {
+        _driver = Map<String, dynamic>.from(trip['driver'] as Map);
+      }
+      if (status.isNotEmpty) _updateStatus(status);
+      notifyListeners();
+      debugPrint('✅ [TRIP_PROVIDER] Resynced trip → $status');
+    } catch (e) {
+      debugPrint('ℹ️ [TRIP_PROVIDER] Resync skipped: $e');
+    } finally {
+      _resyncing = false;
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // SUBMIT RATING
@@ -521,12 +540,7 @@ class TripProvider with ChangeNotifier {
   @override
   void dispose() {
     debugPrint('🗑️ [TRIP_PROVIDER] Disposing...');
-    _driverAssignedSub?.cancel();
-    _statusChangedSub?.cancel();
-    _canceledSub?.cancel();
-    _noDriversSub?.cancel();
-    _driverLocationSub?.cancel();
-    _errorSub?.cancel();
+    _cancelSubs(); // includes _connectionSub
     super.dispose();
   }
 }
