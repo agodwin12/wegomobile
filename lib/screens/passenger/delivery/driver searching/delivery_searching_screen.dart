@@ -1,6 +1,6 @@
 // lib/screens/passenger/delivery/driver searching/delivery_searching_screen.dart
 //
-// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// LocationIQ migration: flutter_map + latlong2 replacing google_maps_flutter.
 // Preserved: socket searching logic, nearby driver markers, dashed route,
 // draggable bottom sheet, delivery details cards, _DashedCirclePainter.
 

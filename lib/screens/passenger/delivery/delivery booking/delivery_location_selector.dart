@@ -311,7 +311,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
       return;
     }
 
-    // Mapbox features already carry coordinates — no second API call needed.
+    // LocationIQ features already carry coordinates — no second API call needed.
     if (suggestion.lat != null && suggestion.lng != null) {
       if (mounted) {
         setState(() {

@@ -1,6 +1,6 @@
 // lib/screens/delivery agent/delivery_express/delivery_active_express_screen.dart
 //
-// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// LocationIQ migration: flutter_map + latlong2 replacing google_maps_flutter.
 // Preserved: stage machine, GPS emit, auto-reroute (50 m), pickup photo,
 // PIN verification, cash confirmation, cancel flow, draggable sheet.
 
@@ -329,7 +329,7 @@ class _DeliveryActiveExpressScreenState
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ROUTE — Mapbox Directions v5
+  // ROUTE — LocationIQ Directions v5
   // ─────────────────────────────────────────────────────────────────────────
 
   void _maybeRefreshRoute(LatLng driverPos) {

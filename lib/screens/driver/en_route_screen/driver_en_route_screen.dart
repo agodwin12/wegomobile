@@ -1,6 +1,6 @@
 // lib/screens/driver/en_route_screen/driver_en_route_screen.dart
 //
-// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// LocationIQ migration: flutter_map + latlong2 replacing google_maps_flutter.
 // All logic preserved: TTS, auto-rerouting, double-layer polyline,
 // direction-arrow Widget markers, location streaming, DraggableScrollableSheet.
 
@@ -426,7 +426,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ROUTE — Mapbox Directions v5
+  // ROUTE — LocationIQ Directions v5
   //         gold solid line + white inner stripe + arrow markers
   // ═══════════════════════════════════════════════════════════
 
@@ -473,7 +473,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
           }
           return;
         }
-        throw Exception('No routes in Mapbox response');
+        throw Exception('No routes in LocationIQ response');
       }
       throw Exception('HTTP ${response.statusCode}');
     } catch (e) {

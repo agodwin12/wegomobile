@@ -1,6 +1,6 @@
 // lib/screens/driver/trip/driver_trip_in_progress_screen.dart
 //
-// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// LocationIQ migration: flutter_map + latlong2 replacing google_maps_flutter.
 // All logic preserved: TTS, auto-rerouting, trip progress, duration timer,
 // near-destination dialog, TripProvider cancellation listener.
 
@@ -477,7 +477,7 @@ class _DriverTripInProgressScreenState
   }
 
   // ════════════════════════════════════════════════════════════
-  // ROUTE — Mapbox Directions v5
+  // ROUTE — LocationIQ Directions v5
   // ════════════════════════════════════════════════════════════
 
   Future<void> _fetchRoute() async {
@@ -525,7 +525,7 @@ class _DriverTripInProgressScreenState
           }
           return;
         }
-        throw Exception('No routes in Mapbox response');
+        throw Exception('No routes in LocationIQ response');
       }
       throw Exception('HTTP ${response.statusCode}');
     } catch (e) {

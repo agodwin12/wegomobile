@@ -1,6 +1,6 @@
 // lib/screens/driver/arrived_screen/driver_arrived.dart
 //
-// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// LocationIQ migration: flutter_map + latlong2 replacing google_maps_flutter.
 // BitmapDescriptor / dart:ui removed — car shown via CarMarkerWidget.
 // All other logic preserved: waiting timer, no-show, start trip,
 // DraggableScrollableSheet, PopScope back-guard.

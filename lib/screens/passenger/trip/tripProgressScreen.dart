@@ -190,7 +190,7 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // POLYLINE (Mapbox Directions, 50 m debounce)
+  // POLYLINE (LocationIQ Directions, 50 m debounce)
   // ═════════════════════════════════════════════════════════════════════════
 
   Future<void> _fetchRoutePolyline({bool force = false}) async {

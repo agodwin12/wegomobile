@@ -90,23 +90,6 @@ class PlacePrediction {
     required this.lng,
   });
 
-  factory PlacePrediction.fromMapbox(Map<String, dynamic> json) {
-    final coords  = json['geometry']?['coordinates'] as List?;
-    final context = json['context'] as List? ?? [];
-    final mainTxt = json['text']?.toString() ?? '';
-    final full    = json['place_name']?.toString() ?? mainTxt;
-    final secondary = context.take(2).map((c) => c['text']?.toString() ?? '').where((s) => s.isNotEmpty).join(', ');
-
-    return PlacePrediction(
-      id:            json['id']?.toString() ?? '',
-      description:   full,
-      mainText:      mainTxt.isNotEmpty ? mainTxt : full,
-      secondaryText: secondary.isNotEmpty ? secondary : null,
-      lat:  (coords != null && coords.length >= 2) ? (coords[1] as num).toDouble() : 0,
-      lng:  (coords != null && coords.length >= 2) ? (coords[0] as num).toDouble() : 0,
-    );
-  }
-
   // LocationIQ (OSM) — accurate Cameroon place names. The /autocomplete and
   // /search endpoints return: display_place, display_address, display_name,
   // lat, lon (strings). Falls back to splitting display_name when the
@@ -428,7 +411,7 @@ class _RideMapScreenState extends State<RideMapScreen>
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // ROUTE POLYLINE (Mapbox Directions)
+  // ROUTE POLYLINE (LocationIQ Directions)
   // ═════════════════════════════════════════════════════════════════════════
 
   Future<void> _fetchRoute() async {
@@ -575,7 +558,7 @@ class _RideMapScreenState extends State<RideMapScreen>
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // AUTOCOMPLETE (Mapbox Geocoding — worldwide)
+  // AUTOCOMPLETE (LocationIQ Geocoding — worldwide)
   // ═════════════════════════════════════════════════════════════════════════
 
   void _onQueryChanged(String q, {required bool forPickup}) {
@@ -623,7 +606,7 @@ class _RideMapScreenState extends State<RideMapScreen>
 
   void _clearSuggestions() => setState(() { _suggestions = []; _searching = false; });
 
-  // Mapbox returns coordinates directly in the suggestion — no second API call needed
+  // LocationIQ returns coordinates directly in the suggestion — no second API call needed
   Future<void> _selectPrediction(PlacePrediction p, {required bool forPickup}) async {
     if (p.lat == 0 && p.lng == 0) return;
     final pos  = LatLng(p.lat, p.lng);

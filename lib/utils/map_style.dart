@@ -25,7 +25,7 @@ extension MapStyleX on MapStyle {
   };
 
   // LocationIQ (OpenStreetMap) tile styles. LocationIQ offers streets / light /
-  // dark; the Mapbox-only styles (satellite, navigation, outdoors) fall back to
+  // dark; the LocationIQ-only styles (satellite, navigation, outdoors) fall back to
   // the closest LocationIQ equivalent.
   String get _liqStyle => switch (this) {
     MapStyle.dark || MapStyle.navigationNight => 'dark',

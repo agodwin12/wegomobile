@@ -171,7 +171,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // ROUTE POLYLINE (Mapbox Directions)
+  // ROUTE POLYLINE (LocationIQ Directions)
   // ═════════════════════════════════════════════════════════════════════════
 
   Future<void> _fetchRoutePolyline() async {

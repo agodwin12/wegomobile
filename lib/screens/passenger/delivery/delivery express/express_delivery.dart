@@ -1,7 +1,7 @@
 // lib/screens/passenger/delivery/delivery express/express_delivery.dart
 //
 // EXPRESS DELIVERY TRACKING (passenger-side)
-// Mapbox migration: flutter_map + latlong2 replacing google_maps_flutter.
+// LocationIQ migration: flutter_map + latlong2 replacing google_maps_flutter.
 // Live driver position updates via socket. All logic preserved.
 
 import 'dart:convert';
