@@ -818,7 +818,11 @@ class _RideMapScreenState extends State<RideMapScreen>
         tripId: tripId, pickupAddress: _pickupCtrl.text, dropoffAddress: _destCtrl.text,
         pickupLocation: _pickup!, dropoffLocation: _dropoff!,
         fareEstimate: _effectiveFare > 0 ? '${_effectiveFare.toInt()} XAF' : null,
-        vehicleType: _selectedVehicle!.name, paymentMethod: _selectedPaymentMethod,
+        // Send the machine tier id ('economy'/'comfort'/'luxury'), NOT the
+        // localized display name. The backend matches it case-insensitively
+        // against the driver's vehicle_type ('Economy'/'Comfort'/'Luxury');
+        // sending the French name ('Économique') never matched → no driver.
+        vehicleType: _selectedVehicle!.id, paymentMethod: _selectedPaymentMethod,
       )));
     } on Exception catch (e) {
       String msg = e.toString().replaceFirst('Exception: ', '');
