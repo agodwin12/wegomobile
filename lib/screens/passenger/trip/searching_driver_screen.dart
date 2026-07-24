@@ -80,9 +80,6 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
   Timer? _counterTimer;
   Timer? _tipTimer;
 
-  final List<_SearchCar> _searchCars = [];
-  Timer? _driverCarTimer;
-
   TripProvider? _tripProvider;
   VoidCallback? _tripListener;
 
@@ -97,7 +94,6 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
   void initState() {
     super.initState();
     _setupAnimations();
-    _generateNearbyDriverCars();
     _startTimers();
     loadMapStylePref().then((s) { if (mounted) setState(() => _mapStyle = s); });
 
@@ -125,7 +121,6 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
     _tipFadeController.dispose();
     _counterTimer?.cancel();
     _tipTimer?.cancel();
-    _driverCarTimer?.cancel();
     _mapCtrl.dispose();
     _sheetController.dispose();
     super.dispose();
@@ -157,37 +152,6 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
     _tipFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(parent: _tipFadeController, curve: Curves.easeInOut));
     _tipFadeController.forward();
-  }
-
-  // Small Uber/Yango-style cars drifting around the pickup while we search.
-  void _generateNearbyDriverCars() {
-    final rng = math.Random();
-    _searchCars.clear();
-    for (int i = 0; i < 6; i++) {
-      _searchCars.add(_SearchCar(
-        LatLng(
-          widget.pickupLocation.latitude  + (rng.nextDouble() - 0.5) * 0.012,
-          widget.pickupLocation.longitude + (rng.nextDouble() - 0.5) * 0.012,
-        ),
-        rng.nextDouble() * 360,
-      ));
-    }
-
-    _driverCarTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted) return;
-      final rng2 = math.Random();
-      setState(() {
-        for (final car in _searchCars) {
-          final from = car.pos;
-          final next = LatLng(
-            from.latitude  + (rng2.nextDouble() - 0.5) * 0.0016,
-            from.longitude + (rng2.nextDouble() - 0.5) * 0.0016,
-          );
-          car.heading = _bearing(from, next);
-          car.pos     = next;
-        }
-      });
-    });
   }
 
   void _startTimers() {
@@ -324,7 +288,6 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
     _hasNavigated = true;
     _counterTimer?.cancel();
     _tipTimer?.cancel();
-    _driverCarTimer?.cancel();
     // Full-screen "no drivers" experience instead of a dialog so the passenger
     // is never left on an infinite searching spinner. Both Retry and Cancel
     // return to the ride map (pushReplacement removed this searching screen).
@@ -352,8 +315,22 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
       ),
     );
     if (confirmed == true && mounted) {
-      Provider.of<TripProvider>(context, listen: false).cancelTrip(widget.tripId, 'Annulée par le passager');
-      if (mounted) Navigator.of(context).pop();
+      final provider = Provider.of<TripProvider>(context, listen: false);
+      // Only leave the screen if the SERVER confirms the cancel — otherwise
+      // the passenger would think they cancelled while a driver is still being
+      // matched. On failure we stay put and surface the reason.
+      final ok = await provider.cancelTrip(widget.tripId, 'Annulée par le passager');
+      if (!mounted) return;
+      if (ok) {
+        Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.errorMessage ?? 'Impossible d\'annuler. Réessayez.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -361,15 +338,6 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
     final m   = s ~/ 60;
     final sec = s % 60;
     return '$m:${sec.toString().padLeft(2, '0')}';
-  }
-
-  double _bearing(LatLng from, LatLng to) {
-    final lat1 = from.latitude * math.pi / 180;
-    final lat2 = to.latitude * math.pi / 180;
-    final dLon = (to.longitude - from.longitude) * math.pi / 180;
-    final y    = math.sin(dLon) * math.cos(lat2);
-    final x    = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
-    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
 
   List<Marker> _buildMarkers() {
@@ -392,12 +360,6 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
       ),
     ];
 
-    for (final car in _searchCars) {
-      markers.add(Marker(
-        point: car.pos, width: 40, height: 40,
-        child: _SearchingCarMarker(heading: car.heading),
-      ));
-    }
     return markers;
   }
 
@@ -515,55 +477,6 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
           ),
         ],
       ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SEARCHING CARS (small top-down sedans, Uber/Yango style)
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _SearchCar {
-  LatLng pos;
-  double heading;
-  _SearchCar(this.pos, this.heading);
-}
-
-class _SearchingCarMarker extends StatefulWidget {
-  final double heading;
-  const _SearchingCarMarker({required this.heading});
-
-  @override
-  State<_SearchingCarMarker> createState() => _SearchingCarMarkerState();
-}
-
-class _SearchingCarMarkerState extends State<_SearchingCarMarker> with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() { _c.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (_, __) {
-        final forward = -1.5 + _c.value * 3.0;
-        return Transform.rotate(
-          angle: widget.heading * math.pi / 180,
-          child: Transform.translate(
-            offset: Offset(0, forward),
-            child: Image.asset('assets/images/carmarker.png',
-                width: 30, height: 30, fit: BoxFit.contain),
-          ),
-        );
-      },
     );
   }
 }

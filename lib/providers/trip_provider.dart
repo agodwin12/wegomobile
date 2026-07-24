@@ -448,15 +448,67 @@ class TripProvider with ChangeNotifier {
     _socketService.updateTripStatus(tripId, status);
   }
 
-  void cancelTrip(String tripId, String reason) {
-    debugPrint('\n🚫 [TRIP_PROVIDER] Canceling trip: $tripId | Reason: $reason\n');
+  /// Cancels the trip through the HTTP endpoint, which is authoritative and
+  /// works even when the socket is down. Returns true only when the SERVER
+  /// confirms — the old version emitted over the socket (silently dropped
+  /// while disconnected) and then optimistically told the passenger the ride
+  /// was cancelled, so a cancel could "succeed" on screen while the driver was
+  /// still on the way. The socket emit is kept as a best-effort fast path for
+  /// instant realtime, but the HTTP result is what decides.
+  Future<bool> cancelTrip(String tripId, String reason) async {
+    debugPrint('🚫 [TRIP_PROVIDER] Canceling trip: $tripId | $reason');
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
+
+    // Best-effort realtime nudge (no-op if disconnected).
     _socketService.cancelTrip(tripId, reason);
-    _status = TripStatus.canceled;
-    _errorMessage = 'Trip canceled';
-    _isLoading = false;
-    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      if (token == null || token.isEmpty) {
+        _isLoading = false;
+        _errorMessage = 'Session expirée. Veuillez vous reconnecter.';
+        notifyListeners();
+        return false;
+      }
+
+      final resp = await http.put(
+        Uri.parse('${AppConfig.apiBaseUrl}/trips/$tripId/cancel'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'reason': reason}),
+      ).timeout(const Duration(seconds: 15));
+
+      final ok = resp.statusCode >= 200 && resp.statusCode < 300;
+      if (ok) {
+        _status = TripStatus.canceled;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+
+      // Server refused (e.g. already started / too late). Do NOT lie — keep
+      // the trip on screen and surface the reason.
+      String msg = 'Impossible d\'annuler la course.';
+      try {
+        final body = jsonDecode(resp.body);
+        if (body['message'] != null) msg = body['message'].toString();
+      } catch (_) {}
+      _isLoading = false;
+      _errorMessage = msg;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = 'Réseau indisponible. Réessayez.';
+      notifyListeners();
+      debugPrint('❌ [TRIP_PROVIDER] Cancel failed: $e');
+      return false;
+    }
   }
 
   void clearTrip() {

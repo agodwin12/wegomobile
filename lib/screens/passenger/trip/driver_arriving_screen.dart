@@ -168,16 +168,16 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
   void _initDriverLocation() {
     final loc = widget.driverLocation;
     if (loc != null && loc['lat'] != null && loc['lng'] != null) {
+      // Only seed a marker when we have a REAL driver fix. If we don't, we
+      // leave the driver location null — the map shows no car and the ETA
+      // shows a placeholder until the first `driver:location` event arrives.
+      // (Never invent a position offset from the pickup — that renders a fake
+      //  car and a fake distance/ETA the passenger would trust.)
       _currentDriverLocation = LatLng(_toDouble(loc['lat']), _toDouble(loc['lng']));
-    } else {
-      _currentDriverLocation = LatLng(
-        widget.pickupLocation.latitude  + 0.003,
-        widget.pickupLocation.longitude + 0.003,
-      );
+      _animatedDriverLocation = _currentDriverLocation;
+      _driverBearing = _calcBearing(_currentDriverLocation!, widget.pickupLocation);
+      _calcDistETA();
     }
-    _animatedDriverLocation = _currentDriverLocation;
-    _driverBearing = _calcBearing(_currentDriverLocation!, widget.pickupLocation);
-    _calcDistETA();
   }
 
   void _startFreeCancelTimer() {
@@ -483,9 +483,18 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
     );
 
     if (confirmed == true && mounted) {
-      Provider.of<TripProvider>(context, listen: false).cancelTrip(widget.tripId, 'Annulée par le passager');
-      _hasNavigated = true;
-      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+      final provider = Provider.of<TripProvider>(context, listen: false);
+      // Wait for server confirmation before leaving — a dropped cancel must
+      // not strand the passenger thinking the ride is off while the driver
+      // keeps coming.
+      final ok = await provider.cancelTrip(widget.tripId, 'Annulée par le passager');
+      if (!mounted) return;
+      if (ok) {
+        _hasNavigated = true;
+        Navigator.of(context).popUntil((r) => r.isFirst);
+      } else {
+        _snack(provider.errorMessage ?? 'Impossible d\'annuler. Réessayez.', isError: true);
+      }
     }
   }
 
@@ -532,7 +541,7 @@ class _DriverArrivingScreenState extends State<DriverArrivingScreen>
     };
   }
 
-  String get _driverRating => _getField(widget.driver, ['rating', 'rating_avg', 'ratingAvg']) ?? '4.8';
+  String get _driverRating => _getField(widget.driver, ['rating', 'rating_avg', 'ratingAvg']) ?? 'Nouveau';
 
   int get _driverRideCount {
     final raw = widget.driver['total_trips'] ?? widget.driver['totalTrips'] ?? widget.driver['rides'];

@@ -132,7 +132,7 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
   ]);
 
   String get _driverRating =>
-      _field(widget.driver, ['rating', 'rating_avg', 'ratingAvg']) ?? '4.8';
+      _field(widget.driver, ['rating', 'rating_avg', 'ratingAvg']) ?? 'Nouveau';
 
   int get _driverRideCount {
     final raw = widget.driver['total_trips'] ??

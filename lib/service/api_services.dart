@@ -643,7 +643,10 @@ class ApiService {
     print('Reason: ${reason ?? "Not specified"}');
 
     try {
-      final response = await http.post(
+      // Backend route is PUT /trips/:tripId/cancel — using POST here silently
+      // failed, which is why cancellation used to depend on the unreliable
+      // socket path.
+      final response = await http.put(
         Uri.parse('$baseUrl/trips/$tripId/cancel'),
         headers: {
           'Content-Type': 'application/json',

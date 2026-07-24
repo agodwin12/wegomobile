@@ -106,15 +106,17 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
       _tripProvider!.addListener(_tripListener!);
       _checkTripStatus(_tripProvider!);
 
+      // Seed the on-map car ONLY from a real driver fix. Without one we leave
+      // the location null (the marker/polyline/ETA all guard for null) rather
+      // than inventing an offset from the pickup — a fabricated position draws
+      // a fake car and a fake distance the passenger would trust.
       final loc = _tripProvider!.driverLocation;
       if (loc != null && loc['lat'] != null && loc['lng'] != null) {
         _currentDriverLocation = LatLng(_toDouble(loc['lat']), _toDouble(loc['lng']));
-      } else {
-        _currentDriverLocation = LatLng(widget.pickupLocation.latitude + 0.001, widget.pickupLocation.longitude + 0.001);
+        _animatedDriverLocation = _currentDriverLocation;
+        _driverBearing = _calcBearing(_currentDriverLocation!, widget.dropoffLocation);
+        _calcDistETA();
       }
-      _animatedDriverLocation = _currentDriverLocation;
-      _driverBearing = _calcBearing(_currentDriverLocation!, widget.dropoffLocation);
-      _calcDistETA();
       setState(() {});
 
       await Future.delayed(const Duration(milliseconds: 600));
@@ -479,7 +481,7 @@ class _TripInProgressScreenState extends State<TripInProgressScreen>
     };
   }
 
-  String get _driverRating => _getField(widget.driver, ['rating', 'rating_avg', 'ratingAvg']) ?? '4.8';
+  String get _driverRating => _getField(widget.driver, ['rating', 'rating_avg', 'ratingAvg']) ?? 'Nouveau';
 
   String _formatElapsed(int s) {
     final m = s ~/ 60;
