@@ -9,6 +9,7 @@
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import '../../../l10n/tr.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -254,14 +255,19 @@ class _TripCompletedScreenState extends State<TripCompletedScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                  color: AppColors.primaryGold.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.primaryGold.withOpacity(0.4), width: 2)),
-              child: const Icon(Icons.check_circle_rounded,
-                  color: AppColors.primaryGold, size: 48),
+            SizedBox(
+              width: 120, height: 120,
+              child: Lottie.asset('assets/lottie/ride_success.json',
+                  repeat: false,
+                  errorBuilder: (_, __, ___) => Container(
+                        width: 80, height: 80,
+                        decoration: BoxDecoration(
+                            color: AppColors.primaryGold.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.primaryGold.withOpacity(0.4), width: 2)),
+                        child: const Icon(Icons.check_circle_rounded,
+                            color: AppColors.primaryGold, size: 48),
+                      )),
             ),
             const SizedBox(height: 20),
             Text(tr('trip.thankYou'),
