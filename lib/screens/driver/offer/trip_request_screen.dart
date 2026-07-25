@@ -96,7 +96,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
 
   String _getPickupAddress() =>
       widget.offer['pickup']?['address']?.toString() ??
-          widget.offer['pickupAddress']?.toString() ?? 'Pickup location';
+          widget.offer['pickupAddress']?.toString() ?? tr('driver.pickupLocation');
 
   String _getDropoffAddress() =>
       widget.offer['dropoff']?['address']?.toString() ??
@@ -252,7 +252,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
       builder: (_) => _DarkDialog(
         icon: Icons.access_time_rounded, iconColor: AppColors.warning,
         title: tr('driver.requestExpired'),
-        message: 'You didn\'t respond in time. The trip was declined automatically.',
+        message: tr('driver.didNotRespond'),
         actions: [_GoldButton(label: 'OK', onTap: () {
           Navigator.pop(context); Navigator.pop(context);
         })],
@@ -390,7 +390,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
                 fontSize: 14, fontWeight: remainingSeconds <= 5 ? FontWeight.w700 : FontWeight.w400,
                 color: remainingSeconds <= 5 ? AppColors.error : AppColors.darkTextSecondary,
               ),
-              child: Text(remainingSeconds <= 5 ? 'Expiring soon!' : '$remainingSeconds seconds to respond'),
+              child: Text(remainingSeconds <= 5 ? tr('driver.expiringSoon') : '$remainingSeconds seconds to respond'),
             ),
           ],
         ),
@@ -443,7 +443,7 @@ class _TripRequestScreenState extends State<TripRequestScreen>
                 Icon(Icons.star_rounded, size: 15, color: rating > 0 ? AppColors.primaryGold : AppColors.darkTextTertiary),
                 const SizedBox(width: 4),
                 Text(
-                  rating > 0 ? rating.toStringAsFixed(1) : 'New rider',
+                  rating > 0 ? rating.toStringAsFixed(1) : tr('driver.newRider'),
                   style: TextStyle(
                     fontSize: 13, fontWeight: FontWeight.w600,
                     color: rating > 0 ? AppColors.darkTextSecondary : AppColors.darkTextTertiary,

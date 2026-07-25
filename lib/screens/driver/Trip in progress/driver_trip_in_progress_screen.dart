@@ -181,7 +181,7 @@ class _DriverTripInProgressScreenState
   Future<void> _announceTripStarted() async {
     if (_tripStartedAnnounced) return;
     _tripStartedAnnounced = true;
-    await _speak('Trip has started. Navigate to your destination.',
+    await _speak(tr('driverVoice.tripStartedNav'),
         interrupt: true);
   }
 
@@ -189,10 +189,10 @@ class _DriverTripInProgressScreenState
     setState(() => _isMuted = !_isMuted);
     if (_isMuted) {
       _tts.stop();
-      _showSnackBar('Voice guidance muted', isError: false);
+      _showSnackBar(tr('driverVoice.voiceMutedSpoken'), isError: false);
     } else {
-      _showSnackBar('Voice guidance enabled', isError: false);
-      _speak('Voice guidance is on.');
+      _showSnackBar(tr('driverVoice.voiceEnabledSpoken'), isError: false);
+      _speak(tr('driverVoice.voiceIsOn'));
     }
   }
 
@@ -215,7 +215,7 @@ class _DriverTripInProgressScreenState
       );
       _pickupAddress = pickup['address']?.toString()
           ?? widget.trip['pickupAddress']?.toString()
-          ?? 'Pickup Location';
+          ?? tr('driver.pickupLocation');
     } else {
       _pickupLocation = LatLng(
         double.tryParse(
@@ -224,7 +224,7 @@ class _DriverTripInProgressScreenState
             widget.trip['pickupLng']?.toString() ?? '0') ?? 0,
       );
       _pickupAddress =
-          widget.trip['pickupAddress']?.toString() ?? 'Pickup Location';
+          widget.trip['pickupAddress']?.toString() ?? tr('driver.pickupLocation');
     }
 
     if (dropoff != null) {
@@ -296,7 +296,7 @@ class _DriverTripInProgressScreenState
         });
       });
     } catch (e) {
-      _showSnackBar('Unable to get location. Check GPS.', isError: true);
+      _showSnackBar(tr('driver.locationUnavailable'), isError: true);
       await _fetchRoute();
     }
   }
@@ -319,7 +319,7 @@ class _DriverTripInProgressScreenState
       if (_distanceToDestination < _kNearDestinationMeters &&
           !_isNearDestination) {
         _isNearDestination = true;
-        _speak('You are almost at the destination.', interrupt: false);
+        _speak(tr('driverVoice.almostThere'), interrupt: false);
         _showNearDestinationDialog();
       }
     });
@@ -386,12 +386,12 @@ class _DriverTripInProgressScreenState
     _lastRerouteTime = DateTime.now();
     _rerouteCount++;
 
-    await _speak('Recalculating route.', interrupt: true);
+    await _speak(tr('driverVoice.recalculating'), interrupt: true);
     _routeFetched = false;
     await _fetchRoute();
 
     if (mounted) setState(() => _isRerouting = false);
-    await _speak('Route updated. Continue to your destination.');
+    await _speak(tr('driverVoice.rerouteToDest'));
   }
 
   // ════════════════════════════════════════════════════════════
@@ -663,7 +663,7 @@ class _DriverTripInProgressScreenState
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         // HTTP /complete is authoritative; backend emits trip:completed to passenger.
-        await _speak('Trip completed. Great job!', interrupt: true);
+        await _speak(tr('driver.tripCompleted'), interrupt: true);
         _hasNavigated = true;
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -683,7 +683,7 @@ class _DriverTripInProgressScreenState
     } catch (e) {
       if (mounted) {
         setState(() { _isCompleting = false; _hasNavigated = false; });
-        _showSnackBar('Failed to complete trip. Try again.', isError: true);
+        _showSnackBar(tr('driver.completeFailed'), isError: true);
       }
     }
   }
@@ -692,7 +692,7 @@ class _DriverTripInProgressScreenState
     final phone = widget.passenger['phone']?.toString()
         ?? widget.passenger['phone_e164']?.toString() ?? '';
     if (phone.isEmpty) {
-      _showSnackBar('Phone number not available', isError: true);
+      _showSnackBar(tr('driver.phoneUnavailable'), isError: true);
       return;
     }
     final uri = Uri.parse('tel:$phone');
@@ -700,10 +700,10 @@ class _DriverTripInProgressScreenState
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
       } else {
-        _showSnackBar('Cannot open dialer', isError: true);
+        _showSnackBar(tr('driver.cannotOpenDialer'), isError: true);
       }
     } catch (_) {
-      _showSnackBar('Failed to call', isError: true);
+      _showSnackBar(tr('driver.callFailed'), isError: true);
     }
   }
 
@@ -787,7 +787,7 @@ class _DriverTripInProgressScreenState
   void _checkTripStatus(TripProvider provider) {
     if (_hasNavigated || !mounted) return;
     if (provider.status == TripStatus.canceled) {
-      _handleCancellation(provider.errorMessage ?? 'Trip canceled');
+      _handleCancellation(provider.errorMessage ?? tr('driver.tripCanceled'));
     }
   }
 
@@ -795,7 +795,7 @@ class _DriverTripInProgressScreenState
     if (_isCanceled || _hasNavigated) return;
     _isCanceled   = true;
     _hasNavigated = true;
-    _speak('Trip has been canceled.', interrupt: true);
+    _speak(tr('driver.tripCanceledFull'), interrupt: true);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1354,9 +1354,7 @@ class _SheetContent extends StatelessWidget {
                           color: AppColors.warning, size: 18),
                       const SizedBox(width: 10),
                       Text(
-                        'Rerouted $rerouteCount '
-                        '${rerouteCount == 1 ? 'time' : 'times'} '
-                        'during this trip',
+                        'Rerouted $rerouteCount ${rerouteCount == 1 ? 'time' : 'times'} ${tr('driver.duringThisTrip')}',
                         style: AppTypography.bodySmall.copyWith(
                             color:      AppColors.warning,
                             fontWeight: FontWeight.w600),
@@ -1444,7 +1442,7 @@ class _SheetContent extends StatelessWidget {
                         : const Icon(Icons.check_circle_rounded,
                             color: Colors.black, size: 22),
                     label: Text(
-                      isCompleting ? 'Completing…' : 'Complete Trip',
+                      isCompleting ? 'Completing…' : tr('driver.completeTrip'),
                       style: const TextStyle(
                           fontSize:   17,
                           fontWeight: FontWeight.w800,

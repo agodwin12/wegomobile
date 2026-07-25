@@ -171,20 +171,20 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
   }
 
   void _announceEnRoute() {
-    _speak('Heading to pickup. Collect $_passengerName.', interrupt: true);
+    _speak(tr('driverVoice.headingToPickup', {'name': _passengerName}), interrupt: true);
   }
 
   void _checkDistanceCallouts() {
     if (_distanceToPickup <= 0) return;
     if (!_said500m && _distanceToPickup <= 500) {
       _said500m = true;
-      _speak('Pickup location in 500 meters.');
+      _speak(tr('driverVoice.pickup500'));
     } else if (!_said200m && _distanceToPickup <= 200) {
       _said200m = true;
-      _speak('Pickup location in 200 meters.');
+      _speak(tr('driverVoice.pickup200'));
     } else if (!_said50m && _distanceToPickup <= _kArrivedThreshold) {
       _said50m = true;
-      _speak('You have arrived at the pickup location.');
+      _speak(tr('driverVoice.arrivedPickup'));
     }
   }
 
@@ -192,10 +192,10 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     setState(() => _isMuted = !_isMuted);
     if (_isMuted) {
       _tts.stop();
-      _showSnackBar('Voice muted', isError: false);
+      _showSnackBar(tr('driver.voiceMuted'), isError: false);
     } else {
-      _speak('Voice guidance on.');
-      _showSnackBar('Voice enabled', isError: false);
+      _speak(tr('driverVoice.voiceOn'));
+      _showSnackBar(tr('driver.voiceEnabled'), isError: false);
     }
   }
 
@@ -261,7 +261,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
       });
       Future.delayed(const Duration(milliseconds: 800), _announceEnRoute);
     } catch (e) {
-      _showSnackBar('Unable to get your location. Check GPS.', isError: true);
+      _showSnackBar(tr('driver.locationUnavailable'), isError: true);
       await _fetchRoute();
     }
   }
@@ -344,12 +344,12 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     _lastRerouteAt = DateTime.now();
     _rerouteCount++;
 
-    await _speak('Recalculating route.', interrupt: true);
+    await _speak(tr('driverVoice.recalculating'), interrupt: true);
     _routeFetched = false;
     await _fetchRoute();
 
     if (mounted) setState(() => _isRerouting = false);
-    await _speak('Route updated. Continue to the pickup location.');
+    await _speak(tr('driverVoice.rerouteToPickup'));
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -628,8 +628,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
           ),
         ]),
         content: Text(
-            'You\'re within 50 meters of the pickup location. '
-            'Have you arrived?'),
+            tr('driverVoice.within50Pickup') + tr('driver.haveYouArrived')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -679,7 +678,7 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
 
         if (response.statusCode == 200 || response.statusCode == 409) {
           // HTTP /arrived is authoritative; backend emits trip:driver_arrived.
-          await _speak('You have arrived at the pickup location.',
+          await _speak(tr('driverVoice.arrivedPickup'),
               interrupt: true);
           await Future.delayed(const Duration(milliseconds: 300));
           if (!mounted) return;
@@ -743,14 +742,14 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
     final phone = widget.passenger['phone']?.toString()
         ?? widget.passenger['phone_e164']?.toString() ?? '';
     if (phone.isEmpty) {
-      _showSnackBar('Phone number not available', isError: true);
+      _showSnackBar(tr('driver.phoneUnavailable'), isError: true);
       return;
     }
     final uri = Uri.parse('tel:$phone');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
-      _showSnackBar('Cannot open dialer', isError: true);
+      _showSnackBar(tr('driver.cannotOpenDialer'), isError: true);
     }
   }
 
@@ -791,8 +790,8 @@ class _DriverEnRouteScreenState extends State<DriverEnRouteScreen>
 
       if (response.statusCode == 200) {
         // HTTP /cancel is authoritative; backend emits trip:canceled to passenger.
-        await _speak('Trip canceled.', interrupt: true);
-        _showSnackBar('Trip canceled', isError: false);
+        await _speak(tr('driver.tripCanceled'), interrupt: true);
+        _showSnackBar(tr('driver.tripCanceled'), isError: false);
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
       } else {
         throw Exception('HTTP ${response.statusCode}');

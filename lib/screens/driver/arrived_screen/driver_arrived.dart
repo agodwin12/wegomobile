@@ -138,7 +138,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     );
     _pickupAddress = pickup['address']?.toString()
         ?? widget.trip['pickupAddress']?.toString()
-        ?? 'Pickup Location';
+        ?? tr('driver.pickupLocation');
 
     _dropoffLocation = LatLng(
       double.tryParse(dropoff['lat']?.toString()
@@ -284,7 +284,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
           // HTTP /start is authoritative; backend emits trip:started to passenger.
 
           _hasNavigated = true;
-          _showSuccessSnackBar('Trip started! Navigate to destination.');
+          _showSuccessSnackBar(tr('driver.tripStarted'));
           await Future.delayed(const Duration(milliseconds: 500));
           if (!mounted) return;
 
@@ -304,7 +304,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
           final data = json.decode(response.body);
           if (mounted) {
             setState(() { _isStarting = false; _hasNavigated = false; });
-            _showErrorSnackBar(data['message'] ?? 'Trip already started');
+            _showErrorSnackBar(data['message'] ?? tr('driver.tripAlreadyStarted'));
           }
           return;
 
@@ -325,9 +325,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                     borderRadius: BorderRadius.circular(20)),
                 title: Text(tr('driver.connTimeout')),
                 content: Text(
-                  'The request is taking longer than expected. '
-                  'The trip may have started on the server. '
-                  'Do you want to try again?',
+                  '${tr('driver.requestSlowTitle')} ${tr('driver.mayHaveStarted')} ${tr('driver.tryAgainQ')}',
                 ),
                 actions: [
                   TextButton(
@@ -445,21 +443,21 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
             },
             body: json.encode({
               'waitingTime': _waitingSeconds,
-              'reason':      'Passenger did not show up',
+              'reason':      tr('driver.reasonNoShow'),
             }),
           )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         // HTTP /no-show is authoritative; backend emits trip:no_show to passenger.
-        _showSuccessSnackBar('No-show reported. Trip canceled.');
+        _showSuccessSnackBar(tr('driver.noShowReported'));
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
       } else {
         throw Exception('HTTP ${response.statusCode}');
       }
     } catch (e) {
-      _showErrorSnackBar('Failed to report no-show. Please try again.');
+      _showErrorSnackBar(tr('driver.noShowFailed'));
     }
   }
 
@@ -467,15 +465,15 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     final phone = widget.passenger['phone']?.toString()
         ?? widget.passenger['phone_e164']?.toString() ?? '';
     if (phone.isEmpty) {
-      _showErrorSnackBar('Passenger phone number not available');
+      _showErrorSnackBar(tr('driver.phoneUnavailable'));
       return;
     }
     final uri = Uri.parse('tel:$phone');
     try {
       if (await canLaunchUrl(uri)) await launchUrl(uri);
-      else _showErrorSnackBar('Cannot launch phone dialer');
+      else _showErrorSnackBar(tr('driver.cannotOpenDialer'));
     } catch (_) {
-      _showErrorSnackBar('Failed to make call');
+      _showErrorSnackBar(tr('driver.callFailed'));
     }
   }
 
@@ -483,16 +481,16 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     final phone = widget.passenger['phone']?.toString()
         ?? widget.passenger['phone_e164']?.toString() ?? '';
     if (phone.isEmpty) {
-      _showErrorSnackBar('Passenger phone number not available');
+      _showErrorSnackBar(tr('driver.phoneUnavailable'));
       return;
     }
     final uri = Uri.parse(
         'sms:$phone?body=I have arrived at the pickup location.');
     try {
       if (await canLaunchUrl(uri)) await launchUrl(uri);
-      else _showErrorSnackBar('Cannot open SMS app');
+      else _showErrorSnackBar(tr('driver.cannotOpenSms'));
     } catch (_) {
-      _showErrorSnackBar('Failed to send SMS');
+      _showErrorSnackBar(tr('driver.smsFailed'));
     }
   }
 
@@ -524,7 +522,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
 
       if (response.statusCode == 200) {
         // HTTP /cancel is authoritative; backend emits trip:canceled to passenger.
-        _showSuccessSnackBar('Trip canceled');
+        _showSuccessSnackBar(tr('driver.tripCanceled'));
         await Future.delayed(const Duration(milliseconds: 800));
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
       } else {
@@ -533,7 +531,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isCanceling = false);
-        _showErrorSnackBar('Failed to cancel trip. Please try again.');
+        _showErrorSnackBar(tr('driver.cancelFailed'));
       }
     }
   }
@@ -634,7 +632,7 @@ class _DriverArrivedScreenState extends State<DriverArrivedScreen>
                 borderRadius: BorderRadius.circular(20)),
             title:   Text(tr('driver.leaveScreen')),
             content: Text(
-                'You are waiting for the passenger. Go back?'),
+                tr('driver.waitingGoBack')),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
@@ -1080,7 +1078,7 @@ class _SheetContent extends StatelessWidget {
                             : const Icon(Icons.play_arrow_rounded,
                                 color: Colors.black, size: 24),
                         label: Text(
-                          isStarting ? 'Starting…' : 'Start Trip',
+                          isStarting ? 'Starting…' : tr('driver.startTrip'),
                           style: const TextStyle(
                               fontSize:   16,
                               fontWeight: FontWeight.w800,
@@ -1296,12 +1294,13 @@ class _CancelDialog extends StatefulWidget {
 }
 
 class _CancelDialogState extends State<_CancelDialog> {
-  static const _reasons = [
-    'Passenger not responding',
-    'Passenger requested cancellation',
-    'Safety concern',
-    'Vehicle issue',
-    'Other',
+  // Localized at build time (tr() is not const), so the switcher applies.
+  List<String> get _reasons => [
+    tr('driver.reasonNotResponding'),
+    tr('driver.reasonRequestedCancel'),
+    tr('driver.reasonSafety'),
+    tr('driver.reasonVehicle'),
+    tr('driver.reasonOther'),
   ];
   String? _selected;
 
