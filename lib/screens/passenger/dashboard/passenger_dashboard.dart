@@ -42,6 +42,7 @@ import '../delivery/delivery_home_screen.dart';
 import '../reservation/rental_screen.dart';
 import '../ride/ride map/ride_map.dart';
 import '../trip/active_trip_resume.dart';
+import '../delivery/active_delivery_resume.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -88,6 +89,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
 
   // ── Ride still running on the server (survives app close / phone off) ──
   ActiveTrip? _activeTrip;
+  ActiveDelivery? _activeDelivery;
 
   // ── Location / map ──────────────────────────────────────────────
   LatLng?         _currentLatLng;
@@ -129,7 +131,10 @@ class _PassengerDashboardState extends State<PassengerDashboard>
     // A ride keeps running on the server while the app is closed. Re-check on
     // every return to the foreground so the banner reflects reality — the trip
     // may have started, finished or been cancelled while we were away.
-    if (state == AppLifecycleState.resumed) _refreshActiveTrip();
+    if (state == AppLifecycleState.resumed) {
+      _refreshActiveTrip();
+      _refreshActiveDelivery();
+    }
   }
 
   /// Looks up any ride still in flight for this passenger and shows/hides the
@@ -138,6 +143,14 @@ class _PassengerDashboardState extends State<PassengerDashboard>
     final trip = await fetchActiveTrip(_accessToken);
     if (!mounted) return;
     setState(() => _activeTrip = trip);
+  }
+
+  /// Same, for a delivery the sender has in flight — a delivery lives on the
+  /// server, so a force-quit/phone-off must not lose the live tracking view.
+  Future<void> _refreshActiveDelivery() async {
+    final delivery = await fetchActiveDelivery(_accessToken);
+    if (!mounted) return;
+    setState(() => _activeDelivery = delivery);
   }
 
   void _setupAnimations() {
@@ -265,6 +278,7 @@ class _PassengerDashboardState extends State<PassengerDashboard>
         _loadDashboardData(),
         _loadFavoritePlaces(),
         _refreshActiveTrip(),
+        _refreshActiveDelivery(),
       ]);
 
       _entryCtrl.forward();
@@ -929,6 +943,8 @@ class _PassengerDashboardState extends State<PassengerDashboard>
           // Sits above everything else: a passenger reopening the app mid-ride
           // must see it before anything competes for attention.
           if (_activeTrip != null) _buildActiveTripBanner(_activeTrip!),
+          if (_activeDelivery != null)
+            _buildActiveDeliveryBanner(_activeDelivery!),
           _buildSearchBar(),
           _buildQuickActions(),
           _buildStatsStrip(),
@@ -1017,6 +1033,99 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                     name.isEmpty
                         ? tr('trip.resumeTap')
                         : tr('trip.resumeWith', {'name': name}),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.62),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: _kGold,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.arrow_forward_rounded,
+                  size: 17, color: _kDark),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // ACTIVE DELIVERY BANNER
+  // ─────────────────────────────────────────────────────────────────
+  //
+  // The sender's delivery also lives on the server. Force-quit or phone-off
+  // must not lose the live tracking view — tapping reopens the tracking screen
+  // (express or regular) at its current stage.
+
+  Widget _buildActiveDeliveryBanner(ActiveDelivery delivery) {
+    return GestureDetector(
+      onTap: () async {
+        await openActiveDelivery(context, delivery, _accessToken ?? '');
+        // The delivery may have completed while they were on that screen.
+        if (mounted) _refreshActiveDelivery();
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_kDark, Color(0xFF2E2E2E)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: _kGold.withOpacity(0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, __) => Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _kGold.withOpacity(0.14 * _pulse.value.clamp(0.6, 1.0)),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.local_shipping_rounded,
+                    color: _kGold, size: 21),
+              ),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    tr('delivery.resume.title'),
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    tr(delivery.statusTitleKey),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
