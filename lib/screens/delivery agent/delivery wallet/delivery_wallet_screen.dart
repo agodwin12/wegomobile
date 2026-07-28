@@ -102,11 +102,11 @@ enum _TopUpStatus {
 
   String get label {
     switch (this) {
-      case _TopUpStatus.pending:        return 'Pending';
+      case _TopUpStatus.pending:        return tr('delivery.wallet.statusPending');
       case _TopUpStatus.under_review:   return tr('wallet.underReview');
-      case _TopUpStatus.confirmed:      return 'Confirmed';
-      case _TopUpStatus.credited:       return 'Credited';
-      case _TopUpStatus.rejected:       return 'Rejected';
+      case _TopUpStatus.confirmed:      return tr('delivery.wallet.statusConfirmed');
+      case _TopUpStatus.credited:       return tr('delivery.wallet.statusCredited');
+      case _TopUpStatus.rejected:       return tr('delivery.wallet.statusRejected');
       case _TopUpStatus.campay_pending: return tr('wallet.awaitingPayment');
       case _TopUpStatus.campay_failed:  return tr('booking.paymentFailed');
     }
@@ -273,10 +273,11 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
   io.Socket? _socket;
 
   // ── Channels ──────────────────────────────────────────────────────────────
+  // Labels hold tr keys, resolved at render so a language switch updates them.
   static const _channels = [
-    {'value': 'mtn_mobile_money', 'label': 'MTN MoMo',      'emoji': '🟡'},
-    {'value': 'orange_money',     'label': 'Orange Money',   'emoji': '🟠'},
-    {'value': 'cash',             'label': 'Cash Deposit',   'emoji': '💵'},
+    {'value': 'mtn_mobile_money', 'label': 'delivery.pay.momo',           'emoji': '🟡'},
+    {'value': 'orange_money',     'label': 'delivery.pay.om',             'emoji': '🟠'},
+    {'value': 'cash',             'label': 'delivery.wallet.cashDeposit',  'emoji': '💵'},
   ];
 
   // ── Presets ───────────────────────────────────────────────────────────────
@@ -414,7 +415,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
 
     // CamPay channels require a phone number
     if (isCampay && _phoneCtrl.text.trim().isEmpty) {
-      _showSnack('Enter the mobile number to charge', isError: true);
+      _showSnack(tr('delivery.wallet.enterMobileNumber'), isError: true);
       return;
     }
 
@@ -431,13 +432,12 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       // still being set up server-side — the top-up record already exists. Don't
       // declare failure; tell the driver to watch for the PIN and refresh history.
       _showSnack(
-        'Still processing — check your phone for the payment prompt. '
-        'Your top-up will appear in history shortly.',
+        tr('delivery.wallet.stillProcessing'),
         isError: false,
       );
       if (mounted) _fetchHistory(reset: true);
     } catch (e) {
-      _showSnack('Network error. Please try again.', isError: true);
+      _showSnack(tr('common.networkError'), isError: true);
     }
 
     if (mounted) setState(() => _submitting = false);
@@ -484,7 +484,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
 
     // Map CamPay error codes
     final code    = body['code']    as String?;
-    final message = body['message'] as String? ?? 'Payment initiation failed';
+    final message = body['message'] as String? ?? tr('delivery.wallet.paymentInitFailed');
     _showSnack(_campayErrorLabel(code, message), isError: true);
   }
 
@@ -520,14 +520,14 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       return;
     }
 
-    _showSnack(body['message'] as String? ?? 'Submission failed', isError: true);
+    _showSnack(body['message'] as String? ?? tr('delivery.wallet.submissionFailed'), isError: true);
   }
 
   String _campayErrorLabel(String? code, String fallback) {
     switch (code) {
-      case 'ER101': return 'Invalid phone number. Please check and try again.';
-      case 'ER102': return 'This number is not supported. Use an MTN or Orange number.';
-      case 'ER301': return 'Payment service temporarily unavailable. Try again shortly.';
+      case 'ER101': return tr('delivery.wallet.errInvalidPhone');
+      case 'ER102': return tr('delivery.wallet.errUnsupportedNumber');
+      case 'ER301': return tr('delivery.wallet.errServiceUnavailable');
       default:      return fallback;
     }
   }
@@ -553,8 +553,11 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
     final now  = DateTime.now();
     final diff = now.difference(dt);
     if (diff.inDays == 0)
-      return 'Today, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    if (diff.inDays == 1) return 'Yesterday';
+      return tr('delivery.wallet.todayAt', {
+        'time':
+            '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}'
+      });
+    if (diff.inDays == 1) return tr('delivery.wallet.yesterday');
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
@@ -619,10 +622,10 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             fontFamily: 'LeagueSpartan', fontSize: 12),
         labelColor: AppColors.primaryGold,
         unselectedLabelColor: Colors.white54,
-        tabs: const [
-          Tab(text: 'Overview'),
-          Tab(text: 'Top Up'),
-          Tab(text: 'History'),
+        tabs: [
+          Tab(text: tr('delivery.wallet.tabOverview')),
+          Tab(text: tr('delivery.wallet.tabTopUp')),
+          Tab(text: tr('delivery.wallet.tabHistory')),
         ],
       ),
       flexibleSpace: FlexibleSpaceBar(
@@ -711,7 +714,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Wallet ${_wallet.status}',
+            Text(tr('delivery.wallet.walletStatus', {'status': _wallet.status}),
                 style: const TextStyle(
                     fontFamily: 'LeagueSpartan',
                     fontSize: 13,
@@ -783,12 +786,12 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
 
   Widget _buildBalanceGrid() {
     final items = [
-      ('💰', 'Available',          _wallet.availableBalance,      AppColors.success),
-      ('🔒', 'Reserved',           _wallet.reservedBalance,       AppColors.warning),
-      ('⏳', 'Pending Withdrawal', _wallet.pendingWithdrawal,     AppColors.info),
-      ('📥', 'Total Topped Up',    _wallet.totalToppedUp,         AppColors.primaryGold),
-      ('📈', 'Total Earned',       _wallet.totalEarned,           AppColors.success),
-      ('🤝', 'Commission Paid',    _wallet.totalCommissionPaid,   AppColors.textSecondary),
+      ('💰', tr('delivery.wallet.available'),         _wallet.availableBalance,      AppColors.success),
+      ('🔒', tr('delivery.wallet.reserved'),          _wallet.reservedBalance,       AppColors.warning),
+      ('⏳', tr('delivery.wallet.pendingWithdrawal'), _wallet.pendingWithdrawal,     AppColors.info),
+      ('📥', tr('delivery.wallet.totalToppedUp'),     _wallet.totalToppedUp,         AppColors.primaryGold),
+      ('📈', tr('delivery.wallet.totalEarned'),       _wallet.totalEarned,           AppColors.success),
+      ('🤝', tr('delivery.wallet.commissionPaid'),    _wallet.totalCommissionPaid,   AppColors.textSecondary),
     ];
     return GridView.count(
       crossAxisCount: 2,
@@ -969,7 +972,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
     final topUp    = _pendingCampayTopUp!;
     final isMtn    = topUp.paymentChannel == 'mtn_mobile_money';
     final emoji    = isMtn ? '🟡' : '🟠';
-    final opLabel  = isMtn ? 'MTN MoMo' : 'Orange Money';
+    final opLabel  = isMtn ? tr('delivery.pay.momo') : tr('delivery.pay.om');
     final color    = isMtn ? const Color(0xFFFFCC00) : const Color(0xFFFF6600);
 
     return Center(
@@ -1004,8 +1007,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                   color: AppColors.textPrimary)),
           const SizedBox(height: 8),
           Text(
-            '$opLabel will send you a USSD prompt.\n'
-                'Enter your PIN to confirm the payment.',
+            tr('delivery.wallet.ussdPrompt', {'operator': opLabel}),
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontFamily: 'Quicksand',
@@ -1080,7 +1082,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
           ]),
 
           const SizedBox(height: 8),
-          Text('Ref: ${topUp.topupCode}',
+          Text(tr('delivery.wallet.refCode', {'code': topUp.topupCode}),
               style: TextStyle(
                   fontFamily: 'Quicksand',
                   fontSize: 11,
@@ -1131,7 +1133,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                   color: AppColors.textPrimary)),
           const SizedBox(height: 8),
           Text(
-            'Your payment was confirmed and the balance has been added to your wallet.',
+            tr('delivery.wallet.paymentConfirmedBody'),
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontFamily: 'Quicksand',
@@ -1224,8 +1226,8 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                   color: AppColors.textPrimary)),
           const SizedBox(height: 8),
           Text(
-            'Your cash top-up request ($_cashSubmitCode) has been received.\n'
-                'A WeGo agent will verify and credit your wallet shortly.',
+            tr('delivery.wallet.cashRequestReceived',
+                {'code': _cashSubmitCode ?? ''}),
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontFamily: 'Quicksand',
@@ -1318,7 +1320,7 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
                       : Text(ch['emoji']!, style: const TextStyle(fontSize: 22)),
                   const SizedBox(height: 5),
                   Text(
-                    ch['label']!,
+                    tr(ch['label']!),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontFamily: 'Quicksand',
@@ -1419,11 +1421,11 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             fontFamily: 'LeagueSpartan',
             fontSize: 18,
             fontWeight: FontWeight.w700),
-        decoration: _inputDecoration('Enter amount', suffix: 'XAF'),
+        decoration: _inputDecoration(tr('delivery.wallet.enterAmount'), suffix: 'XAF'),
         validator: (v) {
           final n = int.tryParse(v?.trim() ?? '');
           if (n == null || n <= 0) return tr('val.amountInvalid');
-          if (n < 25) return 'Minimum top-up is 25 XAF';
+          if (n < 25) return tr('delivery.wallet.minTopUp');
           return null;
         },
       ),
@@ -1438,8 +1440,8 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       style: const TextStyle(fontFamily: 'Quicksand', fontSize: 14),
       decoration: _inputDecoration(
         isMtn
-            ? 'MTN number to charge (e.g. 670000000)'
-            : 'Orange number to charge (e.g. 690000000)',
+            ? tr('delivery.wallet.mtnNumberHint')
+            : tr('delivery.wallet.orangeNumberHint'),
       ),
       validator: (v) {
         if (_selectedChannel == 'cash') return null;
@@ -1458,13 +1460,15 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
       controller: _noteCtrl,
       maxLines: 2,
       style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13),
-      decoration: _inputDecoration('Note (optional)'),
+      decoration: _inputDecoration(tr('delivery.wallet.noteOptional')),
     );
   }
 
   Widget _buildSubmitButton() {
     final isCampay = _selectedChannel != 'cash';
-    final label    = isCampay ? 'Pay with Mobile Money' : 'Submit Cash Request';
+    final label    = isCampay
+        ? tr('delivery.wallet.payWithMobileMoney')
+        : tr('delivery.wallet.submitCashRequest');
 
     return SizedBox(
       width: double.infinity,
@@ -1514,10 +1518,8 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
         Expanded(
           child: Text(
             isCampay
-                ? 'Tap Pay and enter your mobile money PIN when prompted on your phone. '
-                'Your wallet will be credited instantly once the payment is confirmed.'
-                : 'Submit this form after making your cash deposit at a WeGo office. '
-                'A staff member will verify and credit your wallet within 30 minutes.',
+                ? tr('delivery.wallet.campayNote')
+                : tr('delivery.wallet.cashNote'),
             style: const TextStyle(
                 fontFamily: 'Quicksand',
                 fontSize: 11,
@@ -1701,13 +1703,13 @@ class _DeliveryWalletScreenState extends State<DeliveryWalletScreen>
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(children: [
               Expanded(
-                  child: _miniStat('Before',
+                  child: _miniStat(tr('delivery.wallet.before'),
                       _fmt(t.balanceBeforeCredit!), AppColors.textSecondary)),
               Icon(Icons.arrow_forward_rounded,
                   size: 14, color: AppColors.borderMedium),
               Expanded(
                   child: _miniStat(
-                      'After', _fmt(t.balanceAfterCredit!), AppColors.success)),
+                      tr('delivery.wallet.after'), _fmt(t.balanceAfterCredit!), AppColors.success)),
             ]),
           ),
         ],

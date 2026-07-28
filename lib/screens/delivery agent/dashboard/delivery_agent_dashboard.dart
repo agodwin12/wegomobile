@@ -130,12 +130,12 @@ class _ActiveDeliverySummary {
 
   String get statusLabel {
     switch (status) {
-      case 'accepted':         return 'Head to pickup';
-      case 'en_route_pickup':  return 'On the way to pickup';
-      case 'arrived_pickup':   return 'At pickup — collect package';
-      case 'picked_up':        return 'Package collected';
-      case 'en_route_dropoff': return 'On the way to dropoff';
-      case 'arrived_dropoff':  return 'At dropoff — ask for PIN';
+      case 'accepted':         return tr('delivery.agentDash.statusHeadToPickup');
+      case 'en_route_pickup':  return tr('delivery.agentDash.statusOnWayPickup');
+      case 'arrived_pickup':   return tr('delivery.agentDash.statusAtPickupCollect');
+      case 'picked_up':        return tr('delivery.agentDash.statusPackageCollected');
+      case 'en_route_dropoff': return tr('delivery.agentDash.statusOnWayDropoff');
+      case 'arrived_dropoff':  return tr('delivery.agentDash.statusAtDropoffAskPin');
       default:                 return status;
     }
   }
@@ -361,9 +361,9 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         }
         return;
       }
-      _showSnack('Could not load delivery. Try again.', isError: true);
+      _showSnack(tr('delivery.agentDash.couldNotLoadDelivery'), isError: true);
     } catch (e) {
-      _showSnack('Network error. Try again.', isError: true);
+      _showSnack(tr('common.networkError'), isError: true);
     }
     if (mounted) setState(() => _resumingActiveDelivery = false);
   }
@@ -420,7 +420,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       final deliveryId = (data is Map) ? data['deliveryId'] : null;
       if (deliveryId != null && _activeDelivery?.id == deliveryId) {
         setState(() => _activeDelivery = null);
-        _showSnack('Delivery was cancelled by sender', isError: true);
+        _showSnack(tr('delivery.agentDash.deliveryCancelledBySender'), isError: true);
       }
     });
   }
@@ -511,7 +511,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
     if (_togglingStatus) return;
 
     if (!_isOnline && !_wallet.canAcceptJobs) {
-      _showSnack('Top up your wallet before going online', isError: true);
+      _showSnack(tr('delivery.agentDash.topUpBeforeOnline'), isError: true);
       return;
     }
 
@@ -522,7 +522,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         // ── GPS check ──────────────────────────────────────────────────────
         final serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) {
-          _showSnack('GPS is turned off. Enable location in device settings.',
+          _showSnack(tr('delivery.agentDash.gpsOff'),
               isError: true);
           if (mounted) setState(() => _togglingStatus = false);
           return;
@@ -534,7 +534,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         }
         if (perm == LocationPermission.denied ||
             perm == LocationPermission.deniedForever) {
-          _showSnack('Location permission required to go online.',
+          _showSnack(tr('delivery.agentDash.locationPermissionRequired'),
               isError: true);
           if (mounted) setState(() => _togglingStatus = false);
           return;
@@ -547,7 +547,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               timeLimit: const Duration(seconds: 15));
           _lastPosition = pos;
         } catch (e) {
-          _showSnack('Could not get location. Make sure GPS is enabled.',
+          _showSnack(tr('delivery.agentDash.couldNotGetLocation'),
               isError: true);
           if (mounted) setState(() => _togglingStatus = false);
           return;
@@ -564,7 +564,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         );
 
         if (onlineRes.statusCode != 200) {
-          _showSnack(_parseMessage(onlineRes.body, 'Failed to go online'),
+          _showSnack(_parseMessage(onlineRes.body, tr('delivery.agentDash.failedGoOnline')),
               isError: true);
           if (mounted) setState(() => _togglingStatus = false);
           return;
@@ -586,7 +586,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
           });
         }
         _startGpsUpdates();
-        _showSnack("You're now online 🟢", isError: false);
+        _showSnack(tr('delivery.agentDash.nowOnline'), isError: false);
 
       } else {
         // ── Go offline ─────────────────────────────────────────────────────
@@ -605,16 +605,16 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
               _togglingStatus = false;
             });
           }
-          _showSnack("You're now offline", isError: false);
+          _showSnack(tr('delivery.agentDash.nowOffline'), isError: false);
         } else {
-          _showSnack(_parseMessage(offlineRes.body, 'Failed to go offline'),
+          _showSnack(_parseMessage(offlineRes.body, tr('delivery.agentDash.failedGoOffline')),
               isError: true);
           if (mounted) setState(() => _togglingStatus = false);
         }
       }
     } catch (e) {
       debugPrint('❌ [AGENT] toggleStatus error: $e');
-      _showSnack('Network error. Try again.', isError: true);
+      _showSnack(tr('common.networkError'), isError: true);
       if (mounted) setState(() => _togglingStatus = false);
     }
   }
@@ -701,7 +701,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
     _offerCtrl.reverse().then((_) {
       if (mounted) setState(() { _offerVisible = false; _pendingOffer = null; });
     });
-    if (expired && mounted) _showSnack('Offer expired', isError: false);
+    if (expired && mounted) _showSnack(tr('delivery.agentDash.offerExpired'), isError: false);
   }
 
   Future<void> _acceptOffer() async {
@@ -753,11 +753,11 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       }
 
       _dismissOffer();
-      _showSnack(_parseMessage(res.body, 'Could not accept delivery'),
+      _showSnack(_parseMessage(res.body, tr('delivery.agentDash.couldNotAccept')),
           isError: true);
     } catch (_) {
       _dismissOffer();
-      _showSnack('Network error. Offer may have expired.', isError: true);
+      _showSnack(tr('delivery.agentDash.networkOfferExpired'), isError: true);
     }
   }
 
@@ -919,7 +919,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                 size: 22,
               ),
               onPressed: null,
-              tooltip: 'Notifications',
+              tooltip: tr('delivery.agentDash.tooltipNotifications'),
             ),
           ),
         ),
@@ -927,18 +927,18 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         IconButton(
           icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 22),
           onPressed: _refreshAll,
-          tooltip: 'Refresh',
+          tooltip: tr('delivery.agentDash.tooltipRefresh'),
         ),
 
         IconButton(
           icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 22),
           onPressed: _refreshAll,
-          tooltip: 'Refresh',
+          tooltip: tr('delivery.agentDash.tooltipRefresh'),
         ),
         IconButton(
           icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 22),
           onPressed: _logout,
-          tooltip: 'Log out',
+          tooltip: tr('delivery.agentDash.tooltipLogout'),
         ),
       ],
       flexibleSpace: FlexibleSpaceBar(
@@ -974,7 +974,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                 children: [
                   Text(
                     '$_firstName $_lastName'.trim().isEmpty
-                        ? 'Delivery Agent'
+                        ? tr('delivery.agentDash.deliveryAgent')
                         : '$_firstName $_lastName',
                     style: const TextStyle(
                         fontFamily: 'LeagueSpartan',
@@ -1003,7 +1003,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      _isOnline ? 'Online — Delivery Mode' : 'Offline',
+                      _isOnline ? tr('delivery.agentDash.onlineDeliveryMode') : tr('delivery.agentDash.offline'),
                       style: TextStyle(
                           fontFamily: 'Quicksand',
                           fontSize:   10,
@@ -1109,7 +1109,9 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        d.deliveryType == 'express' ? '⚡ EXPRESS' : '📦 REGULAR',
+                        d.deliveryType == 'express'
+                            ? tr('delivery.agentDash.expressBadge')
+                            : tr('delivery.agentDash.regularBadge'),
                         style: TextStyle(
                             fontFamily: 'LeagueSpartan',
                             fontSize:   9,
@@ -1227,7 +1229,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _isOnline ? "You're Online" : "You're Offline",
+                    _isOnline ? tr('delivery.agentDash.youreOnline') : tr('delivery.agentDash.youreOffline'),
                     style: TextStyle(
                         fontFamily: 'LeagueSpartan',
                         fontSize:   17,
@@ -1239,8 +1241,8 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   const SizedBox(height: 3),
                   Text(
                     _isOnline
-                        ? 'Delivery requests will appear here'
-                        : 'Tap to go online and start earning',
+                        ? tr('delivery.agentDash.requestsWillAppear')
+                        : tr('delivery.agentDash.tapToGoOnline'),
                     style: TextStyle(
                         fontFamily: 'Quicksand',
                         fontSize:   12,
@@ -1380,15 +1382,15 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
 
             Row(children: [
               Expanded(child: _walletStat(
-                  'Reserved', _fmt(_wallet.reservedBalance), AppColors.warning)),
+                  tr('delivery.agentDash.reserved'), _fmt(_wallet.reservedBalance), AppColors.warning)),
               Container(width: 1, height: 36,
                   color: Colors.white.withOpacity(0.08)),
               Expanded(child: _walletStat(
-                  'Total Earned', _fmt(_wallet.totalEarned), AppColors.success)),
+                  tr('delivery.agentDash.totalEarned'), _fmt(_wallet.totalEarned), AppColors.success)),
               Container(width: 1, height: 36,
                   color: Colors.white.withOpacity(0.08)),
               Expanded(child: _walletStat(
-                  'Commission Due', _fmt(_wallet.outstandingCommission),
+                  tr('delivery.commissionDue'), _fmt(_wallet.outstandingCommission),
                   AppColors.textSecondary)),
             ]),
 
@@ -1408,7 +1410,8 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                   Expanded(
                     child: Text(
                       _wallet.frozenReason ??
-                          'Wallet ${_wallet.status}. Contact support.',
+                          tr('delivery.agentDash.walletStatusContact',
+                              {'status': _wallet.status}),
                       style: const TextStyle(
                           fontFamily: 'Quicksand',
                           fontSize:   11,
@@ -1451,14 +1454,14 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
     final activeCount = _activeDelivery != null ? '1' : '0';
     return Row(children: [
       Expanded(child: _statCard(
-          '💰', 'Total\nEarned', _fmt(_wallet.totalEarned), AppColors.success)),
+          '💰', tr('delivery.agentDash.statTotalEarned'), _fmt(_wallet.totalEarned), AppColors.success)),
       const SizedBox(width: 12),
       Expanded(child: _statCard(
-          '🔒', 'Commission\nReserved', _fmt(_wallet.reservedBalance),
+          '🔒', tr('delivery.agentDash.statCommissionReserved'), _fmt(_wallet.reservedBalance),
           AppColors.warning)),
       const SizedBox(width: 12),
       Expanded(child: _statCard(
-          '📦', 'Active\nDeliveries', activeCount, AppColors.info)),
+          '📦', tr('delivery.agentDash.statActiveDeliveries'), activeCount, AppColors.info)),
     ]);
   }
 
@@ -1618,8 +1621,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         color:      AppColors.warning)),
                 const SizedBox(height: 4),
                 Text(
-                    'You need sufficient balance to cover the delivery commission '
-                        'before accepting jobs. Top up to go online.',
+                    tr('delivery.agentDash.balanceWarning'),
                     style: TextStyle(
                         fontFamily: 'Quicksand',
                         fontSize:   11,
@@ -1683,9 +1685,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         color:      AppColors.info)),
                 SizedBox(height: 5),
                 Text(
-                    '1. A commission is reserved from your wallet when you accept a delivery.\n'
-                        '2. After successful delivery, your payout is credited to your wallet.\n'
-                        '3. Request a cashout anytime from the Wallet screen.',
+                    tr('delivery.agentDash.earningsExplainer'),
                     style: TextStyle(
                         fontFamily: 'Quicksand',
                         fontSize:   11,
@@ -1712,7 +1712,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
     final isExpress  = (offer['deliveryType'] as String?) == 'express';
     final isFragile  = offer['isFragile'] as bool? ?? false;
     final emoji      = offer['categoryEmoji'] as String? ?? '📦';
-    final catLabel   = offer['categoryLabel'] as String? ?? 'Package';
+    final catLabel   = offer['categoryLabel'] as String? ?? tr('delivery.agentDash.packageDefault');
     final size       = offer['packageSize']   as String? ?? '';
     final pickup     = (offer['pickup']  as Map?)?['address'] as String? ?? '—';
     final dropoff    = (offer['dropoff'] as Map?)?['address'] as String? ?? '—';
@@ -1762,8 +1762,8 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                         children: [
                           Text(
                             isExpress
-                                ? 'Express Delivery'
-                                : 'New Delivery Request',
+                                ? tr('delivery.type.express')
+                                : tr('delivery.agentDash.newDeliveryRequest'),
                             style: TextStyle(
                                 fontFamily: 'LeagueSpartan',
                                 fontSize:   16,
@@ -1862,7 +1862,7 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
                       Expanded(
                         child: Text(
                           '$catLabel${size.isNotEmpty ? ' · ${size[0].toUpperCase()}${size.substring(1)}' : ''}'
-                              '${isFragile ? ' · 🏺 Fragile' : ''}',
+                              '${isFragile ? ' · 🏺 ${tr("delivery.agentDash.fragile")}' : ''}',
                           style: const TextStyle(
                               fontFamily: 'Quicksand',
                               fontSize:   13,
@@ -1883,14 +1883,15 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
 
                     Row(children: [
                       _chip(Icons.directions_bike_rounded,
-                          '${distPickup.toStringAsFixed(1)} km to pickup',
+                          tr('delivery.agentDash.kmToPickup',
+                              {'km': distPickup.toStringAsFixed(1)}),
                           AppColors.info),
                       const SizedBox(width: 8),
                       _chip(
                         payment == 'cash'
                             ? Icons.payments_outlined
                             : Icons.phone_android_rounded,
-                        payment == 'cash' ? 'Cash' : 'Mobile Money',
+                        payment == 'cash' ? tr('delivery.pay.cash') : tr('delivery.pay.mobileMoney'),
                         AppColors.success,
                       ),
                     ]),

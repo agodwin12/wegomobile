@@ -487,10 +487,10 @@ class _DeliveryActiveExpressScreenState
         _showSnack(nextStage.statusLabel, isError: false);
       } else {
         _showSnack(
-            resBody['message'] as String? ?? 'Failed', isError: true);
+            resBody['message'] as String? ?? tr('delivery.activeX.failed'), isError: true);
       }
     } catch (_) {
-      _showSnack('Network error. Try again.', isError: true);
+      _showSnack(tr('common.networkError'), isError: true);
     }
 
     if (mounted) setState(() => _transitioning = false);
@@ -511,7 +511,7 @@ class _DeliveryActiveExpressScreenState
         setState(() => _pickupPhoto = File(picked.path));
       }
     } on PlatformException catch (e) {
-      _showSnack('Camera: ${e.message}', isError: true);
+      _showSnack(tr('delivery.active.cameraError', {'message': '${e.message}'}), isError: true);
     }
   }
 
@@ -577,7 +577,7 @@ class _DeliveryActiveExpressScreenState
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
                 Text(
-                  'Ask ${widget.delivery.recipientName} for the 4-digit PIN.',
+                  tr('delivery.active.askPinPhone', {'recipient': widget.delivery.recipientName}),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                       color: AppColors.textSecondary, height: 1.4),
@@ -630,7 +630,7 @@ class _DeliveryActiveExpressScreenState
                     child: ElevatedButton(
                       onPressed: _verifyingPin ? null : () async {
                         if (_pinCtrl.text.length != 4) {
-                          setDS(() => _pinError = 'Enter 4 digits');
+                          setDS(() => _pinError = tr('delivery.active.enter4Digits'));
                           return;
                         }
                         setDS(() { _verifyingPin = true; _pinError = null; });
@@ -682,11 +682,11 @@ class _DeliveryActiveExpressScreenState
         return;
       }
       setDS(() {
-        _pinError     = body['message'] as String? ?? 'Incorrect PIN';
+        _pinError     = body['message'] as String? ?? tr('delivery.active.incorrectPin');
         _verifyingPin = false;
       });
     } catch (_) {
-      setDS(() { _pinError = 'Network error'; _verifyingPin = false; });
+      setDS(() { _pinError = tr('common.networkError'); _verifyingPin = false; });
     }
   }
 
@@ -711,7 +711,7 @@ class _DeliveryActiveExpressScreenState
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                 Text(
-                  'You will lose the commission fee as a cancellation penalty.',
+                  tr('delivery.active.cancelBody'),
                   style: TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                       color: AppColors.textSecondary, height: 1.5),
                 ),
@@ -778,9 +778,9 @@ class _DeliveryActiveExpressScreenState
       }
       _showSnack(
           (jsonDecode(res.body) as Map)['message'] as String?
-              ?? 'Cannot cancel',
+              ?? tr('delivery.active.cannotCancel'),
           isError: true);
-    } catch (_) { _showSnack('Network error', isError: true); }
+    } catch (_) { _showSnack(tr('common.networkError'), isError: true); }
     if (mounted) setState(() => _cancelling = false);
   }
 
@@ -799,11 +799,11 @@ class _DeliveryActiveExpressScreenState
       ).timeout(const Duration(seconds: 12));
       if (res.statusCode == 200) {
         setState(() { _cashConfirmed = true; _confirmingCash = false; });
-        _showSnack('Cash confirmed!', isError: false);
+        _showSnack(tr('delivery.active.cashConfirmedMsg'), isError: false);
         return;
       }
     } catch (_) {}
-    _showSnack('Failed', isError: true);
+    _showSnack(tr('delivery.activeX.failed'), isError: true);
     if (mounted) setState(() => _confirmingCash = false);
   }
 
@@ -1195,7 +1195,7 @@ class _DeliveryActiveExpressScreenState
             '${widget.delivery.categoryLabel} · '
             '${widget.delivery.packageSize[0].toUpperCase()}'
             '${widget.delivery.packageSize.substring(1)}'
-            '${widget.delivery.isFragile ? ' · 🏺 Fragile' : ''}',
+            '${widget.delivery.isFragile ? ' · 🏺 ' + tr('agent.fragile') : ''}',
             style: const TextStyle(fontFamily: 'Quicksand', fontSize: 12,
                 fontWeight: FontWeight.w600),
           ),
@@ -1253,14 +1253,14 @@ class _DeliveryActiveExpressScreenState
 
   Widget _buildFinancialsRow() {
     return Row(children: [
-      _finStat('Your Payout',  _fmt(widget.delivery.driverPayout),
+      _finStat(tr('delivery.payout'),  _fmt(widget.delivery.driverPayout),
           AppColors.success),
       const SizedBox(width: 12),
-      _finStat('Commission',   _fmt(widget.delivery.commissionAmount),
+      _finStat(tr('delivery.active.commission'),   _fmt(widget.delivery.commissionAmount),
           AppColors.warning),
       const SizedBox(width: 12),
-      _finStat('Payment',
-          widget.delivery.paymentMethod == 'cash' ? '💵 Cash' : '📱 Mobile',
+      _finStat(tr('delivery.active.payment'),
+          widget.delivery.paymentMethod == 'cash' ? '💵 ${tr('delivery.pay.cash')}' : '📱 ${tr('delivery.active.mobile')}',
           AppColors.info),
     ]);
   }
@@ -1343,8 +1343,7 @@ class _DeliveryActiveExpressScreenState
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Ask ${widget.delivery.recipientName} for the 4-digit PIN '
-            'before handing over the package.',
+            tr('delivery.activeX.pinHintBody', {'recipient': widget.delivery.recipientName}),
             style: const TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                 color: AppColors.warning, height: 1.4),
           ),
@@ -1375,7 +1374,7 @@ class _DeliveryActiveExpressScreenState
                   color: AppColors.success, size: 50),
             ),
             const SizedBox(height: 20),
-            Text('⚡ Express Delivery Complete!',
+            Text('⚡ ${tr('delivery.activeX.completeTitle')}',
                 style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 20,
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
@@ -1391,13 +1390,13 @@ class _DeliveryActiveExpressScreenState
                 border: Border.all(color: AppColors.borderLight),
               ),
               child: Column(children: [
-                _completionStat('💰 Your Payout',
+                _completionStat('💰 ${tr('delivery.payout')}',
                     _fmt(widget.delivery.driverPayout), AppColors.success),
                 const SizedBox(height: 10),
-                _completionStat('🏢 Commission',
+                _completionStat('🏢 ${tr('delivery.active.commission')}',
                     _fmt(widget.delivery.commissionAmount), AppColors.warning),
                 const SizedBox(height: 10),
-                _completionStat('📦 Recipient',
+                _completionStat('📦 ${tr('delivery.recipient')}',
                     widget.delivery.recipientName, AppColors.info),
               ]),
             ),
@@ -1414,14 +1413,13 @@ class _DeliveryActiveExpressScreenState
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('💵 Confirm cash received',
+                      Text('💵 ${tr('delivery.activeX.confirmCashReceived')}',
                           style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color:      AppColors.warning)),
                       const SizedBox(height: 4),
                       Text(
-                        'Confirm you received ${_fmt(widget.delivery.totalPrice)} '
-                        'from ${widget.delivery.recipientName}.',
+                        tr('delivery.active.confirmReceivedAmount', {'amount': _fmt(widget.delivery.totalPrice), 'name': widget.delivery.recipientName}),
                         style: const TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                             color: AppColors.warning, height: 1.4),
                       ),
@@ -1530,8 +1528,7 @@ class _DeliveryActiveExpressScreenState
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
               Text(
-                'This express delivery was cancelled. '
-                'Your commission has been released.',
+                tr('delivery.activeX.cancelledBody'),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                     color: AppColors.textSecondary, height: 1.5),

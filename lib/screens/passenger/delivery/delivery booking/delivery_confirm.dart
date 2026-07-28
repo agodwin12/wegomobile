@@ -200,11 +200,11 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         });
         return;
       }
-      final err = jsonDecode(res.body)['message'] ?? 'Could not calculate fare';
+      final err = jsonDecode(res.body)['message'] ?? tr('delivery.confirm.couldNotCalculateFare');
       if (mounted) setState(() { _estimateError = err; _estimating = false; });
     } catch (_) {
       if (mounted) setState(() {
-        _estimateError = 'Network error. Pull to retry.';
+        _estimateError = tr('delivery.confirm.networkPullRetry');
         _estimating    = false;
       });
     }
@@ -282,13 +282,13 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
         return;  // nothing else — no dialog
       }
 
-      final msg = data['message'] ?? 'Booking failed. Please try again.';
+      final msg = data['message'] ?? tr('delivery.confirm.bookingFailed');
       if (mounted) setState(() { _bookingError = msg; _booking = false; });
       _showError(msg);
 
     } catch (e) {
       if (mounted) setState(() { _booking = false; });
-      _showError('Network error. Check your connection.');
+      _showError(tr('delivery.confirm.networkCheckConnection'));
     }
   }
 
@@ -313,7 +313,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                 style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 18,
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
-            Text('Code: ${delivery['deliveryCode']}',
+            Text(tr('delivery.confirm.code', {'code': '${delivery['deliveryCode']}'}),
                 style: TextStyle(fontFamily: 'Quicksand', fontSize: 14,
                     color: AppColors.textSecondary)),
             const SizedBox(height: 8),
@@ -408,7 +408,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
       foregroundColor: _isExpress ? Colors.white : AppColors.textPrimary,
       elevation: 0,
       title: Text(
-        _isExpress ? '⚡ Express Delivery' : '📦 Regular Delivery',
+        _isExpress ? '⚡ ${tr('delivery.type.express')}' : '📦 ${tr('delivery.type.regular')}',
         style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 17,
             fontWeight: FontWeight.w800,
             color: _isExpress ? Colors.white : AppColors.textPrimary),
@@ -448,7 +448,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                   ),
                 ),
                 const SizedBox(width: 6),
-                Text(['Location', 'Package', 'Confirm'][i],
+                Text([tr('delivery.confirm.stepLocation'), tr('delivery.confirm.stepPackage'), tr('delivery.confirm.stepConfirm')][i],
                     style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                         fontWeight: active ? FontWeight.w700 : FontWeight.w400,
                         color: active ? AppColors.textPrimary : AppColors.textLight)),
@@ -522,7 +522,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                         style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 13,
                             fontWeight: FontWeight.w700)),
                     if (widget.isFragile)
-                      Text('🏺 Fragile',
+                      Text('🏺 ${tr('delivery.confirm.fragile')}',
                           style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                               color: AppColors.warning,
                               fontWeight: FontWeight.w500)),
@@ -673,7 +673,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                     child: Row(children: [
                       const Icon(Icons.bolt_rounded, size: 13, color: Colors.white),
                       const SizedBox(width: 3),
-                      Text('Surge ×${e.surgeMultiplier.toStringAsFixed(1)}',
+                      Text(tr('delivery.confirm.surgeMultiplier', {'value': e.surgeMultiplier.toStringAsFixed(1)}),
                           style: const TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                               fontWeight: FontWeight.w700, color: Colors.white)),
                     ]),
@@ -690,18 +690,18 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
             child: Column(children: [
-              _eRow('Distance',
+              _eRow(tr('delivery.confirm.distance'),
                   e.distanceText ?? '${e.distanceKm.toStringAsFixed(1)} km'),
               if (e.durationText != null)
-                _eRow('Est. duration', e.durationText!),
+                _eRow(tr('delivery.confirm.estDuration'), e.durationText!),
               if (_isExpress && e.expressSurcharge > 0)
-                _eRow('Express surcharge',
+                _eRow(tr('delivery.confirm.expressSurcharge'),
                     '+${e.expressSurcharge.toStringAsFixed(0)} XAF',
                     highlight: true),
               if (e.surgeActive && e.surgeRuleName != null)
-                _eRow('Surge rule', e.surgeRuleName!),
-              _eRow('Tracking mode',
-                  _isExpress ? '🗺 Live map' : '📋 Stage updates'),
+                _eRow(tr('delivery.confirm.surgeRule'), e.surgeRuleName!),
+              _eRow(tr('delivery.confirm.trackingMode'),
+                  _isExpress ? '🗺 ${tr('delivery.confirm.liveMap')}' : '📋 ${tr('delivery.confirm.stageUpdates')}'),
             ]),
           ),
         ],
@@ -737,13 +737,13 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
               style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 14),
-          _input(_nameCtrl,  'Full name *',
+          _input(_nameCtrl,  tr('delivery.confirm.fullName'),
               icon: Icons.person_outline_rounded),
           const SizedBox(height: 10),
           CountryCodePhoneField(
             controller: _phoneCtrl,
             country: _recipientCountry,
-            hint: 'Phone number *',
+            hint: tr('delivery.confirm.phoneNumber'),
             onCountryChanged: (c) => setState(() => _recipientCountry = c),
             onChanged: () => setState(() {}), // refresh _canBook
           ),
@@ -751,15 +751,14 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: Text(
-              'Select the recipient\'s country, then enter the number '
-              'without the country code.',
+              tr('delivery.confirm.selectCountryHint'),
               style: TextStyle(
                   fontFamily: 'Quicksand', fontSize: 11,
                   color: AppColors.textLight),
             ),
           ),
           const SizedBox(height: 10),
-          _input(_noteCtrl,  'Note (optional)',
+          _input(_noteCtrl,  tr('delivery.confirm.noteOptional'),
               icon: Icons.note_outlined, maxLines: 2),
           const SizedBox(height: 10),
           Container(
@@ -773,8 +772,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                    'A 4-digit PIN will be sent to the recipient\'s number '
-                        'to confirm delivery.',
+                    tr('delivery.confirm.pinNotice'),
                     style: TextStyle(fontFamily: 'Quicksand', fontSize: 11,
                         color: AppColors.info, height: 1.4)),
               ),
@@ -851,7 +849,7 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
             const SizedBox(height: 8),
             Text(
               applied
-                  ? '✓ Coupon applied — you save ${_couponDiscount.toStringAsFixed(0)} XAF'
+                  ? tr('delivery.confirm.couponApplied', {'amount': _couponDiscount.toStringAsFixed(0)})
                   : _couponMessage!,
               style: TextStyle(
                 fontSize: 12.5,
@@ -868,10 +866,10 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
   // ── Payment card ───────────────────────────────────────────────────────────
 
   Widget _buildPaymentCard() {
-    const methods = [
-      ('mtn_mobile_money', 'MTN MoMo',    '🟡'),
-      ('orange_money',     'Orange Money','🟠'),
-      ('cash',             'Cash',        '💵'),
+    final methods = [
+      ('mtn_mobile_money', tr('delivery.pay.momo'),    '🟡'),
+      ('orange_money',     tr('delivery.pay.om'),'🟠'),
+      ('cash',             tr('delivery.pay.cash'),        '💵'),
     ];
     return _card(
       child: Column(
@@ -962,8 +960,8 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
               const SizedBox(width: 8),
               Text(
                   price != null
-                      ? 'Confirm Booking · $price XAF'
-                      : 'Confirm Booking',
+                      ? tr('delivery.confirm.confirmBookingPrice', {'price': price})
+                      : tr('delivery.confirm.confirmBooking'),
                   style: const TextStyle(fontFamily: 'LeagueSpartan',
                       fontSize: 15, fontWeight: FontWeight.w700,
                       letterSpacing: 0.1)),

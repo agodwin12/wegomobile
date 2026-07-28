@@ -490,11 +490,11 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                   .copyWith(fontWeight: FontWeight.w700, fontSize: 11),
               unselectedLabelStyle:
               AppTypography.labelSmall.copyWith(fontSize: 11),
-              tabs: const [
-                Tab(text: 'Today'),
-                Tab(text: 'This Week'),
-                Tab(text: 'This Month'),
-                Tab(text: 'All Time'),
+              tabs: [
+                Tab(text: tr('delivery.history.today')),
+                Tab(text: tr('delivery.history.thisWeek')),
+                Tab(text: tr('delivery.history.thisMonth')),
+                Tab(text: tr('delivery.history.allTime')),
               ],
             ),
           ),
@@ -526,7 +526,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
               const SizedBox(width: 8),
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text('${p.deliveries} deliveries',
+                child: Text(tr('delivery.history.deliveriesCount', {'count': '${p.deliveries}'}),
                     style: AppTypography.bodySmall
                         .copyWith(color: Colors.white70)),
               ),
@@ -536,11 +536,11 @@ class _HistoryState extends State<DeliveryHistoryScreen>
           Row(
             children: [
               _stat(Icons.account_balance_wallet_rounded,
-                  'Wallet', _xaf(p.walletCredited)),
+                  tr('delivery.history.wallet'), _xaf(p.walletCredited)),
               const SizedBox(width: 8),
-              _stat(Icons.payments_rounded, 'Cash', _xaf(p.cashCollected)),
+              _stat(Icons.payments_rounded, tr('delivery.pay.cash'), _xaf(p.cashCollected)),
               const SizedBox(width: 8),
-              _stat(Icons.flash_on_rounded, 'Express',
+              _stat(Icons.flash_on_rounded, tr('delivery.history.express'),
                   '${p.expressCount}', accent: true),
             ],
           ),
@@ -588,7 +588,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _chip('All',       _fStatus == null,
+          _chip(tr('delivery.history.all'),       _fStatus == null,
                   () { setState(() => _fStatus = null);        _loadList(reset: true); }),
           const SizedBox(width: 6),
           _chip(tr('agent.st.delivered'), _fStatus == 'delivered',
@@ -598,16 +598,16 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                   () { setState(() => _fStatus = 'cancelled'); _loadList(reset: true); }),
           const SizedBox(width: 10),
           _chip(
-            _fType == 'express' ? '⚡ Express'
-                : _fType == 'regular' ? '📦 Regular' : 'All Types',
+            _fType == 'express' ? '⚡ ${tr('delivery.history.express')}'
+                : _fType == 'regular' ? '📦 ${tr('delivery.history.regular')}' : tr('delivery.history.allTypes'),
             _fType != null, _showFilterSheet,
           ),
           const SizedBox(width: 6),
           _chip(
-            _fPayment == 'cash'             ? '💵 Cash'
+            _fPayment == 'cash'             ? '💵 ${tr('delivery.pay.cash')}'
                 : _fPayment == 'mtn_mobile_money' ? '📱 MTN'
                 : _fPayment == 'orange_money'     ? '🟠 Orange'
-                : 'All Payments',
+                : tr('delivery.history.allPayments'),
             _fPayment != null, _showFilterSheet,
           ),
         ],
@@ -656,8 +656,8 @@ class _HistoryState extends State<DeliveryHistoryScreen>
           const SizedBox(height: 8),
           Text(
             (_fStatus != null || _fType != null || _fPayment != null)
-                ? 'Try changing your filters'
-                : 'Completed deliveries will appear here',
+                ? tr('delivery.history.tryChangingFilters')
+                : tr('delivery.history.completedWillAppear'),
             style: AppTypography.bodySmall
                 .copyWith(color: AppColors.secondaryGrey),
             textAlign: TextAlign.center,
@@ -729,7 +729,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                                   color: Colors.orange.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Text('⚡ Express',
+                                child: Text('⚡ ${tr('delivery.history.express')}',
                                     style: AppTypography.labelSmall.copyWith(
                                         color: Colors.orange,
                                         fontSize: 9,
@@ -803,7 +803,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                         ),
                         Text(
                           d.isDelivered
-                              ? (d.isCash ? 'Cash delivery' : 'Wallet credited')
+                              ? (d.isCash ? tr('delivery.history.cashDelivery') : tr('delivery.history.walletCreditedLabel'))
                               : (d.isCancelled ? tr('agent.st.cancelled') : d.status),
                           style: AppTypography.labelSmall.copyWith(
                             // ✅ black sublabel
@@ -821,7 +821,7 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                         ? Icons.payments_rounded
                         : Icons.phone_android_rounded,
                     d.isCash
-                        ? 'Cash'
+                        ? tr('delivery.pay.cash')
                         : d.paymentMethod == 'mtn_mobile_money'
                         ? 'MTN'
                         : 'Orange',
@@ -935,17 +935,17 @@ class _HistoryState extends State<DeliveryHistoryScreen>
                   style: AppTypography.titleLarge
                       .copyWith(color: AppColors.primaryDark)),
               const SizedBox(height: 20),
-              _sheetSection('Status', {
-                null: 'All', 'delivered': tr('agent.st.delivered'), 'cancelled': tr('agent.st.cancelled'),
+              _sheetSection(tr('delivery.history.status'), {
+                null: tr('delivery.history.all'), 'delivered': tr('agent.st.delivered'), 'cancelled': tr('agent.st.cancelled'),
               }, tStatus, (v) => setSt(() => tStatus = v)),
               const SizedBox(height: 16),
-              _sheetSection('Type', {
-                null: 'All', 'regular': '📦 Regular', 'express': '⚡ Express',
+              _sheetSection(tr('delivery.history.type'), {
+                null: tr('delivery.history.all'), 'regular': '📦 ${tr('delivery.history.regular')}', 'express': '⚡ ${tr('delivery.history.express')}',
               }, tType, (v) => setSt(() => tType = v)),
               const SizedBox(height: 16),
-              _sheetSection('Payment', {
-                null: 'All',
-                'cash': '💵 Cash',
+              _sheetSection(tr('delivery.history.payment'), {
+                null: tr('delivery.history.all'),
+                'cash': '💵 ${tr('delivery.pay.cash')}',
                 'mtn_mobile_money': '📱 MTN',
                 'orange_money': '🟠 Orange',
               }, tPayment, (v) => setSt(() => tPayment = v)),
@@ -1195,7 +1195,7 @@ class _DetailState extends State<_DetailSheet> {
                       );
                     },
                     icon: const Icon(Icons.copy_rounded, size: 16),
-                    label: Text('Copy ${d.deliveryCode}'),
+                    label: Text(tr('delivery.history.copyCode', {'code': d.deliveryCode})),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.secondaryGrey,
                       side: BorderSide(
@@ -1214,7 +1214,7 @@ class _DetailState extends State<_DetailSheet> {
   }
 
   Widget _earningsSection(_Delivery d) => _sec(
-    'Earnings',
+    tr('delivery.history.earnings'),
     Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1224,13 +1224,13 @@ class _DetailState extends State<_DetailSheet> {
       ),
       child: Column(
         children: [
-          _row2('Your payout', _xaf(d.driverPayout),
+          _row2(tr('delivery.payout'), _xaf(d.driverPayout),
               valueColor: AppColors.success, bold: true),
           const SizedBox(height: 8),
-          _row2('WeGo commission', '- ${_xaf(d.commissionAmount)}',
+          _row2(tr('delivery.commissionLabel'), '- ${_xaf(d.commissionAmount)}',
               valueColor: AppColors.error),
           Divider(height: 16, color: AppColors.success.withOpacity(0.2)),
-          _row2('Total fare', _xaf(d.totalPrice), bold: true),
+          _row2(tr('delivery.history.totalFare'), _xaf(d.totalPrice), bold: true),
           if (d.isCash) ...[
             const SizedBox(height: 10),
             Container(
@@ -1246,8 +1246,10 @@ class _DetailState extends State<_DetailSheet> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Cash delivery — collected ${_xaf(d.totalPrice)}, '
-                          'owe ${_xaf(d.commissionAmount)} to WeGo.',
+                      tr('delivery.history.cashCollectedNote', {
+                        'collected': _xaf(d.totalPrice),
+                        'owed': _xaf(d.commissionAmount),
+                      }),
                       style: AppTypography.bodySmall.copyWith(
                           color: Colors.orange, fontSize: 11),
                     ),
@@ -1262,23 +1264,23 @@ class _DetailState extends State<_DetailSheet> {
   );
 
   Widget _routeSection(_Delivery d) => _sec(
-    'Route · ${d.distanceKm.toStringAsFixed(1)} km',
+    tr('delivery.history.routeWithDistance', {'distance': d.distanceKm.toStringAsFixed(1)}),
     Column(children: [
-      _iconRow(Icons.trip_origin_rounded, 'Pickup',
+      _iconRow(Icons.trip_origin_rounded, tr('delivery.history.pickup'),
           d.pickupAddress, AppColors.success),
       const SizedBox(height: 12),
-      _iconRow(Icons.location_on_rounded, 'Dropoff',
+      _iconRow(Icons.location_on_rounded, tr('delivery.history.dropoff'),
           d.dropoffAddress, AppColors.primaryGold),
     ]),
   );
 
   Widget _recipientSection(_Delivery d) => _sec(
-    'Recipient',
+    tr('delivery.history.recipient'),
     Column(children: [
-      _iconRow(Icons.person_rounded, 'Name', d.recipientName),
+      _iconRow(Icons.person_rounded, tr('delivery.history.name'), d.recipientName),
       if (d.senderName != null) ...[
         const SizedBox(height: 10),
-        _iconRow(Icons.send_rounded, 'Booked by', d.senderName!),
+        _iconRow(Icons.send_rounded, tr('delivery.history.bookedBy'), d.senderName!),
       ],
     ]),
   );
@@ -1298,7 +1300,7 @@ class _DetailState extends State<_DetailSheet> {
         color: AppColors.error),
     ];
     return _sec(
-      'Timeline${d.durationMinutes != null ? ' · ${_dur(d.durationMinutes)}' : ''}',
+      '${tr('delivery.history.timeline')}${d.durationMinutes != null ? ' · ${_dur(d.durationMinutes)}' : ''}',
       Column(
         children: events.asMap().entries.map((entry) {
           final isLast = entry.key == events.length - 1;
@@ -1343,7 +1345,7 @@ class _DetailState extends State<_DetailSheet> {
   }
 
   Widget _cancelSection(_Delivery d) => _sec(
-    'Cancellation',
+    tr('delivery.history.cancellation'),
     Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1368,17 +1370,17 @@ class _DetailState extends State<_DetailSheet> {
         .cast<Map<String, dynamic>>();
     if (txns.isEmpty) return const SizedBox.shrink();
     return _sec(
-      'Wallet Transactions',
+      tr('delivery.history.walletTransactions'),
       Column(
         children: txns.map((t) {
           final type   = t['type'] as String? ?? '';
           final amount = (t['amount'] as num? ?? 0).toDouble();
           final credit = type == 'delivery_earning' || type == 'cash_collected';
           final label  = {
-            'delivery_earning':     'Earning credited',
-            'commission_deduction': 'Commission deducted',
-            'cash_collected':       'Cash collected',
-            'cash_commission_owed': 'Commission owed',
+            'delivery_earning':     tr('delivery.history.earningCredited'),
+            'commission_deduction': tr('delivery.history.commissionDeducted'),
+            'cash_collected':       tr('delivery.history.cashCollected'),
+            'cash_commission_owed': tr('delivery.history.commissionOwed'),
           }[type] ?? type;
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),

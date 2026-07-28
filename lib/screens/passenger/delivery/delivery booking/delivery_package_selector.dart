@@ -151,7 +151,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
         );
       } catch (pickError) {
         debugPrint('Image picker error: $pickError');
-        if (mounted) _showError('Could not open gallery. Please try again.');
+        if (mounted) _showError(tr('pkg.galleryError'));
         return;
       }
 
@@ -159,7 +159,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
 
       final file = File(picked.path);
       if (!await file.exists()) {
-        if (mounted) _showError('Selected file not found. Please try again.');
+        if (mounted) _showError(tr('pkg.fileNotFound'));
         return;
       }
 
@@ -191,7 +191,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
         }
       }
 
-      final msg = body['message'] as String? ?? 'Upload failed';
+      final msg = body['message'] as String? ?? tr('pkg.uploadFailed');
       if (mounted) {
         setState(() => _uploadingPhoto = false);
         _showError(msg);
@@ -201,7 +201,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
       debugPrint('Upload error: $e');
       if (mounted) {
         setState(() => _uploadingPhoto = false);
-        _showError('Upload failed. Check your connection.');
+        _showError(tr('pkg.uploadFailedConnection'));
       }
     }
   }
@@ -213,8 +213,8 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
   void _next() {
     if (!_canProceed) {
       _showError(_packageCategory == null
-          ? 'Select what you are sending'
-          : 'Upload a photo of your package');
+          ? tr('pkg.selectWhatSending')
+          : tr('pkg.uploadPhotoOfPackage'));
       return;
     }
     Navigator.push(context, MaterialPageRoute(
@@ -298,7 +298,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
       foregroundColor: _isExpress ? Colors.white : AppColors.textPrimary,
       elevation: 0,
       title: Text(
-        _isExpress ? '⚡ Express Delivery' : '📦 Regular Delivery',
+        _isExpress ? '⚡ ${tr('delivery.type.express')}' : '📦 ${tr('delivery.type.regular')}',
         style: TextStyle(
           fontFamily: 'LeagueSpartan', fontSize: 17, fontWeight: FontWeight.w800,
           color: _isExpress ? Colors.white : AppColors.textPrimary,
@@ -340,7 +340,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
                   ),
                 ),
                 const SizedBox(width: 6),
-                Text(['Location', 'Package', 'Confirm'][i],
+                Text([tr('pkg.stepLocation'), tr('pkg.stepPackage'), tr('pkg.stepConfirm')][i],
                     style: TextStyle(
                       fontFamily: 'Quicksand', fontSize: 11,
                       fontWeight: active ? FontWeight.w700 : FontWeight.w400,
@@ -367,11 +367,11 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
       title: tr('pkg.size'),
       child: Row(
         children: [
-          _sizeCard('small',  'Small',  '< 1 kg',  '🟢'),
+          _sizeCard('small',  tr('pkg.small'),  tr('pkg.weightUnder1'),  '🟢'),
           const SizedBox(width: 10),
-          _sizeCard('medium', 'Medium', '1–5 kg',  '🟡'),
+          _sizeCard('medium', tr('pkg.medium'), tr('pkg.weight1to5'),  '🟡'),
           const SizedBox(width: 10),
-          _sizeCard('large',  'Large',  '> 5 kg',  '🔴'),
+          _sizeCard('large',  tr('pkg.large'),  tr('pkg.weightOver5'),  '🔴'),
         ],
       ),
     );
@@ -497,7 +497,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Photo uploaded ✓',
+              Text(tr('pkg.photoUploaded'),
                   style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 13,
                       fontWeight: FontWeight.w600, color: AppColors.success)),
               Text(tr('pkg.driverWillSee'),
@@ -548,7 +548,7 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
               Text(tr('pkg.tapAddPhoto'),
                   style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textSecondary, fontSize: 13)),
-              Text('JPG · PNG · WEBP · max 5 MB',
+              Text(tr('pkg.fileFormats'),
                   style: AppTypography.caption.copyWith(fontSize: 10)),
             ]),
       ),
@@ -673,10 +673,10 @@ class _DeliveryStep2PackageState extends State<DeliveryStep2Package>
             children: [
               Text(
                   _canProceed
-                      ? 'Next — Review & Confirm'
+                      ? tr('pkg.nextReviewConfirm')
                       : _packageCategory == null
-                      ? 'Select what you are sending'
-                      : 'Upload a photo to continue',
+                      ? tr('pkg.selectWhatSending')
+                      : tr('pkg.uploadPhotoToContinue'),
                   style: const TextStyle(fontFamily: 'LeagueSpartan', fontSize: 14,
                       fontWeight: FontWeight.w700)),
               if (_canProceed) ...[

@@ -148,10 +148,10 @@ class _State extends State<AgentProfileScreen> {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         setState(() => _profile = _Profile.fromJson(body['profile'] as Map<String, dynamic>));
       } else {
-        setState(() => _error = 'Failed to load profile (${res.statusCode})');
+        setState(() => _error = tr('delivery.agentProfile.loadFailed', {'code': '${res.statusCode}'}));
       }
     } catch (_) {
-      setState(() => _error = 'Network error. Check your connection.');
+      setState(() => _error = tr('delivery.agentProfile.networkErrorCheck'));
     }
     setState(() => _loading = false);
   }
@@ -170,9 +170,9 @@ class _State extends State<AgentProfileScreen> {
         return true;
       }
       final err = jsonDecode(res.body) as Map<String, dynamic>;
-      _snack(err['message'] as String? ?? 'Update failed', isError: true);
+      _snack(err['message'] as String? ?? tr('delivery.agentProfile.updateFailed'), isError: true);
     } catch (_) {
-      _snack('Network error. Try again.', isError: true);
+      _snack(tr('common.networkError'), isError: true);
     }
     setState(() => _saving = false);
     return false;
@@ -207,12 +207,12 @@ class _State extends State<AgentProfileScreen> {
               const SizedBox(height: 16),
               _statsRow(),
               const SizedBox(height: 16),
-              _section('Contact',   _contactContent()),
+              _section(tr('delivery.agentProfile.contact'),   _contactContent()),
               const SizedBox(height: 12),
-              _section('Vehicle',   _vehicleContent()),
+              _section(tr('delivery.agentProfile.vehicle'),   _vehicleContent()),
               if (_profile!.verificationState != null) ...[
                 const SizedBox(height: 12),
-                _section('Verification', _verificationContent()),
+                _section(tr('delivery.agentProfile.verification'), _verificationContent()),
               ],
               const SizedBox(height: 40),
             ]),
@@ -302,7 +302,7 @@ class _State extends State<AgentProfileScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            p.userType == 'DRIVER' ? '🚗 Driver · Ride & Delivery' : '🛵 Delivery Agent',
+            p.userType == 'DRIVER' ? tr('delivery.agentProfile.roleDriver') : tr('delivery.agentProfile.roleAgent'),
             style: AppTypography.labelSmall.copyWith(
               color: p.userType == 'DRIVER' ? AppColors.info : AppColors.primaryDark,
               fontWeight: FontWeight.w700,
@@ -338,8 +338,8 @@ class _State extends State<AgentProfileScreen> {
             ),
             child: Text(
               p.currentMode == 'delivery'
-                  ? '📦 Currently in Delivery mode'
-                  : '🚗 Currently in Ride mode',
+                  ? tr('delivery.agentProfile.currentDeliveryMode')
+                  : tr('delivery.agentProfile.currentRideMode'),
               style: AppTypography.labelSmall.copyWith(
                 color: p.currentMode == 'delivery'
                     ? AppColors.primaryDark : AppColors.info,
@@ -357,11 +357,11 @@ class _State extends State<AgentProfileScreen> {
   Widget _statsRow() {
     final p = _profile!;
     return Row(children: [
-      _statCard('Total',     '${p.totalDeliveries}',     Icons.local_shipping_rounded, AppColors.info),
+      _statCard(tr('delivery.agentProfile.statTotal'),     '${p.totalDeliveries}',     Icons.local_shipping_rounded, AppColors.info),
       const SizedBox(width: 10),
-      _statCard('Delivered', '${p.completedDeliveries}', Icons.check_circle_rounded,   AppColors.success),
+      _statCard(tr('delivery.agentProfile.statDelivered'), '${p.completedDeliveries}', Icons.check_circle_rounded,   AppColors.success),
       const SizedBox(width: 10),
-      _statCard('Cancelled', '${p.cancelledDeliveries}', Icons.cancel_rounded,         AppColors.error),
+      _statCard(tr('delivery.agentProfile.statCancelled'), '${p.cancelledDeliveries}', Icons.cancel_rounded,         AppColors.error),
     ]);
   }
 
@@ -414,9 +414,9 @@ class _State extends State<AgentProfileScreen> {
   Widget _contactContent() {
     final p = _profile!;
     return Column(children: [
-      _infoRow(Icons.phone_rounded,  'Phone', p.phone ?? 'Not set', verified: p.phoneVerified),
+      _infoRow(Icons.phone_rounded,  tr('delivery.agentProfile.phone'), p.phone ?? tr('delivery.agentProfile.notSet'), verified: p.phoneVerified),
       const SizedBox(height: 10),
-      _infoRow(Icons.email_rounded,  'Email', p.email ?? 'Not set', verified: p.emailVerified),
+      _infoRow(Icons.email_rounded,  tr('delivery.agentProfile.email'), p.email ?? tr('delivery.agentProfile.notSet'), verified: p.emailVerified),
     ]);
   }
 
@@ -435,18 +435,18 @@ class _State extends State<AgentProfileScreen> {
     }
     return Column(children: [
       if (p.vehicleMakeModel != null)
-        _infoRow(Icons.directions_car_rounded, 'Make / Model', p.vehicleMakeModel!),
+        _infoRow(Icons.directions_car_rounded, tr('delivery.agentProfile.makeModel'), p.vehicleMakeModel!),
       if (p.vehiclePlate != null) ...[
         const SizedBox(height: 10),
-        _infoRow(Icons.pin_rounded, 'Plate', p.vehiclePlate!),
+        _infoRow(Icons.pin_rounded, tr('delivery.agentProfile.plate'), p.vehiclePlate!),
       ],
       if (p.vehicleColor != null) ...[
         const SizedBox(height: 10),
-        _infoRow(Icons.palette_rounded, 'Color', p.vehicleColor!),
+        _infoRow(Icons.palette_rounded, tr('delivery.agentProfile.color'), p.vehicleColor!),
       ],
       if (p.vehicleYear != null) ...[
         const SizedBox(height: 10),
-        _infoRow(Icons.calendar_today_rounded, 'Year', '${p.vehicleYear}'),
+        _infoRow(Icons.calendar_today_rounded, tr('delivery.agentProfile.year'), '${p.vehicleYear}'),
       ],
     ]);
   }
@@ -485,14 +485,14 @@ class _State extends State<AgentProfileScreen> {
       ),
       if (p.licenseNumber != null) ...[
         const SizedBox(height: 12),
-        _infoRow(Icons.badge_rounded, 'License No.', p.licenseNumber!,
-            sub: p.licenseExpiry != null ? 'Expires ${p.licenseExpiry}' : null),
+        _infoRow(Icons.badge_rounded, tr('delivery.agentProfile.licenseNo'), p.licenseNumber!,
+            sub: p.licenseExpiry != null ? tr('delivery.agentProfile.expires', {'date': p.licenseExpiry!}) : null),
       ],
       if (p.insuranceNumber != null) ...[
         const SizedBox(height: 10),
-        _infoRow(Icons.health_and_safety_rounded, 'Insurance No.',
+        _infoRow(Icons.health_and_safety_rounded, tr('delivery.agentProfile.insuranceNo'),
             p.insuranceNumber!,
-            sub: p.insuranceExpiry != null ? 'Expires ${p.insuranceExpiry}' : null),
+            sub: p.insuranceExpiry != null ? tr('delivery.agentProfile.expires', {'date': p.insuranceExpiry!}) : null),
       ],
     ]);
   }
@@ -546,7 +546,7 @@ class _State extends State<AgentProfileScreen> {
         Icon(Icons.wifi_off_rounded,
             size: 56, color: AppColors.secondaryLightGrey),
         const SizedBox(height: 16),
-        Text(_error ?? 'Something went wrong',
+        Text(_error ?? tr('delivery.agentProfile.somethingWrong'),
             style: AppTypography.bodyMedium.copyWith(color: AppColors.secondaryGrey),
             textAlign: TextAlign.center),
         const SizedBox(height: 20),
@@ -598,31 +598,31 @@ class _State extends State<AgentProfileScreen> {
                     style: AppTypography.titleLarge.copyWith(color: AppColors.primaryDark)),
                 const SizedBox(height: 20),
 
-                _label('Personal Info'),
+                _label(tr('delivery.agentProfile.personalInfo')),
                 const SizedBox(height: 8),
                 Row(children: [
-                  Expanded(child: _field('First name', firstCtrl)),
+                  Expanded(child: _field(tr('delivery.agentProfile.firstName'), firstCtrl)),
                   const SizedBox(width: 10),
-                  Expanded(child: _field('Last name', lastCtrl)),
+                  Expanded(child: _field(tr('delivery.agentProfile.lastName'), lastCtrl)),
                 ]),
                 const SizedBox(height: 10),
-                _field('Email', emailCtrl, keyboardType: TextInputType.emailAddress),
+                _field(tr('delivery.agentProfile.email'), emailCtrl, keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 10),
-                _field('Phone', phoneCtrl, keyboardType: TextInputType.phone),
+                _field(tr('delivery.agentProfile.phone'), phoneCtrl, keyboardType: TextInputType.phone),
                 const SizedBox(height: 20),
 
-                _label('Vehicle Info'),
+                _label(tr('delivery.agentProfile.vehicleInfo')),
                 const SizedBox(height: 8),
-                _field('Make / Model (e.g. Toyota Hilux)', makeCtrl),
+                _field(tr('delivery.agentProfile.makeModelExample'), makeCtrl),
                 const SizedBox(height: 10),
                 Row(children: [
-                  Expanded(child: _field('Color', colorCtrl)),
+                  Expanded(child: _field(tr('delivery.agentProfile.color'), colorCtrl)),
                   const SizedBox(width: 10),
-                  Expanded(child: _field('Year', yearCtrl,
+                  Expanded(child: _field(tr('delivery.agentProfile.year'), yearCtrl,
                       keyboardType: TextInputType.number)),
                 ]),
                 const SizedBox(height: 10),
-                _field('Plate number', plateCtrl, hint: 'e.g. LT-1234-A'),
+                _field(tr('delivery.agentProfile.plateNumber'), plateCtrl, hint: tr('delivery.agentProfile.plateHint')),
                 const SizedBox(height: 24),
 
                 SizedBox(
@@ -657,7 +657,7 @@ class _State extends State<AgentProfileScreen> {
                       final ok = await _save(updates);
                       if (ok && mounted) {
                         Navigator.pop(context);
-                        _snack('Profile updated ✓');
+                        _snack(tr('delivery.agentProfile.profileUpdated'));
                       }
                     },
                     style: ElevatedButton.styleFrom(

@@ -107,7 +107,7 @@ class ActiveDelivery {
     dropoffLandmark: (j['dropoff'] as Map?)?['landmark'] as String?,
     packageSize: j['packageSize'] as String? ?? j['package_size'] as String? ?? 'medium',
     packageCategory: j['packageCategory'] as String? ?? j['package_category'] as String? ?? 'other',
-    categoryLabel: j['categoryLabel'] as String? ?? 'Package',
+    categoryLabel: j['categoryLabel'] as String? ?? tr('delivery.active.packageDefault'),
     categoryEmoji: j['categoryEmoji'] as String? ?? '📦',
     packagePhotoUrl: j['packagePhotoUrl'] as String? ?? j['package_photo_url'] as String?,
     packageDescription: j['packageDescription'] as String? ?? j['package_description'] as String?,
@@ -402,10 +402,10 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
         setState(() => _stage = nextStage);
         _showSnack(nextStage.statusLabel, isError: false);
       } else {
-        _showSnack(resBody['message'] as String? ?? 'Failed to update status', isError: true);
+        _showSnack(resBody['message'] as String? ?? tr('delivery.active.failedUpdateStatus'), isError: true);
       }
     } catch (e) {
-      _showSnack('Network error. Try again.', isError: true);
+      _showSnack(tr('common.networkError'), isError: true);
     }
 
     if (mounted) setState(() => _transitioning = false);
@@ -426,7 +426,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
         setState(() => _pickupPhoto = File(picked.path));
       }
     } on PlatformException catch (e) {
-      _showSnack('Camera error: ${e.message}', isError: true);
+      _showSnack(tr('delivery.active.cameraError', {'message': '${e.message}'}), isError: true);
     }
   }
 
@@ -497,7 +497,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                           color: AppColors.darkTextPrimary)),
                   const SizedBox(height: 6),
                   Text(
-                    'Ask ${_delivery.recipientName} for the 4-digit PIN sent to their phone.',
+                    tr('delivery.active.askPinPhone', {'recipient': _delivery.recipientName}),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontFamily: 'Quicksand',
@@ -557,7 +557,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                             ? null
                             : () async {
                           if (_pinCtrl.text.length != 4) {
-                            setDialogState(() => _pinError = 'Enter 4 digits');
+                            setDialogState(() => _pinError = tr('delivery.active.enter4Digits'));
                             return;
                           }
                           setDialogState(() {
@@ -620,14 +620,14 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
         return;
       }
 
-      final msg = body['message'] as String? ?? 'Incorrect PIN';
+      final msg = body['message'] as String? ?? tr('delivery.active.incorrectPin');
       setDialogState(() {
         _pinError = msg;
         _verifyingPin = false;
       });
     } catch (e) {
       setDialogState(() {
-        _pinError = 'Network error. Try again.';
+        _pinError = tr('common.networkError');
         _verifyingPin = false;
       });
     }
@@ -649,12 +649,12 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
 
       if (res.statusCode == 200) {
         setState(() => _cashConfirmed = true);
-        _showSnack('Cash payment confirmed!', isError: false);
+        _showSnack(tr('delivery.active.cashConfirmedMsg'), isError: false);
         return;
       }
-      _showSnack('Failed to confirm cash', isError: true);
+      _showSnack(tr('delivery.active.failedConfirmCash'), isError: true);
     } catch (e) {
-      _showSnack('Network error', isError: true);
+      _showSnack(tr('common.networkError'), isError: true);
     }
 
     if (mounted) setState(() => _confirmingCash = false);
@@ -685,7 +685,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       color: AppColors.darkTextPrimary)),
               const SizedBox(height: 8),
               Text(
-                'You will lose the commission fee as a penalty for cancelling an accepted delivery.',
+                tr('delivery.active.cancelBody'),
                 style: TextStyle(
                     fontFamily: 'Quicksand',
                     fontSize: 12,
@@ -757,10 +757,10 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
         return;
       }
 
-      final msg = (jsonDecode(res.body) as Map)['message'] as String? ?? 'Cannot cancel';
+      final msg = (jsonDecode(res.body) as Map)['message'] as String? ?? tr('delivery.active.cannotCancel');
       _showSnack(msg, isError: true);
     } catch (e) {
-      _showSnack('Network error', isError: true);
+      _showSnack(tr('common.networkError'), isError: true);
     }
 
     if (mounted) setState(() => _cancelling = false);
@@ -1040,12 +1040,12 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
 
   String _stageTitle() {
     switch (_stage) {
-      case _Stage.accepted:        return 'Delivery Accepted';
-      case _Stage.en_route_pickup: return 'En Route to Pickup';
-      case _Stage.arrived_pickup:  return 'At Pickup Location';
-      case _Stage.picked_up:       return 'Package Collected';
+      case _Stage.accepted:        return tr('delivery.active.stageAccepted');
+      case _Stage.en_route_pickup: return tr('delivery.active.stageEnRoutePickup');
+      case _Stage.arrived_pickup:  return tr('delivery.active.stageAtPickup');
+      case _Stage.picked_up:       return tr('delivery.active.stagePackageCollected');
       case _Stage.en_route_dropoff:return tr('dstage.enRouteDropoff');
-      case _Stage.arrived_dropoff: return 'At Dropoff Location';
+      case _Stage.arrived_dropoff: return tr('delivery.active.stageAtDropoff');
       default:                     return '';
     }
   }
@@ -1218,7 +1218,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 ]),
                 const SizedBox(height: 4),
                 Text(
-                  '${_delivery.packageSize[0].toUpperCase()}${_delivery.packageSize.substring(1)} package',
+                  tr('delivery.active.sizePackage', {'size': '${_delivery.packageSize[0].toUpperCase()}${_delivery.packageSize.substring(1)}'}),
                   style: const TextStyle(
                       fontFamily: 'Quicksand',
                       fontSize: 11,
@@ -1397,19 +1397,19 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
       child: Row(
         children: [
           Expanded(
-              child: _finStat('Your Payout', _fmt(_delivery.driverPayout),
+              child: _finStat(tr('delivery.payout'), _fmt(_delivery.driverPayout),
                   AppColors.success)),
           Container(
               width: 1, height: 36, color: Colors.white.withOpacity(0.1)),
           Expanded(
-              child: _finStat('Commission', _fmt(_delivery.commissionAmount),
+              child: _finStat(tr('delivery.active.commission'), _fmt(_delivery.commissionAmount),
                   AppColors.warning)),
           Container(
               width: 1, height: 36, color: Colors.white.withOpacity(0.1)),
           Expanded(
               child: _finStat(
-                  'Payment',
-                  _delivery.paymentMethod == 'cash' ? '💵 Cash' : '📱 Mobile',
+                  tr('delivery.active.payment'),
+                  _delivery.paymentMethod == 'cash' ? '💵 ${tr('delivery.pay.cash')}' : '📱 ${tr('delivery.active.mobile')}',
                   AppColors.info)),
         ],
       ),
@@ -1480,7 +1480,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
             ],
           ),
           const SizedBox(height: 4),
-          Text('Take a photo before collecting the package',
+          Text(tr('delivery.active.takePhotoBefore'),
               style: TextStyle(
                   fontFamily: 'Quicksand',
                   fontSize: 11,
@@ -1583,8 +1583,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         color: AppColors.warning)),
                 const SizedBox(height: 3),
                 Text(
-                  'Ask ${_delivery.recipientName} for the 4-digit PIN sent to ${_delivery.recipientPhone}. '
-                      'Do not hand over the package before entering the correct PIN.',
+                  tr('delivery.active.pinInstructionBody', {'recipient': _delivery.recipientName, 'phone': _delivery.recipientPhone}),
                   style: const TextStyle(
                       fontFamily: 'Quicksand',
                       fontSize: 11,
@@ -1708,13 +1707,13 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                 ),
                 child: Column(
                   children: [
-                    _completionStat('💰 Your Payout',
+                    _completionStat('💰 ${tr('delivery.payout')}',
                         _fmt(_delivery.driverPayout), AppColors.success),
                     const SizedBox(height: 12),
-                    _completionStat('🏢 WeGo Commission',
+                    _completionStat('🏢 ${tr('delivery.commissionLabel')}',
                         _fmt(_delivery.commissionAmount), AppColors.warning),
                     const SizedBox(height: 12),
-                    _completionStat('📦 Delivered to',
+                    _completionStat('📦 ${tr('delivery.active.deliveredTo')}',
                         _delivery.recipientName, AppColors.info),
                   ],
                 ),
@@ -1734,7 +1733,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('💵 Cash payment received?',
+                      Text('💵 ${tr('delivery.active.cashReceivedQ')}',
                           style: TextStyle(
                               fontFamily: 'LeagueSpartan',
                               fontSize: 12,
@@ -1742,7 +1741,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                               color: AppColors.warning)),
                       const SizedBox(height: 4),
                       Text(
-                        'Confirm you received ${_fmt(_delivery.totalPrice)} from ${_delivery.recipientName}.',
+                        tr('delivery.active.confirmReceivedAmount', {'amount': _fmt(_delivery.totalPrice), 'name': _delivery.recipientName}),
                         style: const TextStyle(
                             fontFamily: 'Quicksand',
                             fontSize: 11,
@@ -1886,7 +1885,7 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                         color: AppColors.darkTextPrimary)),
                 const SizedBox(height: 8),
                 Text(
-                  'This delivery was cancelled. Your commission fee has been released.',
+                  tr('delivery.active.cancelledExternallyBody'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontFamily: 'Quicksand',

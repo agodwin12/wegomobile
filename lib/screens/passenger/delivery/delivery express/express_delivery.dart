@@ -62,14 +62,14 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
   late AnimationController _sheetCtrl;
   late Animation<double>   _sheetAnim;
 
-  static const _stageLabels = {
-    'accepted':         ('✅', 'Driver accepted your delivery'),
-    'en_route_pickup':  ('🚗', 'Driver is heading to pickup'),
-    'arrived_pickup':   ('📍', 'Driver arrived at pickup'),
-    'picked_up':        ('📦', 'Package picked up'),
-    'en_route_dropoff': ('🚀', 'Driver heading to recipient'),
-    'arrived_dropoff':  ('🏁', 'Driver at destination'),
-    'delivered':        ('🎉', 'Package delivered!'),
+  Map<String, (String, String)> get _stageLabels => {
+    'accepted':         ('✅', tr('delivery.expressTrack.accepted')),
+    'en_route_pickup':  ('🚗', tr('delivery.expressTrack.enRoutePickup')),
+    'arrived_pickup':   ('📍', tr('delivery.expressTrack.arrivedPickup')),
+    'picked_up':        ('📦', tr('delivery.expressTrack.pickedUp')),
+    'en_route_dropoff': ('🚀', tr('delivery.expressTrack.enRouteDropoff')),
+    'arrived_dropoff':  ('🏁', tr('delivery.expressTrack.arrivedDropoff')),
+    'delivered':        ('🎉', tr('delivery.expressTrack.delivered')),
   };
 
   // ── Map coords ─────────────────────────────────────────────────────────────
@@ -325,7 +325,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('No')),
+              child: Text(tr('common.no'))),
           ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
@@ -427,7 +427,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
                       const SizedBox(width: 5),
                       Text(
                           widget.delivery['deliveryCode'] as String?
-                              ?? 'Express',
+                              ?? tr('delivery.expressTrack.codeFallback'),
                           style: const TextStyle(
                               fontFamily:  'LeagueSpartan',
                               fontSize:    13,
@@ -553,7 +553,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
       ),
       const SizedBox(width: 10),
       Expanded(
-        child: Text(_driver!['name'] as String? ?? 'Driver',
+        child: Text(_driver!['name'] as String? ?? tr('delivery.expressTrack.driver'),
             style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                 fontWeight: FontWeight.w600)),
       ),
@@ -586,7 +586,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('TO',
+            Text(tr('delivery.expressTrack.to'),
                 style: TextStyle(fontFamily: 'Quicksand', fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color:      AppColors.textSecondary)),

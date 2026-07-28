@@ -47,14 +47,14 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
   late Animation<double>   _fade;
 
   // Stage definitions in order
-  static const _stages = [
-    ('accepted',        '✅', 'Driver accepted',     'Your driver is on the way to pick up your package'),
-    ('en_route_pickup', '🚗', 'Heading to pickup',   'Driver is heading to your pickup location'),
-    ('arrived_pickup',  '📍', 'Arrived at pickup',   'Driver has arrived — prepare your package'),
-    ('picked_up',       '📦', 'Package collected',   'Your package has been picked up'),
-    ('en_route_dropoff','🚀', 'Out for delivery',    'Driver is on the way to the recipient'),
-    ('arrived_dropoff', '🏁', 'At destination',      'Driver has arrived — recipient should verify PIN'),
-    ('delivered',       '🎉', 'Delivered!',           'Your package has been delivered successfully'),
+  List<(String, String, String, String)> get _stages => [
+    ('accepted',        '✅', tr('delivery.regularTrack.acceptedTitle'),     tr('delivery.regularTrack.acceptedSub')),
+    ('en_route_pickup', '🚗', tr('delivery.regularTrack.enRoutePickupTitle'),   tr('delivery.regularTrack.enRoutePickupSub')),
+    ('arrived_pickup',  '📍', tr('delivery.regularTrack.arrivedPickupTitle'),   tr('delivery.regularTrack.arrivedPickupSub')),
+    ('picked_up',       '📦', tr('delivery.regularTrack.pickedUpTitle'),   tr('delivery.regularTrack.pickedUpSub')),
+    ('en_route_dropoff','🚀', tr('delivery.regularTrack.enRouteDropoffTitle'),    tr('delivery.regularTrack.enRouteDropoffSub')),
+    ('arrived_dropoff', '🏁', tr('delivery.regularTrack.arrivedDropoffTitle'),      tr('delivery.regularTrack.arrivedDropoffSub')),
+    ('delivered',       '🎉', tr('delivery.regularTrack.deliveredTitle'),           tr('delivery.regularTrack.deliveredSub')),
   ];
 
   int get _currentStageIndex =>
@@ -134,7 +134,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('No'),
+            child: Text(tr('common.no')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -213,7 +213,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
   // ── Driver card ────────────────────────────────────────────────────────────
 
   Widget _buildDriverCard() {
-    final name   = _driver?['name']   as String? ?? 'Your driver';
+    final name   = _driver?['name']   as String? ?? tr('delivery.regularTrack.yourDriver');
     final phone  = _driver?['phone']  as String?;
     final rating = _driver?['rating'];
 
@@ -386,13 +386,13 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
       ),
       child: Column(
         children: [
-          _infoRow('📍 Pickup',   d['pickupAddress']  as String? ?? '—'),
+          _infoRow('📍 ${tr('delivery.regularTrack.pickup')}',   d['pickupAddress']  as String? ?? '—'),
           const Divider(height: 16),
-          _infoRow('🏁 Dropoff',  d['dropoffAddress'] as String? ?? '—'),
+          _infoRow('🏁 ${tr('delivery.regularTrack.dropoff')}',  d['dropoffAddress'] as String? ?? '—'),
           const Divider(height: 16),
-          _infoRow('💳 Payment',  _paymentLabel(d['paymentMethod'] as String? ?? '')),
+          _infoRow('💳 ${tr('delivery.payment')}',  _paymentLabel(d['paymentMethod'] as String? ?? '')),
           const Divider(height: 16),
-          _infoRow('💰 Total',    '${d['totalPrice']} XAF'),
+          _infoRow('💰 ${tr('common.total')}',    '${d['totalPrice']} XAF'),
         ],
       ),
     );
@@ -417,10 +417,10 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
   }
 
   String _paymentLabel(String method) {
-    const map = {
-      'mtn_mobile_money': 'MTN MoMo',
-      'orange_money':     'Orange Money',
-      'cash':             'Cash',
+    final map = {
+      'mtn_mobile_money': tr('delivery.pay.momo'),
+      'orange_money':     tr('delivery.pay.om'),
+      'cash':             tr('delivery.pay.cash'),
     };
     return map[method] ?? method;
   }
@@ -474,7 +474,7 @@ class _DeliveryTrackingRegularState extends State<DeliveryTrackingRegular>
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
               Text(
-                  _cancelReason ?? 'This delivery has been cancelled.',
+                  _cancelReason ?? tr('del.cancelledMsg'),
                   textAlign: TextAlign.center,
                   style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.textSecondary)),

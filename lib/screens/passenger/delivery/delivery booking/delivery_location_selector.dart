@@ -148,7 +148,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
       }
       if (perm == LocationPermission.denied ||
           perm == LocationPermission.deniedForever) {
-        if (mounted) setState(() { _gpsError = 'Location permission denied.'; _gpsLoading = false; });
+        if (mounted) setState(() { _gpsError = tr('delivery.loc.permissionDenied'); _gpsLoading = false; });
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
@@ -166,7 +166,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
         });
       }
     } catch (_) {
-      if (mounted) setState(() { _gpsError = 'Could not get location.'; _gpsLoading = false; });
+      if (mounted) setState(() { _gpsError = tr('delivery.loc.couldNotGetLocation'); _gpsLoading = false; });
     }
   }
 
@@ -342,8 +342,8 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
   void _next() {
     if (!_canProceed) {
       _showError(_pickupLat == null
-          ? 'Tap "Use my location" to set pickup'
-          : 'Search and select a dropoff address');
+          ? tr('delivery.loc.setPickupHint')
+          : tr('delivery.loc.setDropoffHint'));
       return;
     }
     Navigator.push(context, MaterialPageRoute(
@@ -425,7 +425,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
           ),
           const SizedBox(width: 8),
           Text(
-            _isExpress ? 'Express Delivery' : 'Regular Delivery',
+            _isExpress ? tr('delivery.type.express') : tr('delivery.type.regular'),
             style: const TextStyle(
               fontFamily: 'LeagueSpartan',
               fontSize: 16,
@@ -454,7 +454,11 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
   // ── Step indicator ─────────────────────────────────────────────────────────
 
   Widget _buildStepIndicator() {
-    const steps = ['Location', 'Package', 'Confirm'];
+    final steps = [
+      tr('delivery.loc.stepLocation'),
+      tr('delivery.loc.stepPackage'),
+      tr('delivery.loc.stepConfirm'),
+    ];
     return Container(
       color: AppColors.primaryDark,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
@@ -574,7 +578,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                     color: AppColors.primaryGold, size: 18),
                 const SizedBox(width: 10),
                 Text(
-                  'Set Your Route',
+                  tr('delivery.loc.setYourRoute'),
                   style: TextStyle(
                     fontFamily: 'LeagueSpartan',
                     fontSize: 14,
@@ -592,13 +596,13 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
-                      children: const [
-                        Icon(Icons.check_rounded,
+                      children: [
+                        const Icon(Icons.check_rounded,
                             size: 12, color: AppColors.primaryDark),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          'Route ready',
-                          style: TextStyle(
+                          tr('delivery.loc.routeReady'),
+                          style: const TextStyle(
                             fontFamily: 'LeagueSpartan',
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -738,7 +742,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'PICKUP',
+          tr('delivery.loc.pickup'),
           style: TextStyle(
             fontFamily: 'LeagueSpartan',
             fontSize: 10,
@@ -764,8 +768,8 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
           child: CircularProgressIndicator(
               strokeWidth: 2.5, color: AppColors.info),
         ),
-        text: 'Detecting your location…',
-        subtext: 'Please wait',
+        text: tr('delivery.loc.detectingLocation'),
+        subtext: tr('delivery.loc.pleaseWait'),
         textColor: AppColors.info,
       );
     }
@@ -797,7 +801,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Current Location',
+                    tr('delivery.loc.currentLocation'),
                     style: TextStyle(
                       fontFamily: 'LeagueSpartan',
                       fontSize: 11,
@@ -874,7 +878,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
             ),
             const SizedBox(width: 12),
             Text(
-              'Use my current location',
+              tr('delivery.loc.useMyCurrentLocation'),
               style: TextStyle(
                 fontFamily: 'LeagueSpartan',
                 fontSize: 13,
@@ -898,7 +902,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'DROPOFF',
+          tr('delivery.loc.dropoff'),
           style: TextStyle(
             fontFamily: 'LeagueSpartan',
             fontSize: 10,
@@ -942,7 +946,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Destination Set',
+                        tr('delivery.loc.destinationSet'),
                         style: TextStyle(
                           fontFamily: 'LeagueSpartan',
                           fontSize: 11,
@@ -1064,7 +1068,7 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                   size: 12, color: AppColors.warning),
               const SizedBox(width: 5),
               Text(
-                'Offline — showing Douala landmarks',
+                tr('delivery.loc.offlineLandmarks'),
                 style: TextStyle(
                     fontFamily: 'Quicksand',
                     fontSize: 11,
@@ -1256,8 +1260,8 @@ class _DeliveryStep1LocationState extends State<DeliveryStep1Location>
                 if (!_canProceed) const SizedBox(width: 8),
                 Text(
                   _canProceed
-                      ? 'Continue to Package Details'
-                      : 'Set both locations first',
+                      ? tr('delivery.loc.continueToPackage')
+                      : tr('delivery.loc.setBothLocations'),
                   style: const TextStyle(
                     fontFamily: 'LeagueSpartan',
                     fontSize: 14,

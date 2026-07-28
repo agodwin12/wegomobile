@@ -353,7 +353,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
       widget.delivery['categoryEmoji'] as String? ?? '📦';
 
   String get _categoryLabel =>
-      widget.delivery['categoryLabel'] as String? ?? 'Package';
+      widget.delivery['categoryLabel'] as String? ?? tr('delivery.searching.package');
 
   String get _packageSize =>
       widget.delivery['packageSize'] as String? ??
@@ -364,9 +364,9 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
     final m = widget.delivery['paymentMethod'] as String? ??
         widget.delivery['payment_method'] as String? ?? '';
     switch (m) {
-      case 'mtn_mobile_money': return 'MTN MoMo';
-      case 'orange_money':     return 'Orange Money';
-      case 'cash':             return 'Cash';
+      case 'mtn_mobile_money': return tr('delivery.pay.momo');
+      case 'orange_money':     return tr('delivery.pay.om');
+      case 'cash':             return tr('delivery.pay.cash');
       default:                 return m;
     }
   }
@@ -380,7 +380,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
       (widget.delivery['priceBreakdown']?['expressSurcharge'] as num? ?? 0)
           .toDouble();
   String get _trackingMode =>
-      _isExpress ? '🗺  Live map' : '📋 Stage updates';
+      _isExpress ? tr('delivery.searching.trackingLive') : tr('delivery.searching.trackingStages');
 
   // ─────────────────────────────────────────────────────────────────────────
   // BUILD
@@ -454,8 +454,8 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                           ],
                           Text(
                             _noDrivers
-                                ? '❌ No drivers found'
-                                : 'Searching${'.' * _dots}',
+                                ? tr('delivery.searching.noDriversFound')
+                                : '${tr('delivery.searching.searching')}${'.' * _dots}',
                             style: const TextStyle(
                                 fontFamily:  'LeagueSpartan',
                                 fontSize:    13,
@@ -480,7 +480,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                             Text('🛵',
                                 style: TextStyle(fontSize: 13)),
                             const SizedBox(width: 5),
-                            Text('$_nearbyCount nearby',
+                            Text(tr('delivery.searching.nearbyCount', {'n': '$_nearbyCount'}),
                                 style: TextStyle(
                                     fontFamily:  'Quicksand',
                                     fontSize:    12,
@@ -545,7 +545,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                       const Icon(Icons.local_shipping_rounded, color: Colors.black, size: 17),
                       const SizedBox(width: 10),
                       Expanded(child: Text(
-                        _isExpress ? 'Express delivery · Priority matching' : 'Regular delivery · Eco-friendly rate',
+                        _isExpress ? tr('delivery.searching.expressPromo') : tr('delivery.searching.regularPromo'),
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black),
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                       )),
@@ -629,7 +629,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _noDrivers ? 'No drivers available' : 'Finding your driver',
+                  _noDrivers ? tr('delivery.searching.noDriversAvailable') : tr('delivery.searching.findingDriver'),
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w800,
                       color: AppColors.darkTextPrimary),
@@ -637,10 +637,13 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
                 const SizedBox(height: 2),
                 Text(
                   _noDrivers
-                      ? 'Please try again in a moment'
+                      ? tr('delivery.searching.tryAgainMoment')
                       : _nearbyCount > 0
-                          ? '$_nearbyCount agent${_nearbyCount > 1 ? "s" : ""} nearby — accepting…'
-                          : 'Looking for delivery agents...',
+                          ? tr(_nearbyCount > 1
+                                  ? 'delivery.searching.agentsNearbyAccepting'
+                                  : 'delivery.searching.agentNearbyAccepting',
+                              {'n': '$_nearbyCount'})
+                          : tr('delivery.searching.lookingForAgents'),
                   style: const TextStyle(fontSize: 12, color: AppColors.darkTextSecondary),
                 ),
               ],
@@ -707,7 +710,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
 
   Widget _buildPackageCard() {
     return _card(
-      label: 'Package',
+      label: tr('delivery.searching.package'),
       child: Row(children: [
         Text(_categoryEmoji, style: const TextStyle(fontSize: 24)),
         const SizedBox(width: 12),
@@ -736,7 +739,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
-              _isExpress ? 'EXPRESS' : 'REGULAR',
+              _isExpress ? tr('delivery.searching.badgeExpress') : tr('delivery.searching.badgeRegular'),
               style: TextStyle(fontFamily: 'LeagueSpartan', fontSize: 9,
                   fontWeight: FontWeight.w800,
                   color: _isExpress
@@ -827,10 +830,10 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
           spacing: 6, runSpacing: 6,
           children: [
             if (_surgeActive)
-              _chip('⚡ Surge ×${_surgeMultiplier.toStringAsFixed(1)}',
+              _chip(tr('delivery.searching.surgeChip', {'x': _surgeMultiplier.toStringAsFixed(1)}),
                   const Color(0xFFFAEEDA), const Color(0xFF854F0B)),
             if (_isExpress && _expressSurcharge > 0)
-              _chip('+ ${_expressSurcharge.toStringAsFixed(0)} XAF express',
+              _chip(tr('delivery.searching.expressSurchargeChip', {'amount': _expressSurcharge.toStringAsFixed(0)}),
                   const Color(0xFFE6F1FB), const Color(0xFF185FA5)),
             _chip(_trackingMode,
                 const Color(0xFFF5F4F0), AppColors.textSecondary),
@@ -853,8 +856,7 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'A 4-digit PIN was sent to the recipient\'s number. '
-            'The driver will request it to confirm delivery.',
+            tr('delivery.searching.pinNote'),
             style: TextStyle(fontSize: 11, color: Color(0xFF7EB8FF), height: 1.5),
           ),
         ),

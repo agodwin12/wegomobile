@@ -316,8 +316,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Track your delivery through clear status updates. '
-                          'Perfect for non-urgent packages at standard pricing.',
+                      tr('delivery.home.regularDesc'),
                       style: TextStyle(
                         fontFamily: 'Quicksand',
                         fontSize: 13,
@@ -331,10 +330,10 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                     Wrap(
                       spacing: 8, runSpacing: 8,
                       children: [
-                        _pill('Step-by-step updates', false),
-                        _pill('Driver info & contact', false),
-                        _pill('Delivery PIN protection', false),
-                        _pill('Standard pricing', false),
+                        _pill(tr('delivery.home.pillStepByStep'), false),
+                        _pill(tr('delivery.home.pillDriverContact'), false),
+                        _pill(tr('delivery.home.pillPinProtection'), false),
+                        _pill(tr('delivery.home.pillStandardPricing'), false),
                       ],
                     ),
                   ],
@@ -456,9 +455,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Watch your driver move on a live map from pickup to '
-                          'your door. Ideal for urgent or high-value packages. '
-                          'A small surcharge applies — configured by the operator.',
+                      tr('delivery.home.expressDesc'),
                       style: TextStyle(
                         fontFamily: 'Quicksand',
                         fontSize: 13,
@@ -472,10 +469,10 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
                     Wrap(
                       spacing: 8, runSpacing: 8,
                       children: [
-                        _pill('Live GPS map tracking', true),
-                        _pill('Real-time driver location', true),
-                        _pill('Delivery PIN protection', true),
-                        _pill('Small surcharge applies', true),
+                        _pill(tr('delivery.home.pillLiveGps'), true),
+                        _pill(tr('delivery.home.pillRealtimeLocation'), true),
+                        _pill(tr('delivery.home.pillPinProtection'), true),
+                        _pill(tr('delivery.home.pillSurchargeApplies'), true),
                       ],
                     ),
                   ],
@@ -578,8 +575,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen>
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-                'Both options include driver tracking, PIN protection, '
-                    'and support for MTN MoMo, Orange Money, or cash.',
+                tr('delivery.home.infoBanner'),
                 style: AppTypography.bodySmall.copyWith(
                     color: AppColors.primaryGold.withOpacity(0.85), fontSize: 12, height: 1.5)),
           ),
