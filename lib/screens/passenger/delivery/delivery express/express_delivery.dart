@@ -57,6 +57,8 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
   bool    _cancelled     = false;
   String? _cancelReason;
   Map<String, dynamic>? _driver;
+  int?    _etaMinutes;
+  String  _etaTarget = 'pickup';
 
   // ── Bottom sheet animation ─────────────────────────────────────────────────
   late AnimationController _sheetCtrl;
@@ -273,8 +275,18 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
     _socket!.on('delivery:driver_location', (data) {
       if (!mounted) return;
       final d   = data as Map<String, dynamic>;
-      final lat = (d['lat'] as num?)?.toDouble();
-      final lng = (d['lng'] as num?)?.toDouble();
+      // Position arrives nested under `driver` (fallback to flat for safety).
+      final drv = (d['driver'] as Map?) ?? const {};
+      final lat = ((drv['lat'] ?? d['lat']) as num?)?.toDouble();
+      final lng = ((drv['lng'] ?? d['lng']) as num?)?.toDouble();
+      final eta = (d['etaMinutes'] as num?)?.toInt();
+      final tgt = d['etaTarget'] as String?;
+      if (eta != null || tgt != null) {
+        setState(() {
+          if (eta != null) _etaMinutes = eta;
+          if (tgt != null) _etaTarget = tgt;
+        });
+      }
       if (lat != null && lng != null) _updateDriverMarker(lat, lng);
     });
 
@@ -557,6 +569,22 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
             style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13,
                 fontWeight: FontWeight.w600)),
       ),
+      if (_etaMinutes != null) ...[
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color:        AppColors.primaryGold.withOpacity(0.16),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            tr(_etaTarget == 'dropoff' ? 'delivery.eta.toDropoff' : 'delivery.eta.toPickup',
+                {'m': '$_etaMinutes'}),
+            style: const TextStyle(fontFamily: 'Quicksand', fontSize: 11.5,
+                fontWeight: FontWeight.w700, color: AppColors.primaryDark),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
       if (_driver!['rating'] != null) ...[
         const Icon(Icons.star_rounded,
             color: AppColors.primaryGold, size: 14),
