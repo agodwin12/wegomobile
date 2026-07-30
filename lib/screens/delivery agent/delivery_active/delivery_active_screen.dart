@@ -256,6 +256,8 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
   File?   _pickupPhoto;
   String? _pickupPhotoUrl;  // uploaded R2 URL
   bool    _uploadingPhoto = false;
+  String? _proofPhotoUrl;   // proof-of-delivery photo, uploaded at PIN handoff
+  bool    _uploadingProof = false;
   final   _picker = ImagePicker();
 
   // ── PIN dialog ────────────────────────────────────────────────────────────
@@ -458,6 +460,34 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
     if (mounted) setState(() => _uploadingPhoto = false);
   }
 
+  // Optional proof-of-delivery photo captured at the PIN handoff. Uploaded via
+  // the same endpoint as the pickup photo; the URL is sent with verify-pin.
+  Future<void> _captureProofPhoto(StateSetter setDialogState) async {
+    try {
+      final picked = await _picker.pickImage(
+          source: ImageSource.camera, maxWidth: 1920, imageQuality: 80);
+      if (picked == null) return;
+      setDialogState(() => _uploadingProof = true);
+
+      final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload/package-photo');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $_accessToken'
+        ..files.add(await http.MultipartFile.fromPath(
+            'image', picked.path, contentType: MediaType('image', 'jpeg')));
+
+      final streamed = await request.send().timeout(const Duration(seconds: 20));
+      final res = await http.Response.fromStream(streamed);
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200 && body['url'] != null) {
+        _proofPhotoUrl = body['url'] as String;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Proof photo upload failed: $e');
+    } finally {
+      if (mounted) setDialogState(() => _uploadingProof = false);
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // PIN VERIFY
   // ─────────────────────────────────────────────────────────────────────────
@@ -533,7 +563,56 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
                       errorText: _pinError,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
+                  // Optional proof-of-delivery photo
+                  InkWell(
+                    onTap: _uploadingProof ? null : () => _captureProofPhoto(setDialogState),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: _proofPhotoUrl != null
+                                ? AppColors.success
+                                : AppColors.borderMedium),
+                      ),
+                      child: Row(children: [
+                        Icon(
+                            _proofPhotoUrl != null
+                                ? Icons.check_circle_rounded
+                                : Icons.camera_alt_rounded,
+                            size: 18,
+                            color: _proofPhotoUrl != null
+                                ? AppColors.success
+                                : AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _uploadingProof
+                                ? tr('delivery.active.uploadingProof')
+                                : _proofPhotoUrl != null
+                                    ? tr('delivery.active.proofAdded')
+                                    : tr('delivery.active.addProofPhoto'),
+                            style: TextStyle(
+                                fontFamily: 'Quicksand',
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: _proofPhotoUrl != null
+                                    ? AppColors.success
+                                    : AppColors.textSecondary),
+                          ),
+                        ),
+                        if (_uploadingProof)
+                          const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2)),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   Row(children: [
                     Expanded(
                       child: OutlinedButton(
@@ -608,7 +687,10 @@ class _DeliveryActiveScreenState extends State<DeliveryActiveScreen>
           'Authorization': 'Bearer $_accessToken',
           'Content-Type':  'application/json',
         },
-        body: jsonEncode({'pin': _pinCtrl.text.trim()}),
+        body: jsonEncode({
+          'pin': _pinCtrl.text.trim(),
+          if (_proofPhotoUrl != null) 'proof_photo_url': _proofPhotoUrl,
+        }),
       ).timeout(const Duration(seconds: 12));
 
       final body = jsonDecode(res.body) as Map<String, dynamic>;
