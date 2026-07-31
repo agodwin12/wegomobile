@@ -39,6 +39,7 @@ import '../../services/services_home_screen.dart';
 import '../activity/activity_screen.dart';
 import '../bottom_nav_bar/bottom_bar.dart';
 import '../delivery/delivery_home_screen.dart';
+import '../delivery/delivery booking/delivery_location_selector.dart';
 import '../reservation/rental_screen.dart';
 import '../ride/ride map/ride_map.dart';
 import '../trip/active_trip_resume.dart';
@@ -447,8 +448,9 @@ class _PassengerDashboardState extends State<PassengerDashboard>
                 accessToken: _accessToken)));
         break;
       case 'Delivery':
-        Navigator.push(
-            context, _route(const DeliveryHomeScreen()));
+        // Unified delivery — go straight to booking (no express/regular choice).
+        Navigator.push(context, _route(DeliveryStep1Location(
+            deliveryType: 'express', accessToken: _accessToken ?? '')));
         break;
     }
   }

@@ -16,7 +16,7 @@ import '../driver searching/delivery_searching_screen.dart';
 
 class _Estimate {
   final double totalPrice;
-  final double expressSurcharge;
+  final double deliveryFee;
   final double distanceKm;
   final String? distanceText;
   final String? durationText;
@@ -26,7 +26,7 @@ class _Estimate {
 
   _Estimate({
     required this.totalPrice,
-    required this.expressSurcharge,
+    required this.deliveryFee,
     required this.distanceKm,
     this.distanceText,
     this.durationText,
@@ -37,7 +37,7 @@ class _Estimate {
 
   factory _Estimate.fromJson(Map<String, dynamic> j) => _Estimate(
     totalPrice:       (j['totalPrice']       as num).toDouble(),
-    expressSurcharge: (j['expressSurcharge']  as num? ?? 0).toDouble(),
+    deliveryFee:      (j['deliveryFee']       as num? ?? 0).toDouble(),
     distanceKm:       (j['distanceKm']        as num).toDouble(),
     distanceText:     j['distanceText'],
     durationText:     j['durationText'],
@@ -694,9 +694,9 @@ class _DeliveryStep3ConfirmState extends State<DeliveryStep3Confirm>
                   e.distanceText ?? '${e.distanceKm.toStringAsFixed(1)} km'),
               if (e.durationText != null)
                 _eRow(tr('delivery.confirm.estDuration'), e.durationText!),
-              if (_isExpress && e.expressSurcharge > 0)
-                _eRow(tr('delivery.confirm.expressSurcharge'),
-                    '+${e.expressSurcharge.toStringAsFixed(0)} XAF',
+              if (e.deliveryFee > 0)
+                _eRow(tr('delivery.confirm.deliveryFee'),
+                    '+${e.deliveryFee.toStringAsFixed(0)} XAF',
                     highlight: true),
               if (e.surgeActive && e.surgeRuleName != null)
                 _eRow(tr('delivery.confirm.surgeRule'), e.surgeRuleName!),
