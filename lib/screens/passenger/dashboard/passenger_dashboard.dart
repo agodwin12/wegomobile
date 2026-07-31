@@ -38,7 +38,6 @@ import '../../profile/profile_screen.dart';
 import '../../services/services_home_screen.dart';
 import '../activity/activity_screen.dart';
 import '../bottom_nav_bar/bottom_bar.dart';
-import '../delivery/delivery_home_screen.dart';
 import '../delivery/delivery booking/delivery_location_selector.dart';
 import '../reservation/rental_screen.dart';
 import '../ride/ride map/ride_map.dart';

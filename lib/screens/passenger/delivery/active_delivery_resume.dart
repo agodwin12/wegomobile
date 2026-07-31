@@ -20,7 +20,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/config.dart';
-import 'delivery regular/regular_delivery.dart';
 import 'delivery express/express_delivery.dart';
 
 /// Statuses that mean "an agent is assigned and this delivery is in flight".
@@ -147,8 +146,7 @@ Future<ActiveDelivery?> fetchActiveDelivery(String? accessToken) async {
 /// Pushes the sender back into their running delivery's tracking screen.
 Future<void> openActiveDelivery(
     BuildContext context, ActiveDelivery d, String accessToken) async {
-  final screen = d.deliveryType == 'express'
-      ? DeliveryTrackingExpress(delivery: d.tracking, accessToken: accessToken)
-      : DeliveryTrackingRegular(delivery: d.tracking, accessToken: accessToken);
+  // Unified delivery — always the live-map tracking screen.
+  final screen = DeliveryTrackingExpress(delivery: d.tracking, accessToken: accessToken);
   await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
 }

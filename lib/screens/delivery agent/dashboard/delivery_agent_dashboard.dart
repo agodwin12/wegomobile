@@ -31,7 +31,7 @@ import '../../notification/notification_badge.dart';
 import '../../notification/notification_screen.dart';
 import '../agent_profile/agent_profile_screen.dart';
 import '../delivery wallet/delivery_wallet_screen.dart';
-import '../delivery_active/delivery_active_screen.dart';
+import '../active_delivery.dart';
 import '../delivery_express/delivery_active_express_screen.dart';
 import '../delivery_history/delivery_history_screen.dart';
 
@@ -341,12 +341,8 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         final delivery = ActiveDelivery.fromJson(dJson);
 
         if (mounted) {
-          final route = delivery.trackingMode == 'live_map'
-              ? MaterialPageRoute(
+          final route = MaterialPageRoute(
               builder: (_) => DeliveryActiveExpressScreen(
-                  delivery: delivery, socket: _socket))
-              : MaterialPageRoute(
-              builder: (_) => DeliveryActiveScreen(
                   delivery: delivery, socket: _socket));
 
           await Navigator.of(context).push(route);
@@ -731,12 +727,8 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
         final activeDelivery = ActiveDelivery.fromJson(deliveryJson);
 
         if (mounted) {
-          final route = activeDelivery.trackingMode == 'live_map'
-              ? MaterialPageRoute(
+          final route = MaterialPageRoute(
               builder: (_) => DeliveryActiveExpressScreen(
-                  delivery: activeDelivery, socket: _socket))
-              : MaterialPageRoute(
-              builder: (_) => DeliveryActiveScreen(
                   delivery: activeDelivery, socket: _socket));
 
           await Navigator.of(context).push(route);

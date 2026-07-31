@@ -20,7 +20,6 @@ import '../../../../utils/map_style.dart';
 import '../../../../widgets/map_style_button.dart';
 import '../../../../core/config.dart';
 import '../delivery express/express_delivery.dart';
-import '../delivery regular/regular_delivery.dart';
 
 class DeliverySearchingScreen extends StatefulWidget {
   final Map<String, dynamic> delivery;
@@ -277,18 +276,14 @@ class _DeliverySearchingScreenState extends State<DeliverySearchingScreen>
 
   void _navigateToTracking(Map<String, dynamic> assignedData) {
     if (!mounted) return;
-    final deliveryType =
-        widget.delivery['deliveryType'] as String? ?? 'regular';
     final merged = {...widget.delivery, ...assignedData};
 
+    // Unified delivery — always the live-map tracking screen.
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => deliveryType == 'express'
-            ? DeliveryTrackingExpress(
-                delivery: merged, accessToken: widget.accessToken)
-            : DeliveryTrackingRegular(
-                delivery: merged, accessToken: widget.accessToken),
+        builder: (_) => DeliveryTrackingExpress(
+            delivery: merged, accessToken: widget.accessToken),
       ),
     );
   }
