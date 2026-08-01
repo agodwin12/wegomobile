@@ -501,6 +501,28 @@ class ServicesApiService {
     } catch (e) { _handleError(e, 'requestServiceContact'); rethrow; }
   }
 
+  /// Report a listing for trust/safety review.
+  /// POST /services/listings/:id/report — { reason_category, reason_text? }
+  Future<Map<String, dynamic>> reportListing(
+    int listingId, {
+    required String reasonCategory,
+    String? reasonText,
+  }) async {
+    try {
+      final uri  = Uri.parse('$_baseUrl$_listingsEndpoint/$listingId/report');
+      final resp = await http
+          .post(uri,
+              headers: await _getHeaders(),
+              body: jsonEncode({
+                'reason_category': reasonCategory,
+                if (reasonText != null && reasonText.trim().isNotEmpty)
+                  'reason_text': reasonText.trim(),
+              }))
+          .timeout(Duration(milliseconds: _timeout));
+      return _handleResponse(resp);
+    } catch (e) { _handleError(e, 'reportListing'); rethrow; }
+  }
+
   Future<Map<String, dynamic>> getMyRequests({
     int     page  = 1,
     int     limit = 20,

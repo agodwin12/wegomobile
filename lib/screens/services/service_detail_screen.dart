@@ -104,7 +104,21 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
 
   Future<void> _callProvider() async {
     if (_listing == null) return;
-    final phone = _listing!.provider?.phone;
+
+    // The public listing payload no longer includes the provider's phone
+    // (privacy). Fetch it from the authed /contact endpoint, which also records
+    // the lead and push-notifies the provider. Fall back to any phone already on
+    // the listing (legacy payloads) only if the call fails.
+    String? phone = _listing!.provider?.phone;
+    try {
+      final resp = await ServicesApiService().requestServiceContact(_listing!.id);
+      final Map data = (resp['data'] is Map) ? resp['data'] as Map : resp;
+      final fetched = (data['provider_phone'] ?? resp['provider_phone'])?.toString();
+      if (fetched != null && fetched.isNotEmpty) phone = fetched;
+    } catch (e) {
+      debugPrint('⚠️ [SERVICE] contact fetch failed: $e');
+    }
+
     if (phone == null || phone.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,12 +127,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       }
       return;
     }
-    // Record the lead + push-notify the provider that a customer is interested.
-    // Fire-and-forget so the dialer opens instantly even if the network is slow.
-    ServicesApiService().requestServiceContact(_listing!.id).catchError((e) {
-      debugPrint('⚠️ [SERVICE] contact notify failed: $e');
-      return <String, dynamic>{};
-    });
 
     final uri = Uri.parse('tel:$phone');
     if (await canLaunchUrl(uri)) {
@@ -133,6 +141,16 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ReviewsSheet(listingId: _listing!.id),
+    );
+  }
+
+  void _showReportSheet() {
+    if (_listing == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ReportSheet(listingId: _listing!.id),
     );
   }
 
@@ -261,6 +279,16 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   : Icons.favorite_border_rounded,
               iconColor: _isFavourite ? _kError : _kTextSecond,
               onTap: () => setState(() => _isFavourite = !_isFavourite),
+            ),
+          ),
+
+          // Report button (trust/safety)
+          Positioned(
+            top: topPad + 8,
+            right: 64,
+            child: _CircleButton(
+              icon: Icons.flag_outlined,
+              onTap: _showReportSheet,
             ),
           ),
 
@@ -602,8 +630,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   // ── Sticky bottom bar ─────────────────────────────────────────────────────
   Widget _buildBottomBar() {
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    final phone = _listing!.provider?.phone;
-    final hasPhone = phone != null && phone.isNotEmpty;
+    // Phone is fetched on tap from /contact (not in the public payload), so the
+    // button is enabled whenever a listing is loaded.
+    final canCall = _listing != null;
 
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 12),
@@ -615,7 +644,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         width: double.infinity,
         height: 50,
         child: ElevatedButton.icon(
-          onPressed: hasPhone ? _callProvider : null,
+          onPressed: canCall ? _callProvider : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: _kPrimary,
             foregroundColor: _kTextPrimary,
@@ -965,6 +994,139 @@ class _ImageDots extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+// ═══════════════════════════════════════════════════════════════════════════════
+// REPORT SHEET — trust/safety: report a listing (fraud/scam/spam/etc.)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _ReportSheet extends StatefulWidget {
+  final int listingId;
+  const _ReportSheet({required this.listingId});
+
+  @override
+  State<_ReportSheet> createState() => _ReportSheetState();
+}
+
+class _ReportSheetState extends State<_ReportSheet> {
+  static const _reasons = <(String, String)>[
+    ('scam', 'Arnaque / fraude'),
+    ('spam', 'Spam'),
+    ('inappropriate', 'Contenu inapproprié'),
+    ('wrong_info', 'Informations erronées'),
+    ('impersonation', "Usurpation d'identité"),
+    ('other', 'Autre'),
+  ];
+
+  String? _category;
+  final _textCtrl = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _textCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_category == null || _submitting) return;
+    setState(() => _submitting = true);
+    try {
+      await ServicesApiService().reportListing(
+        widget.listingId,
+        reasonCategory: _category!,
+        reasonText: _textCtrl.text,
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Merci — cette annonce a été signalée à notre équipe.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec du signalement : $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: _kBorder, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Signaler cette annonce', style: AppTypography.titleLarge),
+          const SizedBox(height: 4),
+          Text('Aidez-nous à garder la plateforme sûre.',
+              style: AppTypography.bodySmall.copyWith(color: _kTextSecond)),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            children: _reasons.map((r) {
+              final selected = _category == r.$1;
+              return ChoiceChip(
+                label: Text(r.$2),
+                selected: selected,
+                onSelected: (_) => setState(() => _category = r.$1),
+                selectedColor: _kPrimary,
+                labelStyle: AppTypography.bodySmall.copyWith(
+                  color: selected ? _kTextPrimary : _kTextSecond,
+                ),
+                backgroundColor: _kSurface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: selected ? _kPrimary : _kBorder),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _textCtrl,
+            maxLength: 500,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Détails (facultatif)',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: (_category != null && !_submitting) ? _submit : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kError,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: _kBorder,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _submitting
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text('Envoyer le signalement', style: AppTypography.buttonMedium.copyWith(color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
