@@ -265,6 +265,10 @@ class _PostServiceScreenState extends State<PostServiceScreen> {
         neighborhoods: _selectedNeighborhoods,
         emergencyService: _emergency,
         photos: _photos.isNotEmpty ? _photos : null,
+        availableDays: _selectedDays.isNotEmpty ? _selectedDays : null,
+        availableHours: _hoursCtrl.text.trim().isNotEmpty ? _hoursCtrl.text.trim() : null,
+        yearsExperience: int.tryParse(_experienceCtrl.text.trim()),
+        certifications: _certsCtrl.text.trim().isNotEmpty ? _certsCtrl.text.trim() : null,
       );
 
       if (newListingId == null || !mounted) {

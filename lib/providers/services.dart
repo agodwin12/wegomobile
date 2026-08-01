@@ -250,10 +250,13 @@ class ServicesProvider with ChangeNotifier {
             _listings.addAll(newListings);
           }
 
-          final pagination = dataWrapper?['pagination'];
+          // pagination is a sibling of `data` in the response envelope
+          // (falls back to inside `data` for older payloads). The backend
+          // key is `totalPages` (camelCase); accept `total_pages` too.
+          final pagination = response['pagination'] ?? dataWrapper?['pagination'];
           if (pagination != null) {
-            _currentPage     = pagination['page']        as int? ?? 1;
-            _totalPages      = pagination['total_pages'] as int? ?? 1;
+            _currentPage     = pagination['page'] as int? ?? 1;
+            _totalPages      = (pagination['totalPages'] ?? pagination['total_pages']) as int? ?? 1;
             _hasMoreListings = _currentPage < _totalPages;
           }
         }
@@ -401,6 +404,10 @@ class ServicesProvider with ChangeNotifier {
     List<String>?   neighborhoods,
     List<File>?     photos,
     bool            emergencyService = false,
+    List<String>?   availableDays,
+    String?         availableHours,
+    int?            yearsExperience,
+    String?         certifications,
   }) async {
     _listingsLoading = true;
     _listingsError   = null;
@@ -430,6 +437,10 @@ class ServicesProvider with ChangeNotifier {
         neighborhoods:   neighborhoods,
         photos:          photos,
         emergencyService: emergencyService,
+        availableDays:   availableDays,
+        availableHours:  availableHours,
+        yearsExperience: yearsExperience,
+        certifications:  certifications,
       );
 
       if (response['success'] == true) {
