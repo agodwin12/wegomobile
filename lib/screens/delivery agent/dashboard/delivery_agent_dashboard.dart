@@ -861,35 +861,40 @@ class _DeliveryAgentDashboardState extends State<DeliveryAgentDashboard>
       automaticallyImplyLeading: false,
       actions: [
         // ── Mode switch pill ──────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-          child: GestureDetector(
-            onTap: () => showModeSwitchSheet(context),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color:        Colors.white.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: Colors.white.withOpacity(0.14), width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.swap_horiz_rounded,
-                      color: AppColors.primaryGold, size: 14),
-                  SizedBox(width: 4),
-                  Text(tr('agent.switch'),
-                      style: TextStyle(
-                          fontFamily: 'LeagueSpartan',
-                          fontSize:   11,
-                          fontWeight: FontWeight.w700,
-                          color:      AppColors.primaryGold)),
-                ],
+        // Hidden while a delivery is active — switching mode mid-delivery
+        // would force the agent offline and orphan the customer with a
+        // frozen tracking screen. The backend also refuses this
+        // (ACTIVE_JOB_IN_PROGRESS) as a second line of defense.
+        if (_activeDelivery == null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            child: GestureDetector(
+              onTap: () => showModeSwitchSheet(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color:        Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.14), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.swap_horiz_rounded,
+                        color: AppColors.primaryGold, size: 14),
+                    SizedBox(width: 4),
+                    Text(tr('agent.switch'),
+                        style: TextStyle(
+                            fontFamily: 'LeagueSpartan',
+                            fontSize:   11,
+                            fontWeight: FontWeight.w700,
+                            color:      AppColors.primaryGold)),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
         // ── Socket status ─────────────────────────────────────────────────
         // ── Notification bell ─────────────────────────────────────────────

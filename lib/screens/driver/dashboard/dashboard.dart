@@ -1558,34 +1558,39 @@ class _DriverMainScreenState extends State<DriverMainScreen>
                   ),
 
                   // ── Mode switch pill ─────────────────────────
-                  GestureDetector(
-                    onTap: () => showModeSwitchSheet(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color:        Colors.white.withOpacity(0.07),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: Colors.white.withOpacity(0.1)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.swap_horiz_rounded,
-                              color: AppColors.primaryGold, size: 14),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Switch',
-                            style: AppTypography.labelSmall.copyWith(
-                              color:      AppColors.primaryGold,
-                              fontWeight: FontWeight.w700,
+                  // Hidden while a trip is active — switching mode mid-trip
+                  // would force the driver offline and orphan the passenger
+                  // with a frozen tracking screen. The backend also refuses
+                  // this (ACTIVE_JOB_IN_PROGRESS) as a second line of defense.
+                  if (currentTrip == null)
+                    GestureDetector(
+                      onTap: () => showModeSwitchSheet(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color:        Colors.white.withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.1)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.swap_horiz_rounded,
+                                color: AppColors.primaryGold, size: 14),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Switch',
+                              style: AppTypography.labelSmall.copyWith(
+                                color:      AppColors.primaryGold,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
                   const SizedBox(width: 8),
 
