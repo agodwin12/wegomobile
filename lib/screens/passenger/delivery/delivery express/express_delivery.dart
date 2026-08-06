@@ -290,7 +290,7 @@ class _DeliveryTrackingExpressState extends State<DeliveryTrackingExpress>
       if (lat != null && lng != null) _updateDriverMarker(lat, lng);
     });
 
-    _socket!.on('delivery:status_update', (data) {
+    _socket!.on('delivery:status_updated', (data) {
       if (!mounted) return;
       final status = (data as Map<String, dynamic>)['status'] as String?;
       if (status != null) setState(() => _currentStatus = status);

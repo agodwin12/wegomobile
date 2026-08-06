@@ -502,7 +502,7 @@ class ProfileApiService {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/users/profile/preferences'),
+        Uri.parse('$baseUrl/preferences'),
         headers: headers,
       );
 
@@ -530,7 +530,7 @@ class ProfileApiService {
     try {
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse('$baseUrl/users/profile/preferences/notifications'),
+        Uri.parse('$baseUrl/preferences/notifications'),
         headers: headers,
         body: json.encode(settings.toJson()),
       );
@@ -559,7 +559,7 @@ class ProfileApiService {
     try {
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse('$baseUrl/users/profile/preferences/privacy'),
+        Uri.parse('$baseUrl/preferences/privacy'),
         headers: headers,
         body: json.encode(settings.toJson()),
       );

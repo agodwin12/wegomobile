@@ -3,15 +3,16 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // SUPPORT API — the endpoints the backend actually exposes
 // ═══════════════════════════════════════════════════════════════════════════
-// src/routes/supportRoutes.js declares exactly seven routes:
+// src/routes/supportRoutes.js declares exactly seven routes, mounted in
+// src/app.js at /api/user/support (not /api/support):
 //
-//   GET  /support/faq                 ?category= &search=   (public)
-//   GET  /support/faq/categories                            (public)
-//   POST /support/contact             { subject, category, message, priority }
-//   GET  /support/tickets
-//   GET  /support/tickets/:ticketNumber
-//   POST /support/report              { problemType, description }
-//   POST /support/feedback            { feedbackType, message, rating? }
+//   GET  /user/support/faq                 ?category= &search=   (public)
+//   GET  /user/support/faq/categories                            (public)
+//   POST /user/support/contact             { subject, category, message, priority }
+//   GET  /user/support/tickets
+//   GET  /user/support/tickets/:ticketNumber
+//   POST /user/support/report              { problemType, description }
+//   POST /user/support/feedback            { feedbackType, message, rating? }
 //
 // The older helpers in profile_api_service.dart posted multipart bodies to
 // /support/tickets and /support/report-problem with field names the server
@@ -85,7 +86,7 @@ class SupportApi {
       if (category != null && category.isNotEmpty) 'category': category,
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
     };
-    final uri = Uri.parse('$_baseUrl/support/faq')
+    final uri = Uri.parse('$_baseUrl/user/support/faq')
         .replace(queryParameters: query.isEmpty ? null : query);
 
     final res = await http.get(uri, headers: await _headers()).timeout(_timeout);
@@ -112,7 +113,7 @@ class SupportApi {
   }) async {
     final res = await http
         .post(
-          Uri.parse('$_baseUrl/support/contact'),
+          Uri.parse('$_baseUrl/user/support/contact'),
           headers: await _headers(),
           body: jsonEncode({
             'subject': subject,
@@ -138,7 +139,7 @@ class SupportApi {
   }) async {
     final res = await http
         .post(
-          Uri.parse('$_baseUrl/support/report'),
+          Uri.parse('$_baseUrl/user/support/report'),
           headers: await _headers(),
           body: jsonEncode({
             'problemType': problemType,

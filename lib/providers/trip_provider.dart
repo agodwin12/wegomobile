@@ -38,6 +38,7 @@ class TripProvider with ChangeNotifier {
   StreamSubscription? _driverAssignedSub;
   StreamSubscription? _statusChangedSub;
   StreamSubscription? _canceledSub;
+  StreamSubscription? _noShowSub;
   StreamSubscription? _noDriversSub;
   StreamSubscription? _driverLocationSub;
   StreamSubscription? _errorSub;
@@ -68,6 +69,7 @@ class TripProvider with ChangeNotifier {
     _driverAssignedSub?.cancel();
     _statusChangedSub?.cancel();
     _canceledSub?.cancel();
+    _noShowSub?.cancel();
     _noDriversSub?.cancel();
     _driverLocationSub?.cancel();
     _errorSub?.cancel();
@@ -177,6 +179,27 @@ class TripProvider with ChangeNotifier {
 
       _status = TripStatus.canceled;
       _errorMessage = data['reason']?.toString() ?? 'Trip was canceled';
+      notifyListeners();
+
+      Future.delayed(const Duration(seconds: 3), () {
+        if (_status == TripStatus.canceled) clearTrip();
+      });
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // TRIP NO-SHOW (driver reported the passenger never showed up)
+    // ═══════════════════════════════════════════════════════════════
+    // Terminal, driver-initiated — same outcome as trip:canceled from the
+    // passenger's point of view, so it reuses TripStatus.canceled to drive
+    // the exact same UI handling (dialog + navigate off the active-trip
+    // screen) that every screen's _checkTripStatus switch already has.
+    _noShowSub = _socketService.tripNoShowStream.listen((data) {
+      debugPrint('\n🚫 [TRIP_PROVIDER] Trip no-show reported by driver!');
+      debugPrint('📦 [TRIP_PROVIDER] Data: $data\n');
+
+      _status = TripStatus.canceled;
+      _errorMessage = data['reason']?.toString() ??
+          'Your driver reported you as a no-show';
       notifyListeners();
 
       Future.delayed(const Duration(seconds: 3), () {

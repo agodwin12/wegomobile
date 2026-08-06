@@ -45,6 +45,7 @@ class SocketService {
   final _tripAssignedController       = StreamController<Map<String, dynamic>>.broadcast();
   final _tripStatusController         = StreamController<Map<String, dynamic>>.broadcast();
   final _tripCanceledController       = StreamController<Map<String, dynamic>>.broadcast();
+  final _tripNoShowController         = StreamController<Map<String, dynamic>>.broadcast();
   final _noDriversController          = StreamController<Map<String, dynamic>>.broadcast();
   final _driverLocationController     = StreamController<Map<String, dynamic>>.broadcast();
   final _tripRequestExpiredController = StreamController<Map<String, dynamic>>.broadcast();
@@ -71,6 +72,7 @@ class SocketService {
   Stream<Map<String, dynamic>> get tripAssignedStream       => _tripAssignedController.stream;
   Stream<Map<String, dynamic>> get tripStatusStream         => _tripStatusController.stream;
   Stream<Map<String, dynamic>> get tripCanceledStream       => _tripCanceledController.stream;
+  Stream<Map<String, dynamic>> get tripNoShowStream         => _tripNoShowController.stream;
   Stream<Map<String, dynamic>> get noDriversStream          => _noDriversController.stream;
   Stream<Map<String, dynamic>> get driverLocationStream     => _driverLocationController.stream;
   Stream<Map<String, dynamic>> get tripRequestExpiredStream => _tripRequestExpiredController.stream;
@@ -433,6 +435,13 @@ class SocketService {
       debugPrint('\n🚫 [SOCKET] trip:canceled: $data\n');
       if (data is Map) {
         _tripCanceledController.add(Map<String, dynamic>.from(data));
+      }
+    });
+
+    _socket!.on('trip:no_show', (data) {
+      debugPrint('\n🚫 [SOCKET] trip:no_show: $data\n');
+      if (data is Map) {
+        _tripNoShowController.add(Map<String, dynamic>.from(data));
       }
     });
 
@@ -825,6 +834,7 @@ class SocketService {
     _tripAssignedController.close();
     _tripStatusController.close();
     _tripCanceledController.close();
+    _tripNoShowController.close();
     _noDriversController.close();
     _driverLocationController.close();
     _tripRequestExpiredController.close();
